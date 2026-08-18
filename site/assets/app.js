@@ -42,6 +42,8 @@ export function initChrome(page) {
         <a href="${BASE}index.html"${page === 'table' ? ' aria-current="page"' : ''}>Table</a>
         <a href="${BASE}matches.html"${page === 'matches' ? ' aria-current="page"' : ''}>Matches</a>
         <a href="${BASE}team.html"${page === 'team' ? ' aria-current="page"' : ''}>Clubs</a>
+        <a href="${BASE}races.html"${page === 'races' ? ' aria-current="page"' : ''}>Races</a>
+        <a href="${BASE}simulator.html"${page === 'sim' ? ' aria-current="page"' : ''}>What&nbsp;if</a>
         <a href="${BASE}method.html"${page === 'method' ? ' aria-current="page"' : ''}>Method</a>
         <button class="searchbtn" data-open-palette aria-label="Search (press slash)">
           <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">

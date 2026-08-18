@@ -172,6 +172,22 @@ def main() -> None:
                                 "fixtures": sos[t]["fixtures"]} for t in teams}},
               open(os.path.join(OUT, "schedule.json"), "w"), separators=(",", ":"))
 
+    # Optional derived outputs; each module is owned by its feature and the
+    # pipeline must keep working whether or not it exists yet.
+    try:
+        from . import siminput
+        siminput.write_sim_input(fit, ds.fixtures, teams, adj, meta,
+                                 os.path.join(OUT, "sim_input.json"))
+        print("  → sim_input.json")
+    except ImportError:
+        pass
+    try:
+        from . import recap
+        recap.write_recap(os.path.join(OUT, "recap.json"), rows, played)
+        print("  → recap.json")
+    except ImportError:
+        pass
+
     frozen = insight.freeze_predictions(ms)
     report = insight.season_report(ms, frozen, {t: meta[t]["name"] for t in teams})
     json.dump(report, open(os.path.join(OUT, "season_report.json"), "w"),
