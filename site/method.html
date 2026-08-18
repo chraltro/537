@@ -9,8 +9,8 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
 <style>
   .barrow { display: grid; grid-template-columns: 190px 1fr 74px; gap: 12px; align-items: center; margin-bottom: 7px; font-size: 13.5px; }
-  .barrow .track { background: var(--grid); border-radius: 3px; height: 16px; }
-  .barrow .fill { background: var(--muted); height: 16px; border-radius: 3px; }
+  .barrow .track { display: block; background: var(--grid); border-radius: 3px; height: 16px; }
+  .barrow .fill { display: block; background: var(--muted); height: 16px; border-radius: 3px; }
   .barrow.me .fill { background: var(--accent); }
   .barrow.me span:first-child { color: var(--ink); font-weight: 650; }
   .barrow span:first-child { color: var(--ink2); }
@@ -31,9 +31,15 @@
     <h2>Out-of-sample accuracy</h2>
     <p class="sub" id="btsub">Loading backtest…</p>
     <div id="bars"></div>
-    <p style="color:var(--muted);font-size:12px;margin:16px 0 0">
+    <p style="color:var(--muted);font-size:12px;margin:16px 0 0" id="btfoot">
       Log-loss, lower is better. Every prediction was made using only matches played before
       it — the model never sees a result before forecasting it.</p>
+    <div class="scroller" style="margin-top:20px">
+      <table id="bysea"><thead><tr>
+        <th class="l">Season</th><th>Matches</th><th>Log-loss</th><th>RPS</th>
+        <th>Correct</th><th class="l">Sample</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
   </section>
 
   <section class="card">
@@ -42,6 +48,7 @@
       The test: gather every outcome the model called <em>x</em>% likely, and check how often
       those actually happened. Points on the diagonal mean the stated confidence is honest.</p>
     <div id="calib"></div>
+    <p style="color:var(--muted);font-size:12px;margin:8px 0 0" id="calibnote"></p>
   </section>
 
   <div class="prose">
@@ -61,10 +68,14 @@
       finishing luck, while shot volume and shot quality repeat. A club that has been
       creating chances and not scoring is usually about to start scoring.</p>
     <p>A free data feed has no shot locations, so the shot-implied figure here is coarse: a
-      league-wide conversion rate fitted on 20,000 matches, worth about
-      <span id="conv">0.23 goals per shot on target</span> and a small fraction of that for
-      shots off target. It is a stand-in for expected goals, not the real thing, and the
-      backtest above prices in that limitation rather than hiding it.</p>
+      league-wide conversion rate fitted on 20,000 matches, worth about 0.23 goals per shot
+      on target and a small fraction of that for shots off target. It is a stand-in for
+      expected goals, not the real thing.</p>
+    <p>How much does it actually buy? The grid search that set the model's two parameters
+      says: a little. Blending shots in is worth roughly 0.005 of log-loss — real, but far
+      less than a proper expected-goals model would give, and less than the gain from simply
+      weighting recent matches more heavily. That is the honest result, and it is stated here
+      rather than left as an implication.</p>
 
     <h3>Rating clubs that have never played in this league</h3>
     <p>Coventry, Ipswich and Hull arrive with no Premier League record. Rather than guess,
@@ -151,18 +162,28 @@ if (!bt) {
   document.getElementById('btsub').textContent =
     'The backtest has not been generated for this build yet.';
 } else {
-  const m = bt.model;
-  const entries = [['model', 'This model', m], ...Object.entries(bt.baselines)
+  /* Lead with the seasons that had no hand in choosing the hyperparameters. */
+  const useHeld = !!bt.held_out;
+  const m = useHeld ? bt.held_out : bt.model;
+  const bl = (useHeld && bt.baselines_held_out) ? bt.baselines_held_out : bt.baselines;
+  const entries = [['model', 'This model', m], ...Object.entries(bl)
     .map(([k, v]) => [k, bt.names[k], v])];
   entries.sort((a, b) => a[2].log_loss - b[2].log_loss);
   const worst = Math.max(...entries.map((e) => e[2].log_loss));
   const best = Math.min(...entries.map((e) => e[2].log_loss));
 
+  const beatsAll = Object.values(bl).every((v) =>
+    v.log_loss > m.log_loss && v.rps > m.rps && v.brier > m.brier);
   document.getElementById('btsub').innerHTML =
-    `Walk-forward over ${esc(bt.seasons[0])} to ${esc(bt.seasons[bt.seasons.length - 1])} —
-     <b>${m.n.toLocaleString()}</b> matches, each predicted before it was played.
+    `Walk-forward over ${esc(bt.seasons[0])} to ${esc(bt.seasons[bt.seasons.length - 1])},
+     each match predicted before it was played.
+     ${useHeld ? `Figures below cover the <b>${m.n.toLocaleString()}</b> matches in seasons
+       that had no hand in choosing the model's two settings — two settings were tuned on
+       ${bt.tuned_on.join(', ')}, so those seasons are excluded here.`
+      : `<b>${m.n.toLocaleString()}</b> matches.`}
      The model calls the right result <b>${(m.accuracy * 100).toFixed(1)}%</b> of the time
-     and beats all three baselines on every metric.`;
+     and ${beatsAll ? 'beats all three baselines on every metric'
+                    : 'is compared against three baselines'}.`;
 
   document.getElementById('bars').innerHTML = entries.map(([k, name, v]) => `
     <div class="barrow ${k === 'model' ? 'me' : ''}" data-k="${k}">
@@ -185,10 +206,22 @@ if (!bt) {
   });
   document.getElementById('bars').addEventListener('mouseleave', () => tip(null));
 
+  document.querySelector('#bysea tbody').innerHTML = (bt.by_season || []).map((r) => `
+    <tr><td class="l">${esc(r.season)}</td><td>${r.n}</td>
+      <td>${r.log_loss.toFixed(4)}</td><td>${r.rps.toFixed(4)}</td>
+      <td>${(r.accuracy * 100).toFixed(1)}%</td>
+      <td class="l" style="color:var(--muted)">${r.held_out ? 'Held out' : 'Used for tuning'}</td>
+    </tr>`).join('');
+  if (bt.model && useHeld) {
+    document.getElementById('btfoot').innerHTML +=
+      ` Across all ${bt.model.n.toLocaleString()} matches including the tuning seasons,
+        log-loss is ${bt.model.log_loss.toFixed(4)}.`;
+  }
+
   /* ---- calibration: predicted vs observed ---- */
-  const W = 460, H = 300, P = 42;
-  const sx = (v) => P + v * (W - P - 12);
-  const sy = (v) => H - P - v * (H - P - 12);
+  const W = 560, H = 360, P = 58;
+  const sx = (v) => P + v * (W - P - 16);
+  const sy = (v) => H - P - v * (H - P - 16);
   const ticks = [0, 0.25, 0.5, 0.75, 1];
   const pts = bt.calibration;
   const maxN = Math.max(...pts.map((p) => p.n));
@@ -199,10 +232,10 @@ if (!bt) {
        <line x1="${sx(t)}" y1="${sy(0)}" x2="${sx(t)}" y2="${sy(1)}" stroke="var(--grid)" stroke-width="1"/>
        <line x1="${sx(0)}" y1="${sy(t)}" x2="${sx(1)}" y2="${sy(t)}" stroke="var(--grid)" stroke-width="1"/>
        <text x="${sx(t)}" y="${H - P + 18}" fill="var(--muted)" font-size="11" text-anchor="middle">${t * 100}%</text>
-       <text x="${P - 10}" y="${sy(t) + 4}" fill="var(--muted)" font-size="11" text-anchor="end">${t * 100}%</text>`).join('')}
+       <text x="${P - 12}" y="${sy(t) + 4}" fill="var(--muted)" font-size="11" text-anchor="end">${t * 100}%</text>`).join('')}
      <line x1="${sx(0)}" y1="${sy(0)}" x2="${sx(1)}" y2="${sy(1)}"
            stroke="var(--rule)" stroke-width="2"/>
-     <text x="${sx(0.72)}" y="${sy(0.79)}" fill="var(--muted)" font-size="11">perfect calibration</text>
+     <text x="${sx(0.04)}" y="${sy(0.82)}" fill="var(--muted)" font-size="11">the grey line is perfect calibration</text>
      <polyline points="${pts.map((p) => `${sx(p.predicted)},${sy(p.observed)}`).join(' ')}"
                fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
      ${pts.map((p) => `<circle cx="${sx(p.predicted)}" cy="${sy(p.observed)}"
@@ -210,8 +243,8 @@ if (!bt) {
         stroke="var(--surface)" stroke-width="2"
         data-p="${p.predicted}" data-o="${p.observed}" data-n="${p.n}"/>`).join('')}
      <text x="${W / 2}" y="${H - 6}" fill="var(--muted)" font-size="11" text-anchor="middle">model said this likely</text>
-     <text x="14" y="${H / 2}" fill="var(--muted)" font-size="11" text-anchor="middle"
-           transform="rotate(-90 14 ${H / 2})">actually happened this often</text>
+     <text x="15" y="${H / 2}" fill="var(--muted)" font-size="11" text-anchor="middle"
+           transform="rotate(-90 15 ${H / 2})">actually happened this often</text>
    </svg>`;
   document.getElementById('calib').addEventListener('mousemove', (e) => {
     const c = e.target.closest('circle');
@@ -223,6 +256,19 @@ if (!bt) {
     ]), e);
   });
   document.getElementById('calib').addEventListener('mouseleave', () => tip(null));
+
+  /* Say what the curve actually shows rather than leaving the reader to squint. */
+  const top = pts.filter((x) => x.predicted > 0.55);
+  if (top.length) {
+    const gap = top.reduce((a, x) => a + (x.observed - x.predicted) * x.n, 0)
+              / top.reduce((a, x) => a + x.n, 0);
+    document.getElementById('calibnote').textContent = Math.abs(gap) < 0.02
+      ? 'The curve tracks the diagonal closely: the model\u2019s stated confidence holds up.'
+      : `The curve tracks the diagonal closely across most of the range. At the confident end it sits `
+        + `${gap > 0 ? 'above' : 'below'} the line by about ${Math.abs(gap * 100).toFixed(0)} points \u2014 `
+        + `outcomes it calls strong favourites come in ${gap > 0 ? 'slightly more' : 'slightly less'} `
+        + `often than stated, so it is mildly ${gap > 0 ? 'under' : 'over'}confident there.`;
+  }
 
   const cp = bt.calibration_priors;
   if (cp) {

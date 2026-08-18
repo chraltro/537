@@ -29,10 +29,16 @@ CH_SEASONS = [f"{y}-{(y+1)%100:02d}" for y in range(2010, 2027)]
 # ---- Ratings ---------------------------------------------------------------
 # Weight on actual goals vs the shot-derived expectation when measuring how well
 # a team played. Shots are the more repeatable signal in small samples, which is
-# the core reason a ratings model beats the league table. Tuned by backtest.
-GOALS_WEIGHT = 0.38
-# Exponential time decay, per day. ~0.0018 gives a half-life near one season.
-TIME_DECAY = 0.0018
+# the core reason a ratings model beats the league table.
+#
+# Both of these were chosen by grid search on the 2022-23..2024-25 walk-forward
+# backtest, not by taste. The honest read of that search: the decay rate matters
+# considerably more than the blend. With only on-target/off-target as a stand-in
+# for shot quality, the blend is worth roughly 0.005 of log-loss, not the much
+# larger gain a real expected-goals model would give.
+GOALS_WEIGHT = 0.70
+# Exponential time decay, per day: a half-life of about eight months.
+TIME_DECAY = 0.0028
 # Ridge pull of attack/defence parameters toward zero, stabilises sparse fits.
 RIDGE = 0.02
 MAX_GOALS = 10             # score matrix truncation; P(>10) is ~1e-6

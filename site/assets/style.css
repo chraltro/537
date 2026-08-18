@@ -54,6 +54,7 @@
 
 body {
   margin: 0;
+  overflow-x: hidden;
   background: var(--plane);
   color: var(--ink);
   font-family: var(--sans);
@@ -227,11 +228,31 @@ footer { color: var(--muted); font-size: 12.5px; padding: 40px 0 60px; border-to
 footer a { color: var(--ink2); }
 .skeleton { color: var(--muted); padding: 40px 0; text-align: center; }
 
-@media (max-width: 860px) {
-  .strip-head, .strip-row { grid-template-columns: 132px 1fr; gap: 8px; }
-  .match { grid-template-columns: 64px 1fr 108px 1fr; }
-  .match .proj, .match .res { display: none; }
-  .wrap { padding: 0 16px; }
+/* Club names collapse to their three-letter code where space is tight. */
+.abbr { display: none; }
+
+@media (max-width: 900px) {
+  .wrap { padding: 0 14px; }
+  .masthead .wrap { gap: 12px; }
+  .brand span { display: none; }
+  nav.top a { padding: 7px 9px; font-size: 13px; }
+  .strip-head, .strip-row { grid-template-columns: 92px 1fr; gap: 8px; }
+  .strip-row .club span:last-child { display: none; }   /* keep the code, drop the name */
+  .cell { height: 16px; }
+  .match { grid-template-columns: 58px 44px 1fr 44px 52px; gap: 8px; }
+  .match .proj { display: none; }
+  .match .res { font-size: 12.5px; }
+  .full { display: none; }
+  .abbr { display: inline; }
+  .pagehead { padding: 28px 0 20px; }
+  .card { padding: 16px 14px; }
+  .tile .v { font-size: 22px; }
+}
+
+@media (max-width: 620px) {
+  .masthead .wrap { height: 52px; }
+  nav.top a { padding: 6px 7px; font-size: 12.5px; }
+  .themetoggle { width: 28px; height: 28px; margin-left: 2px; }
 }
 
 /* match list column header */

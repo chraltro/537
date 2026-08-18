@@ -174,10 +174,15 @@ def _rounds(matches: list[Match]) -> list[tuple[dt.date, list[Match]]]:
     return out
 
 
+#: Seasons whose results were used to choose GOALS_WEIGHT and TIME_DECAY. They
+#: are still scored, but they are not fully out of sample and the site says so.
+TUNED_ON = ("2022-23", "2023-24", "2024-25")
+
+
 def run(ds: Dataset, *, seasons: list[str] | None = None,
         goals_weight: float = config.GOALS_WEIGHT,
         decay: float = config.TIME_DECAY,
-        history_years: int = 6, quiet: bool = False) -> dict:
+        history_years: int = 5, quiet: bool = False) -> dict:
     all_seasons = sorted({m.season for m in ds.pl if m.season != config.SEASON})
     seasons = seasons or [s for s in all_seasons if s >= "2015-16"]
     shot_conv = ratings.fit_shot_conversion(
@@ -185,6 +190,7 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
 
     preds: list[np.ndarray] = []
     ys: list[int] = []
+    seasons_of: list[str] = []
     base_preds = {k: [] for k in ("base", "elo", "form")}
 
     train0 = [m for m in ds.pl if m.season < min(seasons)]
@@ -216,6 +222,7 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
                 ph, pd, pa = outcome_probs(score_matrix(lh, la, fit.rho))
                 preds.append(np.array([ph, pd, pa]))
                 ys.append(_result_index(m))
+                seasons_of.append(season)
                 base_preds["base"].append(base.predict(m))
                 base_preds["elo"].append(elo.predict(m))
                 base_preds["form"].append(form.predict(m))
@@ -227,8 +234,18 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
 
     P = np.array(preds)
     Y = np.array(ys)
+    S = np.array(seasons_of)
+    held = ~np.isin(S, TUNED_ON)
     out = {"model": score_all(P, Y),
+           "held_out": score_all(P[held], Y[held]) if held.any() else None,
+           "tuned_on": list(TUNED_ON),
+           "by_season": [
+               {"season": s, **score_all(P[S == s], Y[S == s]),
+                "held_out": s not in TUNED_ON}
+               for s in seasons if (S == s).any()],
            "baselines": {k: score_all(np.array(v), Y) for k, v in base_preds.items()},
+           "baselines_held_out": {k: score_all(np.array(v)[held], Y[held])
+                                  for k, v in base_preds.items()} if held.any() else None,
            "names": {"base": BaseRate.name, "elo": Elo.name, "form": SeasonForm.name},
            "seasons": seasons,
            "params": {"goals_weight": goals_weight, "decay": decay}}

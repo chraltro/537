@@ -39,7 +39,7 @@
 
   <div class="match matchhead">
     <span class="when">Kick-off</span><span class="home">Home</span>
-    <span style="text-align:center">Win / draw / loss %</span>
+    <span style="text-align:center"><span class="full">Win / draw / loss %</span><span class="abbr">W/D/L</span></span>
     <span class="away">Away</span><span class="proj">Exp. goals</span><span class="res">Result</span>
   </div>
   <div id="list"><p class="skeleton">Loading match forecasts…</p></div>
@@ -86,9 +86,9 @@ function row(m) {
   }
   return `<div class="match" data-i="${m.i}">
     <span class="when">${fmt(m.date)}${m.time ? `<br>${m.time}` : ''}</span>
-    <span class="home">${esc(h.name)}<span class="chip" style="background:${chipColor(h.primary)}"></span></span>
+    <span class="home"><span class="full">${esc(h.name)}</span><span class="abbr">${esc(h.short)}</span><span class="chip" style="background:${chipColor(h.primary)}"></span></span>
     <span class="wdl">${seg('h', m.ph)}${seg('d', m.pd)}${seg('a', m.pa)}</span>
-    <span class="away"><span class="chip" style="background:${chipColor(a.primary)}"></span>${esc(a.name)}</span>
+    <span class="away"><span class="chip" style="background:${chipColor(a.primary)}"></span><span class="full">${esc(a.name)}</span><span class="abbr">${esc(a.short)}</span></span>
     <span class="proj">${m.xgh.toFixed(1)}–${m.xga.toFixed(1)}</span>
     <span class="res">${res} ${hit}</span>
   </div>`;
