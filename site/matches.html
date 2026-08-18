@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Every match forecast — Premier League 2026/27</title>
+<meta name="description" content="Win, draw and loss probabilities plus a projected scoreline for all 380 Premier League matches in 2026/27.">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
+</head>
+<body>
+<main class="wrap">
+  <div class="pagehead">
+    <h1>All 380 matches</h1>
+    <p class="lede">A probability for every fixture in the season, from the opening night at
+      the Emirates to the final Sunday. Bars show the chance of a home win, a draw and an
+      away win; the projected score is the single most likely result, which is usually far
+      from a sure thing.</p>
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <div class="controls">
+    <label for="fteam">Club</label>
+    <select id="fteam"><option value="">All clubs</option></select>
+    <label for="fmw">Matchweek</label>
+    <select id="fmw"><option value="">All matchweeks</option></select>
+    <label><input type="checkbox" id="fplayed"> Played only</label>
+    <span style="margin-left:auto;color:var(--muted);font-size:12.5px" id="count"></span>
+  </div>
+
+  <div class="legend" style="margin:0 0 14px">
+    <span class="swatches" aria-hidden="true">
+      <i style="background:var(--accent);width:14px;height:10px"></i></span><span>Home win</span>
+    <span class="swatches" aria-hidden="true">
+      <i style="background:var(--draw);width:14px;height:10px"></i></span><span>Draw</span>
+    <span class="swatches" aria-hidden="true">
+      <i style="background:var(--away);width:14px;height:10px"></i></span><span>Away win</span>
+  </div>
+
+  <div class="match matchhead">
+    <span class="when">Kick-off</span><span class="home">Home</span>
+    <span style="text-align:center">Win / draw / loss %</span>
+    <span class="away">Away</span><span class="proj">Exp. goals</span><span class="res">Result</span>
+  </div>
+  <div id="list"><p class="skeleton">Loading match forecasts…</p></div>
+</main>
+
+<script type="module">
+import { data, pct, esc, initChrome, tip, tipRows, chipColor } from './assets/app.js';
+initChrome('matches');
+
+const [fc, mm] = [await data('forecast'), await data('matches')];
+const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
+const matches = mm.matches;
+
+document.getElementById('stamp').innerHTML =
+  `<span><b>${matches.filter((m) => m.played).length}</b> played</span>
+   <span><b>${matches.filter((m) => !m.played).length}</b> to come</span>
+   <span>Probabilities from the current model, not frozen at kick-off</span>`;
+
+const fteam = document.getElementById('fteam');
+fteam.insertAdjacentHTML('beforeend', [...fc.teams]
+  .sort((a, b) => a.name.localeCompare(b.name))
+  .map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join(''));
+const mws = [...new Set(matches.map((m) => m.md))].sort((a, b) => a - b);
+document.getElementById('fmw').insertAdjacentHTML('beforeend',
+  mws.map((n) => `<option value="${n}">Matchweek ${n}</option>`).join(''));
+
+const fmt = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
+  { weekday: 'short', day: 'numeric', month: 'short' });
+
+/* A segment only carries its number when the label actually fits, so a 6%
+   sliver never shows a clipped digit. */
+const seg = (c, p) => `<i class="${c}" style="flex:${Math.max(p, 0.012)}">${
+  p >= 0.16 ? `<b>${Math.round(p * 100)}</b>` : ''}</i>`;
+
+function row(m) {
+  const h = meta[m.h], a = meta[m.a];
+  let res = '', hit = '';
+  if (m.played) {
+    res = `${m.hg}–${m.ag}`;
+    const actual = m.hg > m.ag ? 'ph' : m.hg === m.ag ? 'pd' : 'pa';
+    const best = ['ph', 'pd', 'pa'].reduce((x, y) => (m[x] > m[y] ? x : y));
+    hit = actual === best ? '<span class="hit" title="Model favoured this result">✓</span>'
+                          : '<span class="miss" title="Model favoured another result">✗</span>';
+  }
+  return `<div class="match" data-i="${m.i}">
+    <span class="when">${fmt(m.date)}${m.time ? `<br>${m.time}` : ''}</span>
+    <span class="home">${esc(h.name)}<span class="chip" style="background:${chipColor(h.primary)}"></span></span>
+    <span class="wdl">${seg('h', m.ph)}${seg('d', m.pd)}${seg('a', m.pa)}</span>
+    <span class="away"><span class="chip" style="background:${chipColor(a.primary)}"></span>${esc(a.name)}</span>
+    <span class="proj">${m.xgh.toFixed(1)}–${m.xga.toFixed(1)}</span>
+    <span class="res">${res} ${hit}</span>
+  </div>`;
+}
+
+matches.forEach((m, i) => { m.i = i; });
+const list = document.getElementById('list');
+
+function draw() {
+  const t = fteam.value, w = document.getElementById('fmw').value;
+  const onlyPlayed = document.getElementById('fplayed').checked;
+  const sel = matches.filter((m) =>
+    (!t || m.h === t || m.a === t) && (!w || String(m.md) === w) && (!onlyPlayed || m.played));
+  document.getElementById('count').textContent = `${sel.length} matches`;
+  if (!sel.length) { list.innerHTML = '<p class="skeleton">No matches match those filters.</p>'; return; }
+  const groups = new Map();
+  sel.forEach((m) => { if (!groups.has(m.md)) groups.set(m.md, []); groups.get(m.md).push(m); });
+  list.innerHTML = [...groups.entries()].map(([md, ms]) =>
+    `<section class="mw"><h3>Matchweek ${md}</h3>${ms.map(row).join('')}</section>`).join('');
+}
+window.addEventListener('themechange', draw);
+['change', 'input'].forEach((ev) => {
+  fteam.addEventListener(ev, draw);
+  document.getElementById('fmw').addEventListener(ev, draw);
+  document.getElementById('fplayed').addEventListener(ev, draw);
+});
+draw();
+
+list.addEventListener('mousemove', (e) => {
+  const el = e.target.closest('.match');
+  if (!el) return tip(null);
+  const m = matches[+el.dataset.i];
+  const h = meta[m.h].name, a = meta[m.a].name;
+  tip(tipRows(`${esc(h)} v ${esc(a)}`, [
+    [`${esc(h)} win`, pct(m.ph, 1)],
+    ['Draw', pct(m.pd, 1)],
+    [`${esc(a)} win`, pct(m.pa, 1)],
+    ['Expected goals', `${m.xgh} – ${m.xga}`],
+    ['Most likely score', `${m.sc[0]}–${m.sc[1]} (${pct(m.scp, 1)})`],
+    ['Next most likely', m.alt.map((s) => `${s[0]}–${s[1]}`).join(', ')],
+    ['Over 2.5 goals', pct(m.o25, 1)],
+    ['Both teams score', pct(m.btts, 1)],
+  ]), e);
+});
+list.addEventListener('mouseleave', () => tip(null));
+</script>
+</body>
+</html>

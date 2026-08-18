@@ -1,0 +1,442 @@
+{
+ "arsenal": {
+  "id": "arsenal",
+  "name": "Arsenal",
+  "short": "ARS",
+  "primary": "#EF0107",
+  "secondary": "#DB0007",
+  "aliases": []
+ },
+ "aston-villa": {
+  "id": "aston-villa",
+  "name": "Aston Villa",
+  "short": "AVL",
+  "primary": "#95BFE5",
+  "secondary": "#670E36",
+  "aliases": []
+ },
+ "bournemouth": {
+  "id": "bournemouth",
+  "name": "Bournemouth",
+  "short": "BOU",
+  "primary": "#DA291C",
+  "secondary": "#000000",
+  "aliases": [
+   "afc bournemouth"
+  ]
+ },
+ "brentford": {
+  "id": "brentford",
+  "name": "Brentford",
+  "short": "BRE",
+  "primary": "#E30613",
+  "secondary": "#FBB800",
+  "aliases": []
+ },
+ "brighton": {
+  "id": "brighton",
+  "name": "Brighton & Hove Albion",
+  "short": "BHA",
+  "primary": "#0057B8",
+  "secondary": "#FFCD00",
+  "aliases": [
+   "brighton and hove albion",
+   "brighton hove albion"
+  ]
+ },
+ "burnley": {
+  "id": "burnley",
+  "name": "Burnley",
+  "short": "BUR",
+  "primary": "#6C1D45",
+  "secondary": "#99D6EA",
+  "aliases": []
+ },
+ "chelsea": {
+  "id": "chelsea",
+  "name": "Chelsea",
+  "short": "CHE",
+  "primary": "#034694",
+  "secondary": "#DBA111",
+  "aliases": []
+ },
+ "coventry": {
+  "id": "coventry",
+  "name": "Coventry City",
+  "short": "COV",
+  "primary": "#59B4E4",
+  "secondary": "#003057",
+  "aliases": [
+   "coventry city"
+  ]
+ },
+ "crystal-palace": {
+  "id": "crystal-palace",
+  "name": "Crystal Palace",
+  "short": "CRY",
+  "primary": "#1B458F",
+  "secondary": "#C4122E",
+  "aliases": []
+ },
+ "everton": {
+  "id": "everton",
+  "name": "Everton",
+  "short": "EVE",
+  "primary": "#003399",
+  "secondary": "#FFFFFF",
+  "aliases": []
+ },
+ "fulham": {
+  "id": "fulham",
+  "name": "Fulham",
+  "short": "FUL",
+  "primary": "#000000",
+  "secondary": "#CC0000",
+  "aliases": []
+ },
+ "hull": {
+  "id": "hull",
+  "name": "Hull City",
+  "short": "HUL",
+  "primary": "#F5A12D",
+  "secondary": "#000000",
+  "aliases": [
+   "hull city"
+  ]
+ },
+ "ipswich": {
+  "id": "ipswich",
+  "name": "Ipswich Town",
+  "short": "IPS",
+  "primary": "#3A64A3",
+  "secondary": "#DE2C37",
+  "aliases": [
+   "ipswich town"
+  ]
+ },
+ "leeds": {
+  "id": "leeds",
+  "name": "Leeds United",
+  "short": "LEE",
+  "primary": "#FFCD00",
+  "secondary": "#1D428A",
+  "aliases": [
+   "leeds united"
+  ]
+ },
+ "leicester": {
+  "id": "leicester",
+  "name": "Leicester City",
+  "short": "LEI",
+  "primary": "#003090",
+  "secondary": "#FDBE11",
+  "aliases": [
+   "leicester city"
+  ]
+ },
+ "liverpool": {
+  "id": "liverpool",
+  "name": "Liverpool",
+  "short": "LIV",
+  "primary": "#C8102E",
+  "secondary": "#00B2A9",
+  "aliases": []
+ },
+ "man-city": {
+  "id": "man-city",
+  "name": "Manchester City",
+  "short": "MCI",
+  "primary": "#6CABDD",
+  "secondary": "#1C2C5B",
+  "aliases": [
+   "man city",
+   "manchester city"
+  ]
+ },
+ "man-united": {
+  "id": "man-united",
+  "name": "Manchester United",
+  "short": "MUN",
+  "primary": "#DA291C",
+  "secondary": "#FBE122",
+  "aliases": [
+   "man united",
+   "manchester united",
+   "man utd"
+  ]
+ },
+ "newcastle": {
+  "id": "newcastle",
+  "name": "Newcastle United",
+  "short": "NEW",
+  "primary": "#241F20",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "newcastle united",
+   "newcastle utd"
+  ]
+ },
+ "nott-forest": {
+  "id": "nott-forest",
+  "name": "Nottingham Forest",
+  "short": "NFO",
+  "primary": "#DD0000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "nottm forest",
+   "nott m forest",
+   "nottingham forest"
+  ]
+ },
+ "sunderland": {
+  "id": "sunderland",
+  "name": "Sunderland",
+  "short": "SUN",
+  "primary": "#EB172B",
+  "secondary": "#211E1F",
+  "aliases": []
+ },
+ "tottenham": {
+  "id": "tottenham",
+  "name": "Tottenham Hotspur",
+  "short": "TOT",
+  "primary": "#132257",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "tottenham hotspur",
+   "spurs"
+  ]
+ },
+ "west-ham": {
+  "id": "west-ham",
+  "name": "West Ham United",
+  "short": "WHU",
+  "primary": "#7A263A",
+  "secondary": "#1BB1E7",
+  "aliases": [
+   "west ham united",
+   "west ham"
+  ]
+ },
+ "wolves": {
+  "id": "wolves",
+  "name": "Wolverhampton Wanderers",
+  "short": "WOL",
+  "primary": "#FDB913",
+  "secondary": "#231F20",
+  "aliases": [
+   "wolverhampton wanderers",
+   "wolverhampton"
+  ]
+ },
+ "southampton": {
+  "id": "southampton",
+  "name": "Southampton",
+  "short": "SOU",
+  "primary": "#D71920",
+  "secondary": "#130C0E",
+  "aliases": []
+ },
+ "west-brom": {
+  "id": "west-brom",
+  "name": "West Bromwich Albion",
+  "short": "WBA",
+  "primary": "#122F67",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "west brom",
+   "west bromwich albion"
+  ]
+ },
+ "sheffield-united": {
+  "id": "sheffield-united",
+  "name": "Sheffield United",
+  "short": "SHU",
+  "primary": "#EE2737",
+  "secondary": "#000000",
+  "aliases": [
+   "sheffield united"
+  ]
+ },
+ "luton": {
+  "id": "luton",
+  "name": "Luton Town",
+  "short": "LUT",
+  "primary": "#F78F1E",
+  "secondary": "#002D62",
+  "aliases": [
+   "luton town"
+  ]
+ },
+ "norwich": {
+  "id": "norwich",
+  "name": "Norwich City",
+  "short": "NOR",
+  "primary": "#FFF200",
+  "secondary": "#00A650",
+  "aliases": [
+   "norwich city"
+  ]
+ },
+ "watford": {
+  "id": "watford",
+  "name": "Watford",
+  "short": "WAT",
+  "primary": "#FBEE23",
+  "secondary": "#ED2127",
+  "aliases": []
+ },
+ "swansea": {
+  "id": "swansea",
+  "name": "Swansea City",
+  "short": "SWA",
+  "primary": "#121212",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "swansea city"
+  ]
+ },
+ "stoke": {
+  "id": "stoke",
+  "name": "Stoke City",
+  "short": "STK",
+  "primary": "#E03A3E",
+  "secondary": "#1B449C",
+  "aliases": [
+   "stoke city"
+  ]
+ },
+ "middlesbrough": {
+  "id": "middlesbrough",
+  "name": "Middlesbrough",
+  "short": "MID",
+  "primary": "#E21C38",
+  "secondary": "#FFFFFF",
+  "aliases": []
+ },
+ "cardiff": {
+  "id": "cardiff",
+  "name": "Cardiff City",
+  "short": "CAR",
+  "primary": "#0070B5",
+  "secondary": "#D11524",
+  "aliases": [
+   "cardiff city"
+  ]
+ },
+ "huddersfield": {
+  "id": "huddersfield",
+  "name": "Huddersfield Town",
+  "short": "HUD",
+  "primary": "#0E63AD",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "huddersfield town"
+  ]
+ },
+ "qpr": {
+  "id": "qpr",
+  "name": "Queens Park Rangers",
+  "short": "QPR",
+  "primary": "#1D5BA4",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "queens park rangers"
+  ]
+ },
+ "reading": {
+  "id": "reading",
+  "name": "Reading",
+  "short": "RDG",
+  "primary": "#004494",
+  "secondary": "#FFFFFF",
+  "aliases": []
+ },
+ "wigan": {
+  "id": "wigan",
+  "name": "Wigan Athletic",
+  "short": "WIG",
+  "primary": "#1D59AF",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "wigan athletic"
+  ]
+ },
+ "blackburn": {
+  "id": "blackburn",
+  "name": "Blackburn Rovers",
+  "short": "BLB",
+  "primary": "#009EE0",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "blackburn rovers"
+  ]
+ },
+ "bolton": {
+  "id": "bolton",
+  "name": "Bolton Wanderers",
+  "short": "BOL",
+  "primary": "#263C7E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "bolton wanderers"
+  ]
+ },
+ "birmingham": {
+  "id": "birmingham",
+  "name": "Birmingham City",
+  "short": "BIR",
+  "primary": "#0000FF",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "birmingham city"
+  ]
+ },
+ "blackpool": {
+  "id": "blackpool",
+  "name": "Blackpool",
+  "short": "BLP",
+  "primary": "#F68B1F",
+  "secondary": "#FFFFFF",
+  "aliases": []
+ },
+ "charlton": {
+  "id": "charlton",
+  "name": "Charlton Athletic",
+  "short": "CHA",
+  "primary": "#D4021D",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "charlton athletic"
+  ]
+ },
+ "derby": {
+  "id": "derby",
+  "name": "Derby County",
+  "short": "DER",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "derby county"
+  ]
+ },
+ "portsmouth": {
+  "id": "portsmouth",
+  "name": "Portsmouth",
+  "short": "POR",
+  "primary": "#001489",
+  "secondary": "#FFFFFF",
+  "aliases": []
+ },
+ "bradford": {
+  "id": "bradford",
+  "name": "Bradford City",
+  "short": "BRA",
+  "primary": "#8B0000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "bradford",
+   "bradford city"
+  ]
+ }
+}

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Premier League 2026/27 Forecast</title>
+<meta name="description" content="Every Premier League match and final table position for 2026/27, forecast with a Dixon-Coles rating model and 50,000 season simulations.">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
+</head>
+<body>
+<main class="wrap">
+  <div class="pagehead">
+    <h1>Who wins the Premier League?</h1>
+    <p class="lede">A rating for every club, a probability for all 380 matches, and 50,000
+      simulations of the 2026/27 season — rebuilt in the spirit of FiveThirtyEight's
+      Soccer Power Index, from public data anyone can check.</p>
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section class="card">
+    <h2>Projected final table</h2>
+    <p class="sub">Average outcome across every simulation. Click any column to sort;
+      hover a club for its full range.</p>
+    <div class="scroller">
+      <table id="tbl">
+        <thead><tr>
+          <th class="l" data-k="rank">#</th>
+          <th class="l" data-k="name">Club</th>
+          <th data-k="spi" title="Expected share of points against an average team">SPI</th>
+          <th data-k="off" title="Goals expected to score vs an average team">Att</th>
+          <th data-k="def" title="Goals expected to concede vs an average team">Def</th>
+          <th data-k="pts">Points</th>
+          <th data-k="gd">GD</th>
+          <th data-k="title">Title</th>
+          <th data-k="ucl">Top 5</th>
+          <th data-k="europa">Europa</th>
+          <th data-k="releg">Relegated</th>
+        </tr></thead>
+        <tbody id="tbody"><tr><td colspan="11" class="skeleton">Loading forecast…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Where every club finishes</h2>
+    <p class="sub">Each row is one club's full distribution of finishing positions across
+      50,000 simulated seasons. A tight dark band means the model is confident; a smear
+      across ten places means it genuinely is not.</p>
+    <div id="strip"></div>
+    <div class="legend">
+      <span>Chance of finishing in that position</span>
+      <span class="swatches" aria-hidden="true">
+        <i style="background:var(--ramp-0)"></i><i style="background:var(--ramp-1)"></i>
+        <i style="background:var(--ramp-2)"></i><i style="background:var(--ramp-3)"></i>
+        <i style="background:var(--ramp-4)"></i><i style="background:var(--ramp-5)"></i>
+        <i style="background:var(--ramp-6)"></i>
+      </span>
+      <span>never → certain</span>
+      <span style="margin-left:12px">Vertical rules mark the Champions League cut (top 5) and the relegation places.</span>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+import { data, pct, signed, esc, ord, initChrome, tip, tipRows, rampColor, makeSortable, chipColor } from './assets/app.js';
+initChrome('table');
+
+const fc = await data('forecast');
+const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-GB',
+  { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+document.getElementById('stamp').innerHTML = `
+  <span>Season <b>${esc(fc.season)}</b></span>
+  <span><b>${fc.matches_played}</b> of ${fc.matches_total} matches played</span>
+  <span><b>${fc.n_sims.toLocaleString()}</b> simulations</span>
+  <span>Updated <b>${fmtDate(fc.generated)}</b></span>`;
+
+const rows = fc.teams.map((t, i) => ({ ...t, rank: i + 1 }));
+const byTitle = [...rows].sort((a, b) => b.title - a.title);
+const byReleg = [...rows].sort((a, b) => b.releg - a.releg);
+const gapTop = byTitle[0].title - byTitle[1].title;
+
+document.getElementById('tiles').innerHTML = [
+  ['Title favourite', esc(byTitle[0].name), `${pct(byTitle[0].title)} — ${pct(byTitle[1].title)} for ${esc(byTitle[1].name)}`],
+  ['Projected champion', `${rows[0].pts} pts`, `80% of simulations land ${rows[0].pts_lo}–${rows[0].pts_hi}`],
+  ['Most likely to go down', esc(byReleg[0].name), `${pct(byReleg[0].releg)} — then ${esc(byReleg[1].name)} ${pct(byReleg[1].releg)}`],
+  ['Title race', gapTop < 0.10 ? 'Too close to call' : 'Clear favourite',
+    `${(gapTop * 100).toFixed(0)} percentage points between the top two`],
+].map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
+
+/* ---- projected table ---- */
+const maxPts = Math.max(...rows.map((r) => r.pts));
+const tbody = document.getElementById('tbody');
+const cls = (p) => (p >= 0.10 ? 'p-hi' : 'p-lo');
+
+function render(list) {
+  tbody.innerHTML = list.map((t) => `
+    <tr data-id="${t.id}">
+      <td class="l rank">${t.rank}</td>
+      <td class="l"><span class="club">
+        <span class="chip" style="background:${chipColor(t.primary)}"></span>
+        <a href="team.html?t=${t.id}">${esc(t.name)}</a>
+        ${t.promoted ? '<span class="tag">Promoted</span>' : ''}
+      </span></td>
+      <td><b>${t.spi.toFixed(1)}</b></td>
+      <td>${t.off.toFixed(2)}</td>
+      <td>${t.def.toFixed(2)}</td>
+      <td><b>${t.pts.toFixed(1)}</b>
+        <span class="minibar" style="width:${(t.pts / maxPts * 100).toFixed(1)}%"></span></td>
+      <td>${signed(t.gd)}</td>
+      <td class="${cls(t.title)}">${pct(t.title)}</td>
+      <td class="${cls(t.ucl)}">${pct(t.ucl)}</td>
+      <td class="${cls(t.europa)}">${pct(t.europa)}</td>
+      <td class="${cls(t.releg)}">${pct(t.releg)}</td>
+    </tr>`).join('');
+}
+makeSortable(document.getElementById('tbl'), rows, render, 'pts');
+
+tbody.addEventListener('mousemove', (e) => {
+  const tr = e.target.closest('tr[data-id]');
+  if (!tr) return tip(null);
+  const t = rows.find((r) => r.id === tr.dataset.id);
+  tip(tipRows(esc(t.name), [
+    ['Projected points', t.pts.toFixed(1)],
+    ['80% of seasons', `${t.pts_lo}–${t.pts_hi} pts`],
+    ['Best simulated', `${t.pts_max} pts`],
+    ['Worst simulated', `${t.pts_min} pts`],
+    ['Win the league', pct(t.title, 1)],
+    ['Champions League', pct(t.ucl, 1)],
+    ['Relegated', pct(t.releg, 1)],
+  ]), e);
+});
+tbody.addEventListener('mouseleave', () => tip(null));
+
+/* ---- season strip ---- */
+const ucl = fc.ucl_places;
+const maxCell = Math.max(...rows.flatMap((t) => t.pos));
+const head = `<div class="strip-head"><span></span><div class="axis20">${
+  Array.from({ length: 20 }, (_, i) => `<span>${i + 1}</span>`).join('')}</div></div>`;
+
+const strip = rows.map((t) => `
+  <div class="strip-row" data-id="${t.id}">
+    <span class="club">
+      <span class="chip" style="background:${chipColor(t.primary)}"></span>
+      <a href="team.html?t=${t.id}">${esc(t.short)}</a>
+      <span style="color:var(--muted);font-size:12px">${esc(t.name)}</span>
+    </span>
+    <div class="strip-cells">${t.pos.map((p, i) =>
+      `<div class="cell" data-p="${p}" data-pos="${i + 1}"
+        ${i === ucl || i === 20 - 3 ? 'data-band="1"' : ''}
+        style="background:${rampColor(p, maxCell)}"></div>`).join('')}</div>
+  </div>`).join('');
+
+const stripEl = document.getElementById('strip');
+stripEl.innerHTML = head + strip;
+stripEl.addEventListener('mousemove', (e) => {
+  const c = e.target.closest('.cell');
+  if (!c) return tip(null);
+  const t = rows.find((r) => r.id === c.closest('.strip-row').dataset.id);
+  const pos = +c.dataset.pos;
+  tip(tipRows(`${esc(t.name)} — ${ord(pos)}`,
+    [['Chance of finishing here', pct(+c.dataset.p, 1)],
+     ['Projected finish', ord(t.rank)]]), e);
+});
+stripEl.addEventListener('mouseleave', () => tip(null));
+
+/* Chip colours are surface-dependent, so they are recomputed when the theme flips. */
+window.addEventListener('themechange', () => {
+  document.querySelectorAll('.chip').forEach((el) => {
+    const id = el.closest('[data-id]')?.dataset.id;
+    const t = rows.find((r) => r.id === id);
+    if (t) el.style.background = chipColor(t.primary);
+  });
+});
+</script>
+</body>
+</html>

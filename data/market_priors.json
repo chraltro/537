@@ -1,0 +1,41 @@
+{
+  "_comment": [
+    "Preseason bookmaker consensus, captured by hand because no free odds feed is reachable.",
+    "Only clubs with an actual quote are listed. Everything else is left to the model rather",
+    "than invented, and the anchor's influence decays to zero over the first 10 matchweeks",
+    "(see config.MARKET_DECAY_MW). Odds are decimal."
+  ],
+  "captured": "2026-08-18",
+  "season": "2026-27",
+  "sources": [
+    "https://www.squawka.com/en/news/premier-league-2026-27-odds-early-contenders-title-top-4-relegation/",
+    "https://www.racingpost.com/sport/football-tips/the-big-kick-off/premier-league-2026-27-title-race-predictions-odds-aKVpk9x4aFU3/",
+    "https://www.racingpost.com/sport/football-tips/the-big-kick-off/premier-league-2026-27-relegation-battle-predictions-odds-aeS6l7d6uWzH/",
+    "https://bookies.com/uk/news/premier-league-relegation-odds-2026-27-hull-ipswich-coventry-clear-favourites-for-drop-over-sunderland-leeds-fulham-18-august",
+    "https://www.thelines.com/uk/news/premier-league/premier-league-relegation-odds-for-2026-27-hull-city-lead-pack/",
+    "https://www.covers.com/soccer/premier-league-title-odds"
+  ],
+  "title": {
+    "arsenal": 2.50,
+    "man-city": 3.75,
+    "liverpool": 6.50,
+    "man-united": 7.20,
+    "chelsea": 11.00,
+    "tottenham": 21.00,
+    "aston-villa": 34.00,
+    "newcastle": 151.00,
+    "brighton": 151.00,
+    "bournemouth": 201.00
+  },
+  "relegation": {
+    "hull": 1.28,
+    "ipswich": 1.67,
+    "coventry": 1.64,
+    "sunderland": 4.00,
+    "fulham": 6.50,
+    "leeds": 7.00,
+    "crystal-palace": 7.00,
+    "everton": 10.00,
+    "bournemouth": 10.00
+  }
+}

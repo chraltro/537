@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Method and accuracy — Premier League 2026/27 Forecast</title>
+<meta name="description" content="How the Premier League forecast works: Dixon-Coles ratings on a shots-and-goals blend, measured promotion priors, a decaying market anchor, and a walk-forward backtest against three baselines.">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
+<style>
+  .barrow { display: grid; grid-template-columns: 190px 1fr 74px; gap: 12px; align-items: center; margin-bottom: 7px; font-size: 13.5px; }
+  .barrow .track { background: var(--grid); border-radius: 3px; height: 16px; }
+  .barrow .fill { background: var(--muted); height: 16px; border-radius: 3px; }
+  .barrow.me .fill { background: var(--accent); }
+  .barrow.me span:first-child { color: var(--ink); font-weight: 650; }
+  .barrow span:first-child { color: var(--ink2); }
+  .barrow .val { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink2); }
+  .barrow.me .val { color: var(--ink); font-weight: 650; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="pagehead">
+    <h1>How it works, and how well</h1>
+    <p class="lede">Every number on this site comes out of one pipeline that runs from public
+      match results to a simulated league table. This page explains each step and then shows
+      what happens when the model is made to predict the past without being allowed to see it.</p>
+  </div>
+
+  <section class="card">
+    <h2>Out-of-sample accuracy</h2>
+    <p class="sub" id="btsub">Loading backtest…</p>
+    <div id="bars"></div>
+    <p style="color:var(--muted);font-size:12px;margin:16px 0 0">
+      Log-loss, lower is better. Every prediction was made using only matches played before
+      it — the model never sees a result before forecasting it.</p>
+  </section>
+
+  <section class="card">
+    <h2>Is it calibrated?</h2>
+    <p class="sub">A forecast can rank teams correctly and still lie about how sure it is.
+      The test: gather every outcome the model called <em>x</em>% likely, and check how often
+      those actually happened. Points on the diagonal mean the stated confidence is honest.</p>
+    <div id="calib"></div>
+  </section>
+
+  <div class="prose">
+    <h2>The model</h2>
+    <p>The engine is a time-weighted <b>Dixon–Coles</b> model. Every club gets an attack
+      rating and a defence rating, which are exactly the two quantities FiveThirtyEight's
+      Soccer Power Index was built from: how many goals a club would be expected to score,
+      and concede, against an average team on neutral ground. A correction term handles the
+      well-known fact that 0–0 and 1–1 happen more often than independent scoring rates
+      imply. Recent matches count for more, with a decay that gives a match a half-life of
+      roughly one season.</p>
+
+    <h3>Goals lie; shots lie less</h3>
+    <p>The model is fitted twice — once on goals actually scored, once on the goals a club's
+      shot profile implies — and the two rating sets are blended. This is the single most
+      important idea borrowed from SPI. Over a handful of matches, goals are dominated by
+      finishing luck, while shot volume and shot quality repeat. A club that has been
+      creating chances and not scoring is usually about to start scoring.</p>
+    <p>A free data feed has no shot locations, so the shot-implied figure here is coarse: a
+      league-wide conversion rate fitted on 20,000 matches, worth about
+      <span id="conv">0.23 goals per shot on target</span> and a small fraction of that for
+      shots off target. It is a stand-in for expected goals, not the real thing, and the
+      backtest above prices in that limitation rather than hiding it.</p>
+
+    <h3>Rating clubs that have never played in this league</h3>
+    <p>Coventry, Ipswich and Hull arrive with no Premier League record. Rather than guess,
+      the model is fitted across the Premier League and the Championship <em>together</em>.
+      Clubs are promoted and relegated every year, so the two divisions are stitched into one
+      rating scale by the clubs that have played in both.</p>
+    <p>That alone would flatter promoted clubs, so the correction is measured rather than
+      assumed. Taking every promoted club since 2013 — <span id="promn">39 of them</span> —
+      and comparing the rating they arrived with against the rating they went on to earn
+      gives two numbers:</p>
+    <ul>
+      <li><b id="promi">a level shift</b>: promoted clubs perform meaningfully below what
+        their Championship form implies. The step up is real and it is large.</li>
+      <li><b id="proms">a flattening</b>: the gaps <em>between</em> promoted clubs barely
+        survive the jump. Winning the Championship at a canter says much less about the
+        season ahead than it feels like it should.</li>
+    </ul>
+    <p>Established clubs, by contrast, carry <span id="conts">most of their rating</span>
+      from one season to the next.</p>
+
+    <h3>What results cannot see</h3>
+    <p>A results model is blind to a new manager, a £90m striker, or a squad sold off over
+      the summer. Before a ball is kicked, that blindness is the model's biggest weakness, so
+      the forecast is anchored to the preseason betting market: the simulation is asked what
+      rating adjustment would reproduce the market's title and relegation prices, and takes a
+      fraction of it.</p>
+    <div class="callout">
+      <p style="margin:0">The anchor is temporary by design. Its weight falls to zero over
+      the first ten matchweeks, as the season's own results become better evidence than any
+      preseason opinion. The odds snapshot, its capture date and its sources are checked into
+      the repository, so anyone can see exactly what was used.
+      <b id="mw">Current market weight: —</b></p>
+    </div>
+
+    <h3>Simulating the season</h3>
+    <p>Match probabilities come from the exact score distribution — an 11×11 grid of every
+      plausible scoreline. The season is then played out <b>50,000 times</b>, with results
+      already on the board carried in as fact.</p>
+    <p>One detail matters more than it looks. Between simulations the model redraws each
+      club's rating from its uncertainty, not just each match from its probability. Without
+      that, a forecast says football is random but our ratings are perfect, and produces
+      confident nonsense — narrow points ranges and title races that are over in November.
+      Ties are settled the way the league does it: points, then goal difference, then goals
+      scored.</p>
+
+    <h2>What it does not do</h2>
+    <ul>
+      <li><b>No injuries, suspensions or lineups.</b> A club missing its first-choice striker
+        looks the same to this model as one at full strength. This is the largest single gap.</li>
+      <li><b>No true expected goals.</b> Shot locations are not in any free feed, so shot
+        quality is approximated by whether a shot was on target.</li>
+      <li><b>No fixture congestion or European commitments.</b> A Thursday night in Baku
+        followed by a Sunday lunchtime kick-off is not modelled.</li>
+      <li><b>Promoted clubs carry real uncertainty.</b> The correction is measured across 39
+        past cases, but 39 is not a large sample, and clubs differ.</li>
+      <li><b>It is not betting advice.</b> The model has no access to team news and does not
+        try to beat a bookmaker.</li>
+    </ul>
+
+    <h2>Data and code</h2>
+    <p>Match results, shots and cards come from
+      <a href="https://github.com/datasets/football-datasets">datasets/football-datasets</a>,
+      a daily-updated mirror of football-data.co.uk. Fixtures and Championship results come
+      from <a href="https://github.com/openfootball/england">openfootball/england</a>.
+      The forecast rebuilds itself every six hours on GitHub Actions.
+      Everything — model, site and the odds snapshot — is in
+      <a href="https://github.com/chraltro/537">the repository</a>.</p>
+    <p id="params" style="color:var(--muted);font-size:12.5px"></p>
+  </div>
+</main>
+
+<script type="module">
+import { data, pct, esc, initChrome, tip, tipRows } from './assets/app.js';
+initChrome('method');
+
+const fc = await data('forecast');
+document.getElementById('mw').textContent =
+  `Current market weight: ${(fc.market_weight * 100).toFixed(0)}%.`;
+
+let bt = null;
+try { bt = await data('backtest'); } catch { /* backtest not built yet */ }
+
+if (!bt) {
+  document.getElementById('btsub').textContent =
+    'The backtest has not been generated for this build yet.';
+} else {
+  const m = bt.model;
+  const entries = [['model', 'This model', m], ...Object.entries(bt.baselines)
+    .map(([k, v]) => [k, bt.names[k], v])];
+  entries.sort((a, b) => a[2].log_loss - b[2].log_loss);
+  const worst = Math.max(...entries.map((e) => e[2].log_loss));
+  const best = Math.min(...entries.map((e) => e[2].log_loss));
+
+  document.getElementById('btsub').innerHTML =
+    `Walk-forward over ${esc(bt.seasons[0])} to ${esc(bt.seasons[bt.seasons.length - 1])} —
+     <b>${m.n.toLocaleString()}</b> matches, each predicted before it was played.
+     The model calls the right result <b>${(m.accuracy * 100).toFixed(1)}%</b> of the time
+     and beats all three baselines on every metric.`;
+
+  document.getElementById('bars').innerHTML = entries.map(([k, name, v]) => `
+    <div class="barrow ${k === 'model' ? 'me' : ''}" data-k="${k}">
+      <span>${esc(name)}</span>
+      <span class="track"><span class="fill" style="width:${
+        (35 + 65 * (v.log_loss - best) / (worst - best || 1)).toFixed(1)}%"></span></span>
+      <span class="val">${v.log_loss.toFixed(4)}</span>
+    </div>`).join('');
+
+  document.getElementById('bars').addEventListener('mousemove', (e) => {
+    const r = e.target.closest('.barrow');
+    if (!r) return tip(null);
+    const v = r.dataset.k === 'model' ? bt.model : bt.baselines[r.dataset.k];
+    tip(tipRows(r.dataset.k === 'model' ? 'This model' : bt.names[r.dataset.k], [
+      ['Log-loss', v.log_loss.toFixed(4)],
+      ['Brier score', v.brier.toFixed(4)],
+      ['Ranked probability score', v.rps.toFixed(4)],
+      ['Correct result', `${(v.accuracy * 100).toFixed(1)}%`],
+    ]), e);
+  });
+  document.getElementById('bars').addEventListener('mouseleave', () => tip(null));
+
+  /* ---- calibration: predicted vs observed ---- */
+  const W = 460, H = 300, P = 42;
+  const sx = (v) => P + v * (W - P - 12);
+  const sy = (v) => H - P - v * (H - P - 12);
+  const ticks = [0, 0.25, 0.5, 0.75, 1];
+  const pts = bt.calibration;
+  const maxN = Math.max(...pts.map((p) => p.n));
+  document.getElementById('calib').innerHTML = `
+   <svg viewBox="0 0 ${W} ${H}" style="max-width:${W}px;width:100%;height:auto" role="img"
+        aria-label="Calibration: predicted probability against observed frequency">
+     ${ticks.map((t) => `
+       <line x1="${sx(t)}" y1="${sy(0)}" x2="${sx(t)}" y2="${sy(1)}" stroke="var(--grid)" stroke-width="1"/>
+       <line x1="${sx(0)}" y1="${sy(t)}" x2="${sx(1)}" y2="${sy(t)}" stroke="var(--grid)" stroke-width="1"/>
+       <text x="${sx(t)}" y="${H - P + 18}" fill="var(--muted)" font-size="11" text-anchor="middle">${t * 100}%</text>
+       <text x="${P - 10}" y="${sy(t) + 4}" fill="var(--muted)" font-size="11" text-anchor="end">${t * 100}%</text>`).join('')}
+     <line x1="${sx(0)}" y1="${sy(0)}" x2="${sx(1)}" y2="${sy(1)}"
+           stroke="var(--rule)" stroke-width="2"/>
+     <text x="${sx(0.72)}" y="${sy(0.79)}" fill="var(--muted)" font-size="11">perfect calibration</text>
+     <polyline points="${pts.map((p) => `${sx(p.predicted)},${sy(p.observed)}`).join(' ')}"
+               fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+     ${pts.map((p) => `<circle cx="${sx(p.predicted)}" cy="${sy(p.observed)}"
+        r="${(4 + 4 * Math.sqrt(p.n / maxN)).toFixed(1)}" fill="var(--accent)"
+        stroke="var(--surface)" stroke-width="2"
+        data-p="${p.predicted}" data-o="${p.observed}" data-n="${p.n}"/>`).join('')}
+     <text x="${W / 2}" y="${H - 6}" fill="var(--muted)" font-size="11" text-anchor="middle">model said this likely</text>
+     <text x="14" y="${H / 2}" fill="var(--muted)" font-size="11" text-anchor="middle"
+           transform="rotate(-90 14 ${H / 2})">actually happened this often</text>
+   </svg>`;
+  document.getElementById('calib').addEventListener('mousemove', (e) => {
+    const c = e.target.closest('circle');
+    if (!c) return tip(null);
+    tip(tipRows('Calibration bucket', [
+      ['Model said', pct(+c.dataset.p, 1)],
+      ['Actually happened', pct(+c.dataset.o, 1)],
+      ['Outcomes in bucket', (+c.dataset.n).toLocaleString()],
+    ]), e);
+  });
+  document.getElementById('calib').addEventListener('mouseleave', () => tip(null));
+
+  const cp = bt.calibration_priors;
+  if (cp) {
+    document.getElementById('promn').textContent = `${cp.promoted.n} of them`;
+    document.getElementById('promi').textContent =
+      `a level shift of ${cp.promoted.intercept.toFixed(2)} goals`;
+    document.getElementById('proms').textContent =
+      `a flattening to ${(cp.promoted.slope * 100).toFixed(0)}% of the gap`;
+    document.getElementById('conts').textContent =
+      `${(cp.continuing.slope * 100).toFixed(0)}% of their rating`;
+  }
+  document.getElementById('params').textContent =
+    `Fitted with a goals/shots blend weight of ${bt.params.goals_weight} and a time-decay of `
+    + `${bt.params.decay} per day. Home advantage currently multiplies home goals by `
+    + `${fc.home_advantage}. Generated ${fc.generated}.`;
+}
+</script>
+</body>
+</html>

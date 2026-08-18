@@ -1,0 +1,84 @@
+name: Rebuild forecast
+
+on:
+  push:
+    branches: [claude/premier-league-predictions-rv9405, main]
+  workflow_dispatch:
+  schedule:
+    # Every six hours. The upstream result mirror refreshes daily, so this keeps
+    # the site current the morning after a matchday without hammering anything.
+    - cron: '17 */6 * * *'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install numpy scipy pytest
+
+      - name: Cache source downloads
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: football-data-${{ github.run_id }}
+          restore-keys: football-data-
+
+      - name: Run tests
+        run: python -m pytest tests/ -q
+
+      - name: Build forecast
+        run: python -m model.run
+
+      - name: Show headline numbers
+        run: |
+          python - <<'PY'
+          import json
+          fc = json.load(open('site/data/forecast.json'))
+          print(f"{fc['season']}  {fc['matches_played']}/{fc['matches_total']} played  "
+                f"{fc['n_sims']:,} sims")
+          for t in fc['teams'][:5]:
+              print(f"  {t['name']:24s} {t['pts']:5.1f} pts  title {t['title']*100:5.1f}%")
+          try:
+              bt = json.load(open('site/data/backtest.json'))['model']
+              print(f"backtest: log-loss {bt['log_loss']:.4f} over {bt['n']} matches")
+          except FileNotFoundError:
+              print('backtest: not built')
+          PY
+
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+        with:
+          # Turns Pages on for the repository the first time this runs, so no
+          # manual switch-flipping is needed. If org policy blocks it, enable
+          # Pages once under Settings -> Pages (source: GitHub Actions).
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
