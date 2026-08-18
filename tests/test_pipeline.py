@@ -173,3 +173,62 @@ def test_simulation_probabilities_are_coherent(ds):
     assert abs(sim["relegation"].sum() - config.RELEGATION_PLACES) < 0.05
     assert np.allclose(sim["position"].sum(axis=1), 1, atol=1e-6)
     assert np.allclose(sim["position"].sum(axis=0), 1, atol=1e-6)
+
+
+# ---------------------------------------------------------------- leverage
+def test_leverage_is_symmetric_and_bounded(ds):
+    """A result that helps one club must hurt another, and no swing can exceed 1."""
+    fit = ratings.fit([m for m in ds.pl if m.season >= "2024-25"],
+                      ds.teams, dt.date(2026, 8, 21))
+    sim = simulate.simulate_season(fit, ds.fixtures, ds.teams,
+                                   n_sims=4000, scenarios=20, leverage=True)
+    lev = sim["leverage"]
+    assert lev is not None and len(lev) == len(
+        [f for f in ds.fixtures if not f.played])
+    for m in lev:
+        assert 0.0 <= m["score"] <= 1.0
+        for s in m["swings"]:
+            assert -1.0 <= s["swing"] <= 1.0
+            assert 0.0 <= s["home"] <= 1.0 and 0.0 <= s["away"] <= 1.0
+            assert s["event"] in simulate.EVENTS
+
+
+def test_a_top_two_clash_outranks_a_dead_rubber(ds):
+    """The score has to track intuition or it is not measuring importance."""
+    fit = ratings.fit([m for m in ds.pl if m.season >= "2023-24"],
+                      ds.teams, dt.date(2026, 8, 21))
+    sim = simulate.simulate_season(fit, ds.fixtures, ds.teams,
+                                   n_sims=8000, scenarios=40, leverage=True)
+    rem = [f for f in ds.fixtures if not f.played]
+    scores = {(f.home, f.away): l["score"] for f, l in zip(rem, sim["leverage"])}
+    order = sorted(scores, key=lambda k: -scores[k])
+    big = {"arsenal", "man-city", "liverpool", "man-united", "chelsea",
+           "coventry", "ipswich", "hull", "sunderland"}
+    # Every one of the ten highest-stakes matches should involve a club with
+    # something real to play for at one end of the table or the other.
+    assert sum(1 for k in order[:10] if set(k) & big) >= 8
+
+
+# ---------------------------------------------------------------- insight
+def test_schedule_strength_covers_every_fixture(ds):
+    from model import insight
+    spi = {t: 50.0 + i for i, t in enumerate(ds.teams)}
+    sos = insight.strength_of_schedule(ds.fixtures, ds.teams, spi, 0.18)
+    for t in ds.teams:
+        assert len(sos[t]["fixtures"]) == 2 * (config.N_TEAMS - 1)
+        assert sos[t]["remaining"] is not None
+    ranks = sorted(sos[t]["rank"] for t in ds.teams)
+    assert ranks == list(range(1, config.N_TEAMS + 1))
+
+
+def test_frozen_predictions_are_never_overwritten_after_kickoff(tmp_path, monkeypatch):
+    """The whole point of freezing is that a result cannot rewrite the forecast
+    that preceded it."""
+    from model import insight
+    monkeypatch.setattr(insight, "OUT", str(tmp_path))
+    base = {"h": "a", "a": "b", "md": 1, "xgh": 1.4, "xga": 1.1}
+    insight.freeze_predictions([{**base, "ph": 0.5, "pd": 0.3, "pa": 0.2, "played": False}])
+    # same fixture, now played, with a different (post-hoc) probability
+    store = insight.freeze_predictions(
+        [{**base, "ph": 0.9, "pd": 0.05, "pa": 0.05, "played": True}])
+    assert store["a|b"]["ph"] == 0.5, "a played match must keep its pre-kick-off forecast"

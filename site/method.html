@@ -19,13 +19,29 @@
 </style>
 </head>
 <body>
-<main class="wrap">
+<main class="wrap" id="main">
   <div class="pagehead">
     <h1>How it works, and how well</h1>
     <p class="lede">Every number on this site comes out of one pipeline that runs from public
       match results to a simulated league table. This page explains each step and then shows
       what happens when the model is made to predict the past without being allowed to see it.</p>
   </div>
+
+  <section class="card" id="seasoncard" hidden>
+    <h2>How it is doing this season</h2>
+    <p class="sub" id="seasonsub"></p>
+    <div class="tiles" id="seasontiles" style="margin-bottom:20px"></div>
+    <div class="split2">
+      <div>
+        <h4 style="font-size:13px;margin:0 0 8px">Biggest shocks</h4>
+        <div id="surprises"></div>
+      </div>
+      <div>
+        <h4 style="font-size:13px;margin:0 0 8px">Called with most confidence</h4>
+        <div id="confident"></div>
+      </div>
+    </div>
+  </section>
 
   <section class="card">
     <h2>Out-of-sample accuracy</h2>
@@ -121,6 +137,21 @@
       Ties are settled the way the league does it: points, then goal difference, then goals
       scored.</p>
 
+    <h3>What a match is worth</h3>
+    <p>Every simulated season also records what happened in each remaining fixture, which
+      makes a second question nearly free to answer: given a home win, how often does each
+      club end up champion, in the top five, or relegated — and how does that differ given an
+      away win? The gap between those two numbers is what the site calls the swing, and it is
+      the honest measure of whether a fixture matters. Two mid-table sides with nothing to
+      play for score near zero however famous they are; a relegation six-pointer between two
+      poor teams scores near the top.</p>
+
+    <h3>Marking its own homework, carefully</h3>
+    <p>Scoring a forecast against results it has already absorbed is meaningless. So each
+      match's probabilities are archived the last time the model saw it as unplayed, and that
+      record is never overwritten once the game kicks off. The in-season figures at the top of
+      this page are computed only from those frozen forecasts.</p>
+
     <h2>What it does not do</h2>
     <ul>
       <li><b>No injuries, suspensions or lineups.</b> A club missing its first-choice striker
@@ -148,10 +179,37 @@
 </main>
 
 <script type="module">
-import { data, pct, esc, initChrome, tip, tipRows } from './assets/app.js';
+import { data, pct, esc, initChrome, tip, tipRows, initPalette } from './assets/app.js';
 initChrome('method');
 
 const fc = await data('forecast');
+initPalette(fc.teams);
+
+/* ---- in-season scorecard, judged only on forecasts frozen before kick-off ---- */
+let sr = null;
+try { sr = await data('season_report'); } catch { /* nothing played yet */ }
+if (sr && sr.n > 0) {
+  const card = document.getElementById('seasoncard');
+  card.hidden = false;
+  document.getElementById('seasonsub').innerHTML =
+    `Scored against the probabilities this model published <em>before</em> each kick-off —
+     archived at build time and never overwritten, so results cannot leak backwards into
+     the forecast that predicted them. ${sr.n} matches so far.`;
+  document.getElementById('seasontiles').innerHTML = [
+    ['Matches scored', sr.n, 'Since the season began'],
+    ['Log-loss', sr.log_loss.toFixed(4), 'Lower is better'],
+    ['Right result', `${(sr.accuracy * 100).toFixed(1)}%`, 'Most likely outcome landed'],
+  ].map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div>
+      <div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
+  const line = (r) => `<div class="r"><span>${esc(r.label)}</span>
+      <b>${pct(r.p, 1)}</b></div>`;
+  document.getElementById('surprises').innerHTML =
+    `<div id="tipish">${sr.surprises.map(line).join('')}</div>
+     <p class="hint" style="margin-top:8px">Probability the model gave the result that happened.</p>`;
+  document.getElementById('confident').innerHTML =
+    `<div id="tipish">${sr.confident.map(line).join('')}</div>
+     <p class="hint" style="margin-top:8px">Correct calls where it was most sure.</p>`;
+}
 document.getElementById('mw').textContent =
   `Current market weight: ${(fc.market_weight * 100).toFixed(0)}%.`;
 

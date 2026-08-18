@@ -32,6 +32,7 @@ export function initChrome(page) {
   if (saved) document.documentElement.setAttribute('data-theme', saved);
 
   document.body.insertAdjacentHTML('afterbegin', `
+    <a class="skip" href="#main">Skip to content</a>
     <header class="masthead"><div class="wrap">
       <a class="brand" href="${BASE}index.html">
         <span class="mark"></span>
@@ -42,6 +43,12 @@ export function initChrome(page) {
         <a href="${BASE}matches.html"${page === 'matches' ? ' aria-current="page"' : ''}>Matches</a>
         <a href="${BASE}team.html"${page === 'team' ? ' aria-current="page"' : ''}>Clubs</a>
         <a href="${BASE}method.html"${page === 'method' ? ' aria-current="page"' : ''}>Method</a>
+        <button class="searchbtn" data-open-palette aria-label="Search (press slash)">
+          <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M10.6 10.6 14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg><kbd>/</kbd>
+        </button>
         <button class="themetoggle" id="tt" title="Switch theme" aria-label="Switch colour theme">
           <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
             <circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6"/>
@@ -171,5 +178,146 @@ export function sparkline(values, { w = 260, h = 54, pad = 6 } = {}) {
           stroke-linejoin="round" stroke-linecap="round"/>
     <circle cx="${x(last).toFixed(1)}" cy="${y(values[last]).toFixed(1)}" r="4"
             fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
+  </svg>`;
+}
+
+/* ================= command palette =================
+   One keystroke to anywhere. `/` or Cmd/Ctrl-K opens it; typing filters
+   clubs, matchweeks and pages; Enter goes. A dense data site is only fast
+   if you can skip the navigation.                                        */
+export function initPalette(teams) {
+  const items = [
+    { label: 'Projected table', kind: 'Page', href: `${BASE}index.html` },
+    { label: 'All 380 matches', kind: 'Page', href: `${BASE}matches.html` },
+    { label: 'Method and accuracy', kind: 'Page', href: `${BASE}method.html` },
+    ...teams.map((t) => ({ label: t.name, kind: 'Club', href: `${BASE}team.html?t=${t.id}`, hint: t.short })),
+    ...Array.from({ length: 38 }, (_, i) => ({
+      label: `Matchweek ${i + 1}`, kind: 'Matchweek', href: `${BASE}matches.html?mw=${i + 1}` })),
+  ];
+
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="palette" hidden>
+      <div class="pal-backdrop" data-close></div>
+      <div class="pal-box" role="dialog" aria-modal="true" aria-label="Search">
+        <input id="pal-input" type="text" placeholder="Search clubs, matchweeks, pages…"
+               autocomplete="off" spellcheck="false" aria-label="Search">
+        <ul id="pal-list" role="listbox"></ul>
+        <div class="pal-foot"><kbd>↑</kbd><kbd>↓</kbd> move · <kbd>↵</kbd> open · <kbd>esc</kbd> close</div>
+      </div>
+    </div>`);
+
+  const el = document.getElementById('palette');
+  const input = document.getElementById('pal-input');
+  const list = document.getElementById('pal-list');
+  let active = 0, shown = [];
+
+  const render = () => {
+    const q = input.value.trim().toLowerCase();
+    shown = (q ? items.filter((i) =>
+      i.label.toLowerCase().includes(q) || (i.hint || '').toLowerCase().includes(q)) : items
+    ).slice(0, 9);
+    active = Math.min(active, Math.max(shown.length - 1, 0));
+    list.innerHTML = shown.map((i, n) => `
+      <li role="option" aria-selected="${n === active}" class="${n === active ? 'on' : ''}" data-n="${n}">
+        <span>${esc(i.label)}</span><span class="pal-kind">${i.kind}</span>
+      </li>`).join('') || '<li class="pal-empty">Nothing matches that.</li>';
+  };
+  const open = () => {
+    el.hidden = false; input.value = ''; active = 0; render();
+    input.focus();
+  };
+  const close = () => { el.hidden = true; };
+  const go = () => { if (shown[active]) location.href = shown[active].href; };
+
+  addEventListener('keydown', (e) => {
+    const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName || '');
+    if (!el.hidden) {
+      if (e.key === 'Escape') { close(); }
+      else if (e.key === 'ArrowDown') { active = Math.min(active + 1, shown.length - 1); render(); e.preventDefault(); }
+      else if (e.key === 'ArrowUp') { active = Math.max(active - 1, 0); render(); e.preventDefault(); }
+      else if (e.key === 'Enter') { go(); e.preventDefault(); }
+      return;
+    }
+    if ((e.key === '/' && !typing) || ((e.metaKey || e.ctrlKey) && e.key === 'k')) {
+      e.preventDefault(); open();
+    }
+  });
+  input.addEventListener('input', () => { active = 0; render(); });
+  list.addEventListener('click', (e) => {
+    const li = e.target.closest('li[data-n]');
+    if (li) { active = +li.dataset.n; go(); }
+  });
+  el.addEventListener('click', (e) => { if (e.target.dataset.close !== undefined) close(); });
+  document.querySelectorAll('[data-open-palette]').forEach((b) =>
+    b.addEventListener('click', open));
+}
+
+/* ================= modal ================= */
+export function modal(html) {
+  let m = document.getElementById('modal');
+  if (!m) {
+    document.body.insertAdjacentHTML('beforeend',
+      '<div id="modal" hidden><div class="pal-backdrop" data-close></div>' +
+      '<div class="modal-box" role="dialog" aria-modal="true"></div></div>');
+    m = document.getElementById('modal');
+    m.addEventListener('click', (e) => { if (e.target.dataset.close !== undefined) closeModal(); });
+    addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+  }
+  m.querySelector('.modal-box').innerHTML =
+    `<button class="modal-x" data-close aria-label="Close">✕</button>${html}`;
+  m.hidden = false;
+  m.querySelector('.modal-x').focus();
+}
+export function closeModal() {
+  const m = document.getElementById('modal');
+  if (m) m.hidden = true;
+}
+
+/* ================= score heatmap =================
+   The exact scoreline distribution, which is the honest answer to "what will
+   the score be": not one number but a cloud, usually a fairly flat one.   */
+export function scoreGrid(grid, homeName, awayName) {
+  const max = Math.max(...grid.flat());
+  const cells = grid.map((row, h) => row.map((p, a) => {
+    const t = Math.min(1, (p / max) ** 0.55);
+    const step = p < 0.002 ? 0 : Math.min(6, Math.max(1, Math.ceil(t * 6)));
+    // Only ring the draw diagonal where a draw is actually plausible; a ring on
+    // 6-6 is decoration pointing at nothing.
+    const res = (h === a && p >= 0.002) ? 'draw' : (h > a ? 'home' : 'away');
+    return `<div class="gcell" style="background:var(--ramp-${step})"
+      data-h="${h}" data-a="${a}" data-p="${p}" data-res="${res}"
+      title="${h}–${a}: ${(p * 100).toFixed(1)}%">${p >= 0.05 ? (p * 100).toFixed(0) : ''}</div>`;
+  }).join('')).join('');
+  return `
+    <div class="gwrap">
+      <div class="gaxis-y" aria-hidden="true">${esc(homeName)}</div>
+      <div>
+        <div class="ggrid">${cells}</div>
+        <div class="gaxis-x" aria-hidden="true">${esc(awayName)} goals →</div>
+      </div>
+    </div>`;
+}
+
+/* ================= multi-series line chart =================
+   Used for the forecast's own movement over time. Series are direct-labelled
+   at their endpoint, so identity never rests on colour alone.             */
+export function lineChart(series, { w = 720, h = 260, pad = 34, fmt = (v) => v,
+                                    yMax = 1, yLabel = '' } = {}) {
+  if (!series.length || series[0].points.length < 2) return '';
+  const n = series[0].points.length;
+  const x = (i) => pad + 8 + (i * (w - pad - 96)) / Math.max(n - 1, 1);
+  const y = (v) => h - pad - (v / yMax) * (h - pad - 14);
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * yMax);
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" role="img"
+      aria-label="${esc(yLabel)} over time">
+    ${ticks.map((t) => `
+      <line x1="${pad}" y1="${y(t)}" x2="${w - 92}" y2="${y(t)}" stroke="var(--grid)" stroke-width="1"/>
+      <text x="${pad - 6}" y="${y(t) + 4}" fill="var(--muted)" font-size="10" text-anchor="end">${fmt(t)}</text>`).join('')}
+    ${series.map((s) => `
+      <polyline points="${s.points.map((p, i) => `${x(i).toFixed(1)},${y(p).toFixed(1)}`).join(' ')}"
+        fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${x(n - 1).toFixed(1)}" cy="${y(s.points[n - 1]).toFixed(1)}" r="3.5"
+        fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>
+      <text x="${w - 86}" y="${y(s.points[n - 1]) + 4}" fill="var(--ink2)" font-size="11">${esc(s.label)}</text>`).join('')}
   </svg>`;
 }

@@ -28,6 +28,20 @@ opinions. It rebuilds itself every six hours on GitHub Actions and publishes to 
   scenarios — without that, the forecast claims far more confidence than it has earned.
 - **A walk-forward backtest** against three baselines, published on the site. Every
   prediction is made using only matches played before it.
+- **Match importance.** For every remaining fixture, how far a home win versus an away win
+  moves each club's title, top-five and relegation chances — counted inside the same
+  simulation, so it costs almost nothing and answers the only question that matters about a
+  fixture: does it matter?
+- **Exact-score distributions.** Click any match for the full grid of plausible scorelines.
+  The most likely single score is usually only a 10-15% shot, which is the honest shape of a
+  football match.
+- **Strength of schedule.** Average opponent rating for what is left, adjusted for venue,
+  plus a shaded run of the next six fixtures per club.
+- **The forecast's own history.** A daily snapshot archive, charted, so "the model liked them
+  in August" stays checkable in April.
+- **In-season scoring that cannot cheat.** Each match's probabilities are frozen before
+  kick-off and never overwritten, so the running log-loss is measured against what the model
+  actually said beforehand.
 
 ## Running it
 
@@ -43,10 +57,11 @@ cd site && python -m http.server # then open http://localhost:8000
 ## Layout
 
 ```
-model/       fetch, parse, ratings, priors, simulate, backtest, run
+model/       fetch, parse, ratings, priors, simulate, insight, backtest, run
 data/        team_meta.json (club aliases + colours), market_priors.json (odds snapshot)
 site/        the static site; site/data/*.json is generated
-tests/       parser, club-name mapping and simulation invariants
+             (press `/` anywhere on the site to jump to a club or matchweek)
+tests/       parser, club-name mapping, simulation and leverage invariants
 ```
 
 ## Data sources

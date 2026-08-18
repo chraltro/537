@@ -5,11 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Premier League 2026/27 Forecast</title>
 <meta name="description" content="Every Premier League match and final table position for 2026/27, forecast with a Dixon-Coles rating model and 50,000 season simulations.">
+<meta property="og:title" content="Who wins the Premier League? — 2026/27 forecast">
+<meta property="og:description" content="A rating for every club, a probability for all 380 matches, and 50,000 simulations of the 2026/27 season.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
 </head>
 <body>
-<main class="wrap">
+<main class="wrap" id="main">
   <div class="pagehead">
     <h1>Who wins the Premier League?</h1>
     <p class="lede">A rating for every club, a probability for all 380 matches, and 50,000
@@ -19,6 +23,16 @@
   </div>
 
   <div class="tiles" id="tiles"></div>
+
+  <section class="card">
+    <h2>The matches that matter most</h2>
+    <p class="sub">Not the biggest names — the biggest swings. Each score is how far one
+      club's title, top-five or relegation chance moves between a home win and an away win,
+      measured across every simulation. Click any match for the full picture.</p>
+    <div id="bigmatches"></div>
+    <div class="hint" style="margin-top:12px">A dead rubber between two good sides scores
+      near zero; a relegation six-pointer between two poor ones scores highly.</div>
+  </section>
 
   <section class="card">
     <h2>Projected final table</h2>
@@ -34,6 +48,7 @@
           <th data-k="def" title="Goals expected to concede vs an average team">Def</th>
           <th data-k="pts">Points</th>
           <th data-k="gd">GD</th>
+          <th data-k="sos" title="Average rating of the opponents left to play">Sched</th>
           <th data-k="title">Title</th>
           <th data-k="ucl">Top 5</th>
           <th data-k="europa">Europa</th>
@@ -42,6 +57,18 @@
         <tbody id="tbody"><tr><td colspan="11" class="skeleton">Loading forecast…</td></tr></tbody>
       </table>
     </div>
+  </section>
+
+  <section class="card" id="movecard" hidden>
+    <h2>How the forecast has moved</h2>
+    <p class="sub">The model's own opinion, tracked over time. A forecast that only ever
+      shows today's number can never be argued with; this one keeps its receipts.</p>
+    <div class="chips" style="margin-bottom:14px">
+      <button class="chip-btn" data-race="title" aria-pressed="true">Title race</button>
+      <button class="chip-btn" data-race="releg" aria-pressed="false">Relegation</button>
+      <button class="chip-btn" data-race="ucl" aria-pressed="false">Top five</button>
+    </div>
+    <div id="movechart"></div>
   </section>
 
   <section class="card">
@@ -65,7 +92,8 @@
 </main>
 
 <script type="module">
-import { data, pct, signed, esc, ord, initChrome, tip, tipRows, rampColor, makeSortable, chipColor } from './assets/app.js';
+import { data, pct, signed, esc, ord, initChrome, tip, tipRows, rampColor,
+         makeSortable, chipColor, initPalette, modal, scoreGrid, lineChart } from './assets/app.js';
 initChrome('table');
 
 const fc = await data('forecast');
@@ -111,6 +139,8 @@ function render(list) {
       <td><b>${t.pts.toFixed(1)}</b>
         <span class="minibar" style="width:${(t.pts / maxPts * 100).toFixed(1)}%"></span></td>
       <td>${signed(t.gd)}</td>
+      <td title="Average opponent rating; ${t.sos_rank ? ord(t.sos_rank) + ' hardest' : ''}"
+          class="${t.sos_rank && t.sos_rank <= 5 ? 'p-hi' : 'p-lo'}">${t.sos ?? '—'}</td>
       <td class="${cls(t.title)}">${pct(t.title)}</td>
       <td class="${cls(t.ucl)}">${pct(t.ucl)}</td>
       <td class="${cls(t.europa)}">${pct(t.europa)}</td>
@@ -131,6 +161,7 @@ tbody.addEventListener('mousemove', (e) => {
     ['Win the league', pct(t.title, 1)],
     ['Champions League', pct(t.ucl, 1)],
     ['Relegated', pct(t.releg, 1)],
+    ['Schedule left', t.sos ? `${t.sos} avg opponent (${ord(t.sos_rank)} hardest)` : '—'],
   ]), e);
 });
 tbody.addEventListener('mouseleave', () => tip(null));
@@ -175,6 +206,93 @@ window.addEventListener('themechange', () => {
     if (t) el.style.background = chipColor(t.primary);
   });
 });
+
+initPalette(fc.teams);
+
+/* ---- the matches that matter most ---- */
+const mm = await data('matches');
+const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
+const EVENT = { title: 'the title', ucl: 'a top-five finish', releg: 'relegation' };
+const upcoming = mm.matches.filter((m) => !m.played && m.lev > 0);
+const big = [...upcoming].sort((a, b) => b.lev - a.lev).slice(0, 6);
+const fmtD = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
+  { day: 'numeric', month: 'short' });
+
+document.getElementById('bigmatches').innerHTML = big.length ? big.map((m) => {
+  const s0 = m.swings[0];
+  const why = s0
+    ? `${esc(meta[s0.team].name)}'s chance of ${EVENT[s0.event]} moves `
+      + `${pct(Math.min(s0.home, s0.away))} → ${pct(Math.max(s0.home, s0.away))}`
+    : 'Little riding on this one';
+  return `<div class="bigmatch" data-key="${m.h}|${m.a}">
+      <span class="mdno">MW ${m.md}<br>${fmtD(m.date)}</span>
+      <span><span class="teams">${esc(meta[m.h].name)} v ${esc(meta[m.a].name)}</span>
+        <span class="why">${why}</span></span>
+      <span class="score"><b>${(m.lev * 100).toFixed(0)}</b><span>swing</span></span>
+    </div>`;
+}).join('') : '<p class="empty">No fixtures left to play.</p>';
+
+/* ---- match detail ---- */
+function openMatch(m) {
+  const h = meta[m.h], a = meta[m.a];
+  const rows2 = m.swings.map((s) => `<div class="r">
+    <span>${esc(meta[s.team].name)} — ${EVENT[s.event]}</span>
+    <b>${pct(s.away, 1)} → ${pct(s.home, 1)}</b></div>`).join('');
+  modal(`
+    <h3>${esc(h.name)} v ${esc(a.name)}</h3>
+    <p class="msub">Matchweek ${m.md} · ${fmtD(m.date)}${m.time ? ` · ${m.time}` : ''}
+      ${m.played ? ` · finished ${m.hg}–${m.ag}` : ''}</p>
+    <div class="wdl" style="height:26px;margin-bottom:6px">
+      <i class="h" style="flex:${Math.max(m.ph, .02)}"><b>${Math.round(m.ph * 100)}</b></i>
+      <i class="d" style="flex:${Math.max(m.pd, .02)}"><b>${Math.round(m.pd * 100)}</b></i>
+      <i class="a" style="flex:${Math.max(m.pa, .02)}"><b>${Math.round(m.pa * 100)}</b></i>
+    </div>
+    <div class="hint" style="margin-bottom:20px">
+      ${esc(h.short)} win · draw · ${esc(a.short)} win &nbsp;·&nbsp;
+      expected goals ${m.xgh} – ${m.xga} &nbsp;·&nbsp;
+      over 2.5 goals ${pct(m.o25)} &nbsp;·&nbsp; both score ${pct(m.btts)}</div>
+    <h4 style="font-size:13px;margin:0 0 3px">Every plausible scoreline</h4>
+    <p class="hint" style="margin:0 0 10px">Percent chance of each exact result. The most
+      likely single score is ${m.sc[0]}–${m.sc[1]}, and even that only happens
+      ${pct(m.scp)} of the time — which is the honest shape of a football match.</p>
+    ${scoreGrid(m.grid, h.short + ' goals', a.short)}
+    ${rows2 ? `<h4 style="font-size:13px;margin:22px 0 3px">What rides on it</h4>
+      <p class="hint" style="margin:0 0 10px">Chance if the away side wins → if the home side does.</p>
+      <div id="tipish">${rows2}</div>` : ''}`);
+}
+document.getElementById('bigmatches').addEventListener('click', (e) => {
+  const el = e.target.closest('.bigmatch');
+  if (!el) return;
+  const [hh, aa] = el.dataset.key.split('|');
+  openMatch(mm.matches.find((m) => m.h === hh && m.a === aa));
+});
+
+/* ---- how the forecast has moved ---- */
+let hist = null;
+try { hist = await data('history'); } catch { /* first build */ }
+const snaps = hist?.snapshots || [];
+if (snaps.length >= 2) {
+  const card = document.getElementById('movecard');
+  card.hidden = false;
+  const draw = (key) => {
+    const top = [...rows].sort((a, b) => (b[key] || 0) - (a[key] || 0)).slice(0, 5);
+    const series = top.map((t) => ({
+      label: t.short,
+      color: chipColor(t.primary),
+      points: snaps.map((s) => s.teams[t.id]?.[key] ?? 0),
+    }));
+    document.getElementById('movechart').innerHTML =
+      lineChart(series, { yMax: 1, fmt: (v) => `${Math.round(v * 100)}%` })
+      + `<div class="hint" style="margin-top:6px">${snaps.length} snapshots · `
+      + `${snaps[0].date} to ${snaps[snaps.length - 1].date}</div>`;
+  };
+  draw('title');
+  card.querySelectorAll('[data-race]').forEach((b) => b.addEventListener('click', () => {
+    card.querySelectorAll('[data-race]').forEach((x) =>
+      x.setAttribute('aria-pressed', String(x === b)));
+    draw(b.dataset.race);
+  }));
+}
 </script>
 </body>
 </html>

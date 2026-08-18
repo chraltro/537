@@ -46,6 +46,7 @@ def match_report(fit: Fit, home: str, away: str, adj: dict[str, float] | None = 
            for i in order]
     tot = np.add.outer(np.arange(m.shape[0]), np.arange(m.shape[1]))
     return {
+        "grid": m,
         "home_win": ph, "draw": pd, "away_win": pa,
         "xg_home": lh, "xg_away": la,
         "top_scores": top,
@@ -85,7 +86,8 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
                     n_sims: int = config.N_SIMS,
                     rating_sd: float = config.RATING_SD,
                     seed: int = config.SEED,
-                    scenarios: int = 200) -> dict:
+                    scenarios: int = 200,
+                    leverage: bool = False) -> dict:
     """Play the rest of the season `n_sims` times.
 
     Results already on the board are carried in as fact; only the remaining
@@ -116,9 +118,16 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
     per = max(1, n_sims // max(scenarios, 1))
     scenarios = max(1, n_sims // per)
     pos_counts = np.zeros((n, n), dtype=np.int64)
-    pts_all = np.empty(scenarios * per)
     pts_team = np.empty((scenarios * per, n))
     gd_sum = np.zeros(n)
+    # Conditional tallies for match importance: for every remaining fixture and
+    # every possible result, how often each club ends up champion / in the top
+    # five / relegated. Counting this inside the existing simulation is nearly
+    # free, and it answers the question a fan actually has -- does this game
+    # matter? -- without a second set of conditional runs.
+    n_ev = 3
+    lev_hits = np.zeros((3, len(remaining), n * n_ev), dtype=np.float64) if leverage else None
+    lev_n = np.zeros((3, len(remaining)), dtype=np.float64) if leverage else None
     kk = np.arange(MAXG + 1)
     lgam = np.array([0.0] + list(np.cumsum(np.log(np.arange(1, MAXG + 1)))))
     cursor = 0
@@ -169,6 +178,19 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
         gd_sum += gd.sum(axis=0)
         cursor += per
 
+        if leverage and len(remaining):
+            rank = np.argsort(order, axis=1)            # rank[s, t] = finish (0-based)
+            ev = np.empty((per, n, n_ev), dtype=np.float32)
+            ev[:, :, 0] = rank == 0
+            ev[:, :, 1] = rank < config.UCL_PLACES
+            ev[:, :, 2] = rank >= n - config.RELEGATION_PLACES
+            ev_flat = ev.reshape(per, n * n_ev)
+            res = np.where(hg > ag, 0, np.where(hg == ag, 1, 2))     # (per, n_rem)
+            for k in range(3):
+                mk = (res == k).T.astype(np.float32)                 # (n_rem, per)
+                lev_hits[k] += mk @ ev_flat
+                lev_n[k] += mk.sum(axis=1)
+
     total = cursor
     p = pos_counts / total
     return {
@@ -185,4 +207,50 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
         "europa": p[:, config.UCL_PLACES:config.UCL_PLACES + config.EUROPA_PLACES].sum(axis=1),
         "relegation": p[:, -config.RELEGATION_PLACES:].sum(axis=1),
         "n_sims": total,
+        "leverage": _leverage(lev_hits, lev_n, remaining, teams) if leverage else None,
     }
+
+
+EVENTS = ("title", "ucl", "releg")
+EVENT_LABEL = {"title": "the title", "ucl": "a Champions League place",
+               "releg": "relegation"}
+
+
+def _leverage(hits, counts, remaining, teams) -> list[dict]:
+    """Turn conditional tallies into a per-match importance score.
+
+    A match matters to the degree that its result moves someone's season. The
+    score is the largest swing in any club's title, top-five or relegation
+    chance between a home win and an away win -- so a mid-table dead rubber
+    scores near zero even if both clubs are good, and a relegation six-pointer
+    scores highly even between two poor sides.
+    """
+    if hits is None or not len(remaining):
+        return []
+    n = len(teams)
+    out = []
+    with np.errstate(invalid="ignore", divide="ignore"):
+        probs = hits / np.maximum(counts, 1)[:, :, None]          # (3, n_rem, n*3)
+    probs = probs.reshape(3, len(remaining), n, len(EVENTS))
+    for m in range(len(remaining)):
+        swing = probs[0, m] - probs[2, m]                          # home win - away win
+        seen = np.abs(swing)
+        # Only rank a club-event pair when the outcome is genuinely in play;
+        # a swing between 0.1% and 0.2% is noise, not drama.
+        live = (np.maximum(probs[0, m], probs[2, m]) > 0.02) & (seen > 0.005)
+        if not live.any():
+            out.append({"score": 0.0, "swings": []})
+            continue
+        flat = np.where(live, seen, 0.0).ravel()
+        order_idx = np.argsort(flat)[::-1][:3]
+        swings = []
+        for f in order_idx:
+            if flat[f] <= 0:
+                break
+            t_i, e_i = divmod(int(f), len(EVENTS))
+            swings.append({"team": teams[t_i], "event": EVENTS[e_i],
+                           "home": round(float(probs[0, m, t_i, e_i]), 4),
+                           "away": round(float(probs[2, m, t_i, e_i]), 4),
+                           "swing": round(float(swing[t_i, e_i]), 4)})
+        out.append({"score": round(float(flat.max()), 4), "swings": swings})
+    return out

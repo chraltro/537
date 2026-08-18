@@ -7,7 +7,7 @@ import os
 
 import numpy as np
 
-from . import backtest, config, priors, ratings, simulate
+from . import backtest, config, insight, priors, ratings, simulate
 from .data import Dataset
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -91,7 +91,7 @@ def main() -> None:
         adj = base_adj
 
     print(f"Simulating the season {config.N_SIMS:,} times…")
-    sim = simulate.simulate_season(fit, ds.fixtures, teams, adj=adj)
+    sim = simulate.simulate_season(fit, ds.fixtures, teams, adj=adj, leverage=True)
 
     table = ds.season_table(config.SEASON)
     idx = {t: i for i, t in enumerate(teams)}
@@ -127,6 +127,59 @@ def main() -> None:
         })
     rows.sort(key=lambda r: (-r["pts"], -r["gd"]))
 
+    print("Writing match forecasts…")
+    lev_by_match = {}
+    if sim.get("leverage"):
+        for f, lv in zip([x for x in ds.fixtures if not x.played], sim["leverage"]):
+            lev_by_match[(f.home, f.away)] = lv
+
+    ms = []
+    for f in sorted(ds.fixtures, key=lambda x: (x.matchday or 0, x.date, x.home)):
+        rep = simulate.match_report(fit, f.home, f.away, adj)
+        best = rep["top_scores"][0]
+        lv = lev_by_match.get((f.home, f.away))
+        ms.append({
+            "md": f.matchday, "date": f.date.isoformat(), "time": f.time,
+            "h": f.home, "a": f.away,
+            "ph": round(rep["home_win"], 4), "pd": round(rep["draw"], 4),
+            "pa": round(rep["away_win"], 4),
+            "xgh": round(rep["xg_home"], 2), "xga": round(rep["xg_away"], 2),
+            "sc": [best["h"], best["a"]], "scp": round(best["p"], 4),
+            "alt": [[s["h"], s["a"], round(s["p"], 4)] for s in rep["top_scores"][1:4]],
+            "o25": round(rep["over25"], 3), "btts": round(rep["btts"], 3),
+            # 0-6 goals covers 99.9% of the distribution and keeps the payload small
+            "grid": [[round(float(v), 5) for v in row[:7]] for row in rep["grid"][:7]],
+            "lev": round(lv["score"], 4) if lv else 0.0,
+            "swings": lv["swings"] if lv else [],
+            "played": f.played, "hg": f.hg, "ag": f.ag,
+        })
+    json.dump({"matches": ms}, open(os.path.join(OUT, "matches.json"), "w"),
+              separators=(",", ":"))
+    print(f"  → matches.json ({len(ms)} matches)")
+
+    print("Deriving schedule strength, history and in-season scoring…")
+    spi_by_team = {r["id"]: r["spi"] for r in rows}
+    sos = insight.strength_of_schedule(ds.fixtures, teams, spi_by_team, fit.home)
+    for r in rows:
+        s_ = sos[r["id"]]
+        r["sos"] = s_["remaining"]
+        r["sos_rank"] = s_.get("rank")
+        r["sos_played"] = s_["played"]
+        r["next"] = s_["next"]
+    json.dump({"schedule": {t: {"remaining": sos[t]["remaining"],
+                                "played": sos[t]["played"],
+                                "rank": sos[t].get("rank"),
+                                "fixtures": sos[t]["fixtures"]} for t in teams}},
+              open(os.path.join(OUT, "schedule.json"), "w"), separators=(",", ":"))
+
+    frozen = insight.freeze_predictions(ms)
+    report = insight.season_report(ms, frozen, {t: meta[t]["name"] for t in teams})
+    json.dump(report, open(os.path.join(OUT, "season_report.json"), "w"),
+              separators=(",", ":"))
+    hist = insight.append_history(rows, played)
+    print(f"  → schedule.json, predictions.json, season_report.json "
+          f"({report['n']} scored), history.json ({len(hist)} snapshots)")
+
     json.dump({
         "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "season": config.SEASON_LABEL,
@@ -139,26 +192,6 @@ def main() -> None:
         "teams": rows,
     }, open(os.path.join(OUT, "forecast.json"), "w"), separators=(",", ":"))
     print(f"  → forecast.json ({len(rows)} teams)")
-
-    print("Writing match forecasts…")
-    ms = []
-    for f in sorted(ds.fixtures, key=lambda x: (x.matchday or 0, x.date, x.home)):
-        rep = simulate.match_report(fit, f.home, f.away, adj)
-        best = rep["top_scores"][0]
-        ms.append({
-            "md": f.matchday, "date": f.date.isoformat(), "time": f.time,
-            "h": f.home, "a": f.away,
-            "ph": round(rep["home_win"], 4), "pd": round(rep["draw"], 4),
-            "pa": round(rep["away_win"], 4),
-            "xgh": round(rep["xg_home"], 2), "xga": round(rep["xg_away"], 2),
-            "sc": [best["h"], best["a"]], "scp": round(best["p"], 4),
-            "alt": [[s["h"], s["a"], round(s["p"], 4)] for s in rep["top_scores"][1:4]],
-            "o25": round(rep["over25"], 3), "btts": round(rep["btts"], 3),
-            "played": f.played, "hg": f.hg, "ag": f.ag,
-        })
-    json.dump({"matches": ms}, open(os.path.join(OUT, "matches.json"), "w"),
-              separators=(",", ":"))
-    print(f"  → matches.json ({len(ms)} matches)")
 
     if os.environ.get("SKIP_BACKTEST") != "1":
         print("Running the walk-forward backtest…")

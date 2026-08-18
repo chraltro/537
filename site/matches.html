@@ -5,11 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Every match forecast — Premier League 2026/27</title>
 <meta name="description" content="Win, draw and loss probabilities plus a projected scoreline for all 380 Premier League matches in 2026/27.">
+<meta property="og:title" content="All 380 Premier League matches — 2026/27 forecast">
+<meta property="og:description" content="Win, draw and loss probabilities plus a projected scoreline for every fixture.">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
 </head>
 <body>
-<main class="wrap">
+<main class="wrap" id="main">
   <div class="pagehead">
     <h1>All 380 matches</h1>
     <p class="lede">A probability for every fixture in the season, from the opening night at
@@ -25,6 +27,12 @@
     <label for="fmw">Matchweek</label>
     <select id="fmw"><option value="">All matchweeks</option></select>
     <label><input type="checkbox" id="fplayed"> Played only</label>
+    <label for="fsort">Order</label>
+    <select id="fsort">
+      <option value="date">By matchweek</option>
+      <option value="lev">Most at stake first</option>
+      <option value="close">Closest games first</option>
+    </select>
     <span style="margin-left:auto;color:var(--muted);font-size:12.5px" id="count"></span>
   </div>
 
@@ -40,13 +48,14 @@
   <div class="match matchhead">
     <span class="when">Kick-off</span><span class="home">Home</span>
     <span style="text-align:center"><span class="full">Win / draw / loss %</span><span class="abbr">W/D/L</span></span>
-    <span class="away">Away</span><span class="proj">Exp. goals</span><span class="res">Result</span>
+    <span class="away">Away</span><span class="proj">xG</span>
+    <span class="stake">Stakes</span><span class="res">Result</span>
   </div>
   <div id="list"><p class="skeleton">Loading match forecasts…</p></div>
 </main>
 
 <script type="module">
-import { data, pct, esc, initChrome, tip, tipRows, chipColor } from './assets/app.js';
+import { data, pct, esc, initChrome, tip, tipRows, chipColor, initPalette, modal, scoreGrid } from './assets/app.js';
 initChrome('matches');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
@@ -56,7 +65,7 @@ const matches = mm.matches;
 document.getElementById('stamp').innerHTML =
   `<span><b>${matches.filter((m) => m.played).length}</b> played</span>
    <span><b>${matches.filter((m) => !m.played).length}</b> to come</span>
-   <span>Probabilities from the current model, not frozen at kick-off</span>`;
+   <span>Each played match is scored against the forecast frozen <b>before</b> kick-off</span>`;
 
 const fteam = document.getElementById('fteam');
 fteam.insertAdjacentHTML('beforeend', [...fc.teams]
@@ -90,6 +99,8 @@ function row(m) {
     <span class="wdl">${seg('h', m.ph)}${seg('d', m.pd)}${seg('a', m.pa)}</span>
     <span class="away"><span class="chip" style="background:${chipColor(a.primary)}"></span><span class="full">${esc(a.name)}</span><span class="abbr">${esc(a.short)}</span></span>
     <span class="proj">${m.xgh.toFixed(1)}–${m.xga.toFixed(1)}</span>
+    <span class="stake" title="How far this result swings someone's season: ${(m.lev * 100).toFixed(0)} points">
+      <i style="--f:${Math.min(100, (m.lev / 0.2) * 100).toFixed(0)}%"></i></span>
     <span class="res">${res} ${hit}</span>
   </div>`;
 }
@@ -97,17 +108,45 @@ function row(m) {
 matches.forEach((m, i) => { m.i = i; });
 const list = document.getElementById('list');
 
+/* Filters live in the URL, so any view of this page is a link someone can send. */
+const params = new URLSearchParams(location.search);
+if (params.get('t') && meta[params.get('t')]) fteam.value = params.get('t');
+if (params.get('mw')) document.getElementById('fmw').value = params.get('mw');
+if (params.get('sort')) document.getElementById('fsort').value = params.get('sort');
+if (params.get('played') === '1') document.getElementById('fplayed').checked = true;
+
 function draw() {
   const t = fteam.value, w = document.getElementById('fmw').value;
+  const sort = document.getElementById('fsort').value;
   const onlyPlayed = document.getElementById('fplayed').checked;
+
+  const q = new URLSearchParams();
+  if (t) q.set('t', t);
+  if (w) q.set('mw', w);
+  if (sort !== 'date') q.set('sort', sort);
+  if (onlyPlayed) q.set('played', '1');
+  history.replaceState({}, '', q.toString() ? `?${q}` : location.pathname);
+
   const sel = matches.filter((m) =>
     (!t || m.h === t || m.a === t) && (!w || String(m.md) === w) && (!onlyPlayed || m.played));
   document.getElementById('count').textContent = `${sel.length} matches`;
-  if (!sel.length) { list.innerHTML = '<p class="skeleton">No matches match those filters.</p>'; return; }
-  const groups = new Map();
-  sel.forEach((m) => { if (!groups.has(m.md)) groups.set(m.md, []); groups.get(m.md).push(m); });
-  list.innerHTML = [...groups.entries()].map(([md, ms]) =>
-    `<section class="mw"><h3>Matchweek ${md}</h3>${ms.map(row).join('')}</section>`).join('');
+  if (!sel.length) {
+    list.innerHTML = '<p class="empty">No matches match those filters.</p>';
+    return;
+  }
+  if (sort === 'date') {
+    const groups = new Map();
+    sel.forEach((m) => { if (!groups.has(m.md)) groups.set(m.md, []); groups.get(m.md).push(m); });
+    list.innerHTML = [...groups.entries()].map(([md, ms]) =>
+      `<section class="mw"><h3>Matchweek ${md}</h3>${ms.map(row).join('')}</section>`).join('');
+  } else {
+    const key = sort === 'lev' ? ((m) => -m.lev)
+      : ((m) => Math.max(m.ph, m.pd, m.pa));       // closest = flattest distribution
+    const heading = sort === 'lev'
+      ? 'Most at stake' : 'Closest games';
+    list.innerHTML = `<section class="mw"><h3>${heading}</h3>` +
+      [...sel].sort((a, b) => key(a) - key(b)).map(row).join('') + '</section>';
+  }
 }
 window.addEventListener('themechange', draw);
 ['change', 'input'].forEach((ev) => {
@@ -134,6 +173,41 @@ list.addEventListener('mousemove', (e) => {
   ]), e);
 });
 list.addEventListener('mouseleave', () => tip(null));
+document.getElementById('fsort').addEventListener('change', draw);
+
+const EVENT = { title: 'the title', ucl: 'a top-five finish', releg: 'relegation' };
+list.addEventListener('click', (e) => {
+  const el = e.target.closest('.match');
+  if (!el || el.classList.contains('matchhead')) return;
+  const m = matches[+el.dataset.i];
+  const h = meta[m.h], a = meta[m.a];
+  const rows2 = (m.swings || []).map((s) => `<div class="r">
+    <span>${esc(meta[s.team].name)} — ${EVENT[s.event]}</span>
+    <b>${pct(s.away, 1)} → ${pct(s.home, 1)}</b></div>`).join('');
+  tip(null);
+  modal(`
+    <h3>${esc(h.name)} v ${esc(a.name)}</h3>
+    <p class="msub">Matchweek ${m.md} · ${fmt(m.date)}${m.time ? ` · ${m.time}` : ''}
+      ${m.played ? ` · finished ${m.hg}–${m.ag}` : ''}</p>
+    <div class="wdl" style="height:26px;margin-bottom:6px">
+      <i class="h" style="flex:${Math.max(m.ph, .02)}"><b>${Math.round(m.ph * 100)}</b></i>
+      <i class="d" style="flex:${Math.max(m.pd, .02)}"><b>${Math.round(m.pd * 100)}</b></i>
+      <i class="a" style="flex:${Math.max(m.pa, .02)}"><b>${Math.round(m.pa * 100)}</b></i>
+    </div>
+    <div class="hint" style="margin-bottom:20px">
+      ${esc(h.short)} win · draw · ${esc(a.short)} win &nbsp;·&nbsp;
+      expected goals ${m.xgh} – ${m.xga} &nbsp;·&nbsp; over 2.5 goals ${pct(m.o25)}
+      &nbsp;·&nbsp; both score ${pct(m.btts)}</div>
+    <h4 style="font-size:13px;margin:0 0 3px">Every plausible scoreline</h4>
+    <p class="hint" style="margin:0 0 10px">Most likely single score is ${m.sc[0]}–${m.sc[1]},
+      and even that only happens ${pct(m.scp)} of the time.</p>
+    ${scoreGrid(m.grid, h.short + ' goals', a.short)}
+    ${rows2 ? `<h4 style="font-size:13px;margin:22px 0 3px">What rides on it</h4>
+      <p class="hint" style="margin:0 0 10px">Chance if the away side wins → if the home side does.</p>
+      <div id="tipish">${rows2}</div>` : ''}`);
+});
+
+initPalette(fc.teams);
 </script>
 </body>
 </html>
