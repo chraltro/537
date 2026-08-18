@@ -110,8 +110,15 @@ const list = document.getElementById('list');
 
 /* Filters live in the URL, so any view of this page is a link someone can send. */
 const params = new URLSearchParams(location.search);
+
+/* Opening on all 380 fixtures is a 48,000px page on a phone and answers nobody's
+   question. Default to the round that is actually next, and leave the whole
+   season one dropdown away. */
+const nextMw = (matches.find((m) => !m.played) || matches[matches.length - 1]).md;
+document.getElementById('fmw').value = String(nextMw);
+
 if (params.get('t') && meta[params.get('t')]) fteam.value = params.get('t');
-if (params.get('mw')) document.getElementById('fmw').value = params.get('mw');
+if (params.has('mw')) document.getElementById('fmw').value = params.get('mw');
 if (params.get('sort')) document.getElementById('fsort').value = params.get('sort');
 if (params.get('played') === '1') document.getElementById('fplayed').checked = true;
 
@@ -122,14 +129,17 @@ function draw() {
 
   const q = new URLSearchParams();
   if (t) q.set('t', t);
-  if (w) q.set('mw', w);
+  q.set('mw', w);            // recorded even when empty, so "all" survives a reload
   if (sort !== 'date') q.set('sort', sort);
   if (onlyPlayed) q.set('played', '1');
   history.replaceState({}, '', q.toString() ? `?${q}` : location.pathname);
 
   const sel = matches.filter((m) =>
     (!t || m.h === t || m.a === t) && (!w || String(m.md) === w) && (!onlyPlayed || m.played));
-  document.getElementById('count').textContent = `${sel.length} matches`;
+  const total = matches.length;
+  document.getElementById('count').textContent = w
+    ? `${sel.length} of ${total} matches · matchweek ${w}`
+    : `${sel.length} of ${total} matches`;
   if (!sel.length) {
     list.innerHTML = '<p class="empty">No matches match those filters.</p>';
     return;
@@ -201,7 +211,7 @@ list.addEventListener('click', (e) => {
     <h4 style="font-size:13px;margin:0 0 3px">Every plausible scoreline</h4>
     <p class="hint" style="margin:0 0 10px">Most likely single score is ${m.sc[0]}–${m.sc[1]},
       and even that only happens ${pct(m.scp)} of the time.</p>
-    ${scoreGrid(m.grid, h.short + ' goals', a.short)}
+    ${scoreGrid(m.grid, h.short, a.short, m.sc)}
     ${rows2 ? `<h4 style="font-size:13px;margin:22px 0 3px">What rides on it</h4>
       <p class="hint" style="margin:0 0 10px">Chance if the away side wins → if the home side does.</p>
       <div id="tipish">${rows2}</div>` : ''}`);

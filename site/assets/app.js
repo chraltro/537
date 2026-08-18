@@ -275,25 +275,36 @@ export function closeModal() {
 
 /* ================= score heatmap =================
    The exact scoreline distribution, which is the honest answer to "what will
-   the score be": not one number but a cloud, usually a fairly flat one.   */
-export function scoreGrid(grid, homeName, awayName) {
+   the score be": not one number but a cloud, usually a fairly flat one.
+
+   Both axes carry goal counts. Without them the grid is decoration — you can
+   see that some cell is likely without being able to say which score it is. */
+export function scoreGrid(grid, homeShort, awayShort, best) {
+  const n = grid.length;
   const max = Math.max(...grid.flat());
-  const cells = grid.map((row, h) => row.map((p, a) => {
-    const t = Math.min(1, (p / max) ** 0.55);
-    const step = p < 0.002 ? 0 : Math.min(6, Math.max(1, Math.ceil(t * 6)));
-    // Only ring the draw diagonal where a draw is actually plausible; a ring on
-    // 6-6 is decoration pointing at nothing.
-    const res = (h === a && p >= 0.002) ? 'draw' : (h > a ? 'home' : 'away');
-    return `<div class="gcell" style="background:var(--ramp-${step})"
-      data-h="${h}" data-a="${a}" data-p="${p}" data-res="${res}"
-      title="${h}–${a}: ${(p * 100).toFixed(1)}%">${p >= 0.05 ? (p * 100).toFixed(0) : ''}</div>`;
-  }).join('')).join('');
+  const ticks = Array.from({ length: n }, (_, i) => i);
+
+  const head = `<div class="gcorner"></div>` +
+    ticks.map((a) => `<div class="gtick">${a}</div>`).join('');
+
+  const body = grid.map((row, h) =>
+    `<div class="gtick row">${h}</div>` + row.map((p, a) => {
+      const t = Math.min(1, (p / max) ** 0.55);
+      const step = p < 0.002 ? 0 : Math.min(6, Math.max(1, Math.ceil(t * 6)));
+      const isBest = best && best[0] === h && best[1] === a;
+      return `<div class="gcell${isBest ? ' best' : ''}" style="background:var(--ramp-${step})"
+        tabindex="0" role="img"
+        aria-label="${homeShort} ${h}, ${awayShort} ${a}: ${(p * 100).toFixed(1)} percent"
+        title="${homeShort} ${h}–${a} ${awayShort} · ${(p * 100).toFixed(1)}%"
+        >${p >= 0.04 ? Math.round(p * 100) : ''}</div>`;
+    }).join('')).join('');
+
   return `
     <div class="gwrap">
-      <div class="gaxis-y" aria-hidden="true">${esc(homeName)}</div>
-      <div>
-        <div class="ggrid">${cells}</div>
-        <div class="gaxis-x" aria-hidden="true">${esc(awayName)} goals →</div>
+      <div class="gaxis-y">${esc(homeShort)} goals</div>
+      <div class="gmain">
+        <div class="ggrid" style="--n:${n}">${head}${body}</div>
+        <div class="gaxis-x">${esc(awayShort)} goals</div>
       </div>
     </div>`;
 }

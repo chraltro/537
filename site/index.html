@@ -43,16 +43,16 @@
         <thead><tr>
           <th class="l" data-k="rank">#</th>
           <th class="l" data-k="name">Club</th>
-          <th data-k="spi" title="Expected share of points against an average team">SPI</th>
-          <th data-k="off" title="Goals expected to score vs an average team">Att</th>
-          <th data-k="def" title="Goals expected to concede vs an average team">Def</th>
+          <th class="p3" data-k="spi" title="Expected share of points against an average team">SPI</th>
+          <th class="p4" data-k="off" title="Goals expected to score vs an average team">Att</th>
+          <th class="p4" data-k="def" title="Goals expected to concede vs an average team">Def</th>
           <th data-k="pts">Points</th>
-          <th data-k="gd">GD</th>
-          <th data-k="sos" title="Average rating of the opponents left to play">Sched</th>
+          <th class="p3" data-k="gd">GD</th>
+          <th class="p4" data-k="sos" title="Average rating of the opponents left to play">Sched</th>
           <th data-k="title">Title</th>
-          <th data-k="ucl">Top 5</th>
-          <th data-k="europa">Europa</th>
-          <th data-k="releg">Relegated</th>
+          <th class="p2" data-k="ucl">Top 5</th>
+          <th class="p4" data-k="europa">Europa</th>
+          <th data-k="releg">Down</th>
         </tr></thead>
         <tbody id="tbody"><tr><td colspan="11" class="skeleton">Loading forecast…</td></tr></tbody>
       </table>
@@ -133,17 +133,17 @@ function render(list) {
         <a href="team.html?t=${t.id}">${esc(t.name)}</a>
         ${t.promoted ? '<span class="tag">Promoted</span>' : ''}
       </span></td>
-      <td><b>${t.spi.toFixed(1)}</b></td>
-      <td>${t.off.toFixed(2)}</td>
-      <td>${t.def.toFixed(2)}</td>
+      <td class="p3"><b>${t.spi.toFixed(1)}</b></td>
+      <td class="p4">${t.off.toFixed(2)}</td>
+      <td class="p4">${t.def.toFixed(2)}</td>
       <td><b>${t.pts.toFixed(1)}</b>
         <span class="minibar" style="width:${(t.pts / maxPts * 100).toFixed(1)}%"></span></td>
-      <td>${signed(t.gd)}</td>
+      <td class="p3">${signed(t.gd)}</td>
       <td title="Average opponent rating; ${t.sos_rank ? ord(t.sos_rank) + ' hardest' : ''}"
-          class="${t.sos_rank && t.sos_rank <= 5 ? 'p-hi' : 'p-lo'}">${t.sos ?? '—'}</td>
+          class="p4 ${t.sos_rank && t.sos_rank <= 5 ? 'p-hi' : 'p-lo'}">${t.sos ?? '—'}</td>
       <td class="${cls(t.title)}">${pct(t.title)}</td>
-      <td class="${cls(t.ucl)}">${pct(t.ucl)}</td>
-      <td class="${cls(t.europa)}">${pct(t.europa)}</td>
+      <td class="p2 ${cls(t.ucl)}">${pct(t.ucl)}</td>
+      <td class="p4 ${cls(t.europa)}">${pct(t.europa)}</td>
       <td class="${cls(t.releg)}">${pct(t.releg)}</td>
     </tr>`).join('');
 }
@@ -169,8 +169,12 @@ tbody.addEventListener('mouseleave', () => tip(null));
 /* ---- season strip ---- */
 const ucl = fc.ucl_places;
 const maxCell = Math.max(...rows.flatMap((t) => t.pos));
+/* Twenty numbers do not fit on a phone; show the ones that orient the reader. */
+const sparse = matchMedia('(max-width: 900px)').matches;
 const head = `<div class="strip-head"><span></span><div class="axis20">${
-  Array.from({ length: 20 }, (_, i) => `<span>${i + 1}</span>`).join('')}</div></div>`;
+  Array.from({ length: 20 }, (_, i) =>
+    `<span>${!sparse || [1, 5, 10, 15, 20].includes(i + 1) ? i + 1 : ''}</span>`).join('')
+  }</div></div>`;
 
 const strip = rows.map((t) => `
   <div class="strip-row" data-id="${t.id}">
@@ -255,7 +259,7 @@ function openMatch(m) {
     <p class="hint" style="margin:0 0 10px">Percent chance of each exact result. The most
       likely single score is ${m.sc[0]}–${m.sc[1]}, and even that only happens
       ${pct(m.scp)} of the time — which is the honest shape of a football match.</p>
-    ${scoreGrid(m.grid, h.short + ' goals', a.short)}
+    ${scoreGrid(m.grid, h.short, a.short, m.sc)}
     ${rows2 ? `<h4 style="font-size:13px;margin:22px 0 3px">What rides on it</h4>
       <p class="hint" style="margin:0 0 10px">Chance if the away side wins → if the home side does.</p>
       <div id="tipish">${rows2}</div>` : ''}`);
