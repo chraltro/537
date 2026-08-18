@@ -58,6 +58,16 @@
     </div>
   </section>
 
+  <section class="card" id="linescard" hidden>
+    <h2>The lines</h2>
+    <p class="sub">Not what the winner averages — what it actually takes. Each figure is read
+      off the boundary position of the simulated tables: the champion's points, fifth place's,
+      and seventeenth's (the last safe spot).</p>
+    <div class="tiles" id="linetiles" style="margin-bottom:6px"></div>
+    <p class="hint">The range is where 80% of simulations land. "Enough" is the total that
+      cleared the line in nine seasons out of ten.</p>
+  </section>
+
   <section class="card" id="movecard" hidden>
     <div class="cardbar">
       <h2>How the forecast has moved</h2>
@@ -198,6 +208,18 @@ initChrome('method');
 
 const fc = await data('forecast');
 initPalette(fc.teams);
+
+/* ---- the lines ---- */
+if (fc.lines) {
+  const L = fc.lines;
+  document.getElementById('linescard').hidden = false;
+  document.getElementById('linetiles').innerHTML = [
+    ['Winning the title', `${L.title.p50} pts`, `80% of champions land ${L.title.p10}–${L.title.p90}`],
+    ['Making the top five', `${L.top5.p50} pts`, `${L.top5.enough90} was enough in 90% of seasons`],
+    ['Staying up', `${L.safety.p50} pts`, `${L.safety.enough90} was enough in 90% of seasons`],
+  ].map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div>
+      <div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
+}
 
 /* ---- how the forecast has moved ---- */
 let hist = null;

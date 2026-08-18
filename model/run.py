@@ -189,6 +189,7 @@ def main() -> None:
         "home_advantage": round(float(np.exp(fit.home)), 3),
         "ucl_places": config.UCL_PLACES,
         "n_sims": int(sim["n_sims"]),
+        "lines": sim.get("lines"),
         "teams": rows,
     }, open(os.path.join(OUT, "forecast.json"), "w"), separators=(",", ":"))
     print(f"  → forecast.json ({len(rows)} teams)")

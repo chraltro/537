@@ -119,6 +119,10 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
     scenarios = max(1, n_sims // per)
     pos_counts = np.zeros((n, n), dtype=np.int64)
     pts_team = np.empty((scenarios * per, n))
+    # Points by finishing position, kept per simulated season: this is what
+    # answers "how many points win the title" and "what keeps you up", which
+    # no club-centric average can.
+    pos_pts = np.empty((scenarios * per, n), dtype=np.float32)
     gd_sum = np.zeros(n)
     # Conditional tallies for match importance: for every remaining fixture and
     # every possible result, how often each club ends up champion / in the top
@@ -175,6 +179,7 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
         flat_idx = order.ravel() * n + np.tile(np.arange(n), per)
         pos_counts += np.bincount(flat_idx, minlength=n * n).reshape(n, n)
         pts_team[cursor:cursor + per] = pts
+        pos_pts[cursor:cursor + per] = np.take_along_axis(pts, order, axis=1)
         gd_sum += gd.sum(axis=0)
         cursor += per
 
@@ -207,8 +212,32 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
         "europa": p[:, config.UCL_PLACES:config.UCL_PLACES + config.EUROPA_PLACES].sum(axis=1),
         "relegation": p[:, -config.RELEGATION_PLACES:].sum(axis=1),
         "n_sims": total,
+        "lines": _lines(pos_pts[:total]),
         "leverage": _leverage(lev_hits, lev_n, remaining, teams) if leverage else None,
     }
+
+
+def _lines(pos_pts: np.ndarray) -> dict:
+    """The season's thresholds, read off the simulated tables.
+
+    'How many points win the league' is a different question from 'how many
+    points will the winner average', and only the first is useful to a fan
+    doing arithmetic in April. Each line reports the points of the side that
+    finished in the boundary position, plus the total that was enough in 90%
+    of seasons."""
+    out = {}
+    for key, pos in (("title", 0), ("top5", config.UCL_PLACES - 1),
+                     ("safety", config.N_TEAMS - config.RELEGATION_PLACES - 1)):
+        col = pos_pts[:, pos]
+        out[key] = {
+            "p10": int(np.percentile(col, 10)),
+            "p50": int(np.percentile(col, 50)),
+            "p90": int(np.percentile(col, 90)),
+            # for the title you must MEET the winner's total; for top-five and
+            # safety, matching the boundary side's points is (roughly) enough
+            "enough90": int(np.percentile(col, 90)) + (1 if key != "title" else 0),
+        }
+    return out
 
 
 EVENTS = ("title", "ucl", "releg")

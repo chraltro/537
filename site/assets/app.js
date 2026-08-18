@@ -388,3 +388,47 @@ export function lineChart(series, { w = 720, h = 260, pad = 34, fmt = (v) => v,
       <text x="${w - 86}" y="${y(s.points[n - 1]) + 4}" fill="var(--ink2)" font-size="11">${esc(s.label)}</text>`).join('')}
   </svg>`;
 }
+
+/* ================= match dialog =================
+   One implementation shared by every page that can open a match. `meta` is the
+   forecast's team map; `opts.link` adds a permalink to the matches page. */
+export function matchModal(m, meta, opts = {}) {
+  const EVENT = { title: 'the title', ucl: 'a top-five finish', releg: 'relegation' };
+  const h = meta[m.h], a = meta[m.a];
+  const fmtDay = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
+    { weekday: 'short', day: 'numeric', month: 'short' });
+  const swings = (m.swings || []).map((s) => `
+    <div class="swing-row">
+      <span>${esc(meta[s.team].name)} — ${EVENT[s.event]}</span>
+      ${swingBar(s.away, s.home, meta[s.team].name + ' ' + EVENT[s.event])}
+      <b>${pct(s.away)} → ${pct(s.home)}</b>
+    </div>`).join('');
+  tip(null);
+  modal(`
+    <h3>${esc(h.name)} v ${esc(a.name)}</h3>
+    <p class="msub">Matchweek ${m.md} · ${fmtDay(m.date)}${m.time ? ` · ${m.time}` : ''}
+      ${m.played ? ` · finished ${m.hg}–${m.ag}` : ''}
+      ${opts.link === false ? '' :
+        ` · <a href="${BASE}matches.html?m=${m.h}--${m.a}">link to this match</a>`}</p>
+    <div class="wdl" style="height:26px;margin-bottom:6px">
+      <i class="h" style="flex:${Math.max(m.ph, .02)}"><b>${Math.round(m.ph * 100)}</b></i>
+      <i class="d" style="flex:${Math.max(m.pd, .02)}"><b>${Math.round(m.pd * 100)}</b></i>
+      <i class="a" style="flex:${Math.max(m.pa, .02)}"><b>${Math.round(m.pa * 100)}</b></i>
+    </div>
+    <div class="hint" style="margin-bottom:20px">
+      ${esc(h.short)} win · draw · ${esc(a.short)} win &nbsp;·&nbsp;
+      expected goals ${m.xgh} – ${m.xga} &nbsp;·&nbsp; over 2.5 goals ${pct(m.o25)}
+      &nbsp;·&nbsp; both score ${pct(m.btts)}</div>
+    <h4>Every plausible scoreline</h4>
+    <p class="hint" style="margin:0 0 12px">The likeliest single score is ${m.sc[0]}–${m.sc[1]},
+      and even that lands only ${pct(m.scp)} of the time.</p>
+    ${scoreGrid(m.grid, h.short, a.short, m.sc)}
+    ${swings ? `<h4 style="margin-top:24px">What rides on it</h4>
+      <p class="hint" style="margin:0 0 6px">Where each club's season stands if the away
+        side wins, and if the home side does.</p>
+      ${swings}
+      <div class="swing-key">
+        <span><i style="background:var(--away)"></i>${esc(a.short)} win</span>
+        <span><i style="background:var(--accent)"></i>${esc(h.short)} win</span>
+      </div>` : ''}`);
+}

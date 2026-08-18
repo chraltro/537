@@ -71,6 +71,7 @@
         <span>Rules mark the Champions League cut and the relegation places.</span>
       </div>
     </div>
+    <p class="hint" id="lines" style="margin-top:16px"></p>
   </section>
 
   <section class="card">
@@ -95,11 +96,13 @@
 
 <script type="module">
 import { data, pct, signed, esc, ord, initChrome, tip, tipRows, rampColor,
-         makeSortable, chipColor, initPalette, modal, scoreGrid, swingBar } from './assets/app.js';
+         makeSortable, chipColor, initPalette, matchModal } from './assets/app.js';
 initChrome('table');
 
+/* forecast.json is 28KB and paints the whole page; matches.json is 350KB and
+   only feeds the next-up card. Fetch both at once, render on the first. */
+const mmPromise = data('matches');
 const fc = await data('forecast');
-const mm = await data('matches');
 const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
 const rows = fc.teams.map((t, i) => ({ ...t, rank: i + 1 }));
 const byTitle = [...rows].sort((a, b) => b.title - a.title);
@@ -124,6 +127,14 @@ document.getElementById('stamp').innerHTML = `
   <span>Season <b>${esc(fc.season)}</b></span>
   <span><b>${fc.matches_played}</b> of ${fc.matches_total} played</span>
   <span>Updated <b>${fmtStamp(fc.generated)}</b></span>`;
+
+if (fc.lines) {
+  const L = fc.lines;
+  document.getElementById('lines').textContent =
+    `Across these simulations the title is usually won with about ${L.title.p50} points, `
+    + `the top five taken with ${L.top5.p50}, and ${L.safety.enough90} is enough to stay up `
+    + `in nine seasons out of ten.`;
+}
 
 document.getElementById('tiles').innerHTML = [
   ['Title favourite', esc(lead.name), `${pct(lead.title)} across every simulation`],
@@ -231,8 +242,9 @@ document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('clic
     : 'Each row is one club’s full spread of finishing positions. A tight band means the model is confident; a smear across ten places means it is not.';
 }));
 
-/* ---- next up ---- */
-const EVENT = { title: 'the title', ucl: 'a top-five finish', releg: 'relegation' };
+/* ---- next up (needs matches.json; the page above is already painted) ---- */
+initPalette(fc.teams);
+const mm = await mmPromise;
 const next = mm.matches.find((m) => !m.played);
 const round = next ? mm.matches.filter((m) => m.md === next.md) : [];
 document.getElementById('nexthead').textContent =
@@ -254,57 +266,23 @@ document.getElementById('nextup').innerHTML = round.length ? round.map((m) => `
       <i style="--f:${Math.min(100, (m.lev / maxLev) * 100).toFixed(0)}%"></i></span>
   </div>`).join('') : '<p class="empty">No fixtures left to play.</p>';
 
-function openMatch(m) {
-  const h = meta[m.h], a = meta[m.a];
-  const swings = (m.swings || []).map((s) => `
-    <div class="swing-row">
-      <span>${esc(meta[s.team].name)} — ${EVENT[s.event]}</span>
-      ${swingBar(s.away, s.home, meta[s.team].name + ' ' + EVENT[s.event])}
-      <b>${pct(s.away)} → ${pct(s.home)}</b>
-    </div>`).join('');
-  modal(`
-    <h3>${esc(h.name)} v ${esc(a.name)}</h3>
-    <p class="msub">Matchweek ${m.md} · ${fmtDay(m.date)}${m.time ? ` · ${m.time}` : ''}
-      ${m.played ? ` · finished ${m.hg}–${m.ag}` : ''}</p>
-    <div class="wdl" style="height:26px;margin-bottom:6px">
-      <i class="h" style="flex:${Math.max(m.ph, .02)}"><b>${Math.round(m.ph * 100)}</b></i>
-      <i class="d" style="flex:${Math.max(m.pd, .02)}"><b>${Math.round(m.pd * 100)}</b></i>
-      <i class="a" style="flex:${Math.max(m.pa, .02)}"><b>${Math.round(m.pa * 100)}</b></i>
-    </div>
-    <div class="hint" style="margin-bottom:20px">
-      ${esc(h.short)} win · draw · ${esc(a.short)} win &nbsp;·&nbsp;
-      expected goals ${m.xgh} – ${m.xga} &nbsp;·&nbsp; over 2.5 goals ${pct(m.o25)}
-      &nbsp;·&nbsp; both score ${pct(m.btts)}</div>
-    <h4>Every plausible scoreline</h4>
-    <p class="hint" style="margin:0 0 12px">The likeliest single score is ${m.sc[0]}–${m.sc[1]},
-      and even that lands only ${pct(m.scp)} of the time.</p>
-    ${scoreGrid(m.grid, h.short, a.short, m.sc)}
-    ${swings ? `<h4 style="margin-top:24px">What rides on it</h4>
-      <p class="hint" style="margin:0 0 6px">Where each club's season stands if the away
-        side wins, and if the home side does.</p>
-      ${swings}
-      <div class="swing-key">
-        <span><i style="background:var(--away)"></i>${esc(a.short)} win</span>
-        <span><i style="background:var(--accent)"></i>${esc(h.short)} win</span>
-      </div>` : ''}`);
-}
+const openByKey = (key) => {
+  const [hh, aa] = key.split('|');
+  matchModal(mm.matches.find((m) => m.h === hh && m.a === aa), meta);
+};
 const nx = document.getElementById('nextup');
 nx.addEventListener('click', (e) => {
   const el = e.target.closest('.fix');
-  if (!el) return;
-  const [hh, aa] = el.dataset.key.split('|');
-  openMatch(mm.matches.find((m) => m.h === hh && m.a === aa));
+  if (el) openByKey(el.dataset.key);
 });
 nx.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' && e.key !== ' ') return;
   const el = e.target.closest('.fix');
   if (!el) return;
   e.preventDefault();
-  const [hh, aa] = el.dataset.key.split('|');
-  openMatch(mm.matches.find((m) => m.h === hh && m.a === aa));
+  openByKey(el.dataset.key);
 });
 
-initPalette(fc.teams);
 window.addEventListener('themechange', () => {
   document.querySelectorAll('.chip').forEach((el) => {
     const t = rows.find((r) => r.id === el.closest('[data-id]')?.dataset.id);

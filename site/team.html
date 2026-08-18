@@ -81,6 +81,13 @@
   </section>
 
   <section class="card">
+    <h2>The matches that will decide their season</h2>
+    <p class="sub">Ranked by how far the result moves this club's own title, top-five or
+      relegation chances. Click one for the full picture.</p>
+    <div id="clubbig"></div>
+  </section>
+
+  <section class="card">
     <h2>Every fixture</h2>
     <p class="sub">Win probability for this club in each match of the season.</p>
     <div id="fixtures"></div>
@@ -88,7 +95,7 @@
 </main>
 
 <script type="module">
-import { data, pct, signed, esc, ord, initChrome, tip, tipRows, sparkline, chipColor, initPalette } from './assets/app.js';
+import { data, pct, signed, esc, ord, initChrome, tip, tipRows, sparkline, chipColor, initPalette, matchModal } from './assets/app.js';
 initChrome('team');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
@@ -104,8 +111,15 @@ pick.addEventListener('change', () => {
   current = pick.value;
   history.replaceState({}, '', `?t=${current}`);
   render();
+});
+
 window.addEventListener('themechange', render);
 initPalette(fc.teams);
+document.getElementById('clubbig').addEventListener('click', (e) => {
+  const el = e.target.closest('.bigmatch');
+  if (!el) return;
+  const [hh, aa] = el.dataset.key.split('|');
+  matchModal(mm.matches.find((m) => m.h === hh && m.a === aa), meta);
 });
 
 function render() {
@@ -163,6 +177,27 @@ function render() {
        <b>${t.sos}</b> — the ${ord(t.sos_rank)} hardest schedule in the league.
        Every club's schedule excludes itself, so strong clubs get an easier one by construction.`
     : '';
+
+  /* the club's own highest-stakes fixtures, from the same conditional sims */
+  const EVENT = { title: 'the title', ucl: 'a top-five finish', releg: 'relegation' };
+  const fmtD = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
+    { day: 'numeric', month: 'short' });
+  const mine = mm.matches
+    .map((m) => ({ m, s: (m.swings || []).find((s) => s.team === current) }))
+    .filter((x) => x.s && !x.m.played)
+    .sort((a, b) => Math.abs(b.s.swing) - Math.abs(a.s.swing))
+    .slice(0, 5);
+  document.getElementById('clubbig').innerHTML = mine.length ? mine.map(({ m, s }) => {
+    const opp = meta[m.h === current ? m.a : m.h];
+    const lo = Math.min(s.home, s.away), hi = Math.max(s.home, s.away);
+    return `<div class="bigmatch" data-key="${m.h}|${m.a}">
+      <span class="mdno">MW ${m.md}<br>${fmtD(m.date)}</span>
+      <span><span class="teams">${m.h === current ? 'v' : 'at'} ${esc(opp.name)}</span>
+        <span class="why">Chance of ${EVENT[s.event]} moves ${pct(lo)} → ${pct(hi)}
+          with the result</span></span>
+      <span class="score"><b>${(Math.abs(s.swing) * 100).toFixed(0)}</b><span>swing</span></span>
+    </div>`;
+  }).join('') : '<p class="empty">Nothing left with much riding on it.</p>';
 
   const fx = mm.matches.filter((m) => m.h === current || m.a === current);
   document.getElementById('fixtures').innerHTML = fx.map((m) => {

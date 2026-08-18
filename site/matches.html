@@ -66,7 +66,7 @@
 </main>
 
 <script type="module">
-import { data, pct, esc, initChrome, tip, tipRows, chipColor, initPalette, modal, scoreGrid, swingBar } from './assets/app.js';
+import { data, pct, esc, initChrome, tip, tipRows, chipColor, initPalette, matchModal } from './assets/app.js';
 initChrome('matches');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
@@ -197,42 +197,7 @@ list.addEventListener('mouseleave', () => tip(null));
 document.getElementById('fsort').addEventListener('change', draw);
 
 const EVENT = { title: 'the title', ucl: 'a top-five finish', releg: 'relegation' };
-
-function openMatch(m) {
-  const h = meta[m.h], a = meta[m.a];
-  const swings = (m.swings || []).map((s) => `
-    <div class="swing-row">
-      <span>${esc(meta[s.team].name)} — ${EVENT[s.event]}</span>
-      ${swingBar(s.away, s.home, meta[s.team].name + ' ' + EVENT[s.event])}
-      <b>${pct(s.away)} → ${pct(s.home)}</b>
-    </div>`).join('');
-  tip(null);
-  modal(`
-    <h3>${esc(h.name)} v ${esc(a.name)}</h3>
-    <p class="msub">Matchweek ${m.md} · ${fmt(m.date)}${m.time ? ` · ${m.time}` : ''}
-      ${m.played ? ` · finished ${m.hg}–${m.ag}` : ''}</p>
-    <div class="wdl" style="height:26px;margin-bottom:6px">
-      <i class="h" style="flex:${Math.max(m.ph, .02)}"><b>${Math.round(m.ph * 100)}</b></i>
-      <i class="d" style="flex:${Math.max(m.pd, .02)}"><b>${Math.round(m.pd * 100)}</b></i>
-      <i class="a" style="flex:${Math.max(m.pa, .02)}"><b>${Math.round(m.pa * 100)}</b></i>
-    </div>
-    <div class="hint" style="margin-bottom:20px">
-      ${esc(h.short)} win · draw · ${esc(a.short)} win &nbsp;·&nbsp;
-      expected goals ${m.xgh} – ${m.xga} &nbsp;·&nbsp; over 2.5 goals ${pct(m.o25)}
-      &nbsp;·&nbsp; both score ${pct(m.btts)}</div>
-    <h4>Every plausible scoreline</h4>
-    <p class="hint" style="margin:0 0 12px">The likeliest single score is ${m.sc[0]}–${m.sc[1]},
-      and even that lands only ${pct(m.scp)} of the time.</p>
-    ${scoreGrid(m.grid, h.short, a.short, m.sc)}
-    ${swings ? `<h4 style="margin-top:24px">What rides on it</h4>
-      <p class="hint" style="margin:0 0 6px">Where each club's season stands if the away
-        side wins, and if the home side does.</p>
-      ${swings}
-      <div class="swing-key">
-        <span><i style="background:var(--away)"></i>${esc(a.short)} win</span>
-        <span><i style="background:var(--accent)"></i>${esc(h.short)} win</span>
-      </div>` : ''}`);
-}
+const openMatch = (m) => matchModal(m, meta, { link: false });
 
 list.addEventListener('click', (e) => {
   const el = e.target.closest('.match');
@@ -241,6 +206,17 @@ list.addEventListener('click', (e) => {
 });
 
 initPalette(fc.teams);
+
+/* ?m=home--away is a shareable link straight into one match's dialog */
+if (params.get('m')) {
+  const [hh, aa] = params.get('m').split('--');
+  const m0 = matches.find((x) => x.h === hh && x.a === aa);
+  if (m0) {
+    document.getElementById('fmw').value = String(m0.md);
+    draw();
+    openMatch(m0);
+  }
+}
 
 /* ---- the biggest games left, wherever they fall in the calendar ---- */
 const big = matches.filter((m) => !m.played && m.lev > 0)
