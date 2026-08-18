@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The races — Premier League 2026/27</title>
+<meta name="description" content="The Premier League 2026/27 title race, the fight for the top five and the relegation battle — with the week's biggest forecast movers and the run of fixtures each contender faces.">
+<meta property="og:title" content="The races — Premier League 2026/27 forecast">
+<meta property="og:description" content="Who is winning the title, the top five and the relegation fight — and how the forecast has moved this week.">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
+<style>
+  /* The chip row is a jump list, so the browser does the scrolling; the offset
+     keeps a section's heading clear of the sticky masthead. */
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  .card[id] { scroll-margin-top: 74px; }
+
+  .racenav { margin: 0 0 22px; position: sticky; top: 68px; z-index: 20; }
+  .racenav a { text-decoration: none; display: inline-block; }
+  .racenav a:hover { text-decoration: none; }
+
+  /* One row per contender: who, the number, the supporting numbers, the run-in.
+     The run-in is the widest thing on the row, so it takes what is left. */
+  .racerow {
+    display: grid; grid-template-columns: 186px 78px 124px minmax(0, 1fr);
+    gap: 14px; align-items: center;
+    padding: 12px 2px; border-bottom: 1px solid var(--grid);
+  }
+  .racerow:last-child { border-bottom: 0; }
+  .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .who a { color: var(--ink); font-weight: 550; }
+  .who .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .racerow .big {
+    font-size: 23px; font-weight: 700; letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+  .racerow .big small {
+    display: block; color: var(--muted); font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .06em; letter-spacing: .06em;
+  }
+  .racerow .num { color: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .racerow .num b { color: var(--ink); font-weight: 650; }
+  .racerow .num span { color: var(--muted); }
+  .runin { display: flex; justify-content: flex-end; }
+  .runin .fdr { justify-content: flex-end; }
+  /* Six squares have to fit the width of a phone in one row, so the narrow-screen
+     size in the shared sheet is restated here at a specificity that survives. */
+  @media (max-width: 620px) {
+    .runin .fdr { gap: 5px; }
+    .runin .fdr .box { width: 44px; height: 34px; font-size: 10.5px; }
+  }
+
+  /* This week's movers: before, after, and the size of the change. */
+  .mover {
+    display: grid; grid-template-columns: 186px 116px minmax(130px, 1fr) 104px;
+    gap: 14px; align-items: center;
+    padding: 11px 2px; border-bottom: 1px solid var(--grid);
+  }
+  .mover:last-child { border-bottom: 0; }
+  .mover .metric {
+    color: var(--muted); font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  .mover .swap { color: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .mover .swap b { color: var(--ink); font-weight: 650; }
+  /* The bar is a reading of one number, not a track to be filled edge to edge. */
+  .mover .swap .pbar { max-width: 180px; }
+  .mover .delta {
+    text-align: right; font-variant-numeric: tabular-nums; font-weight: 700;
+    white-space: nowrap; font-size: 14px;
+  }
+  /* Colour says whether the move is good news for the club; the arrow says
+     which way the number went. Neither carries the meaning on its own. */
+  .mover .delta.good { color: var(--good); }
+  .mover .delta.bad  { color: var(--critical); }
+  .mover .delta i { font-style: normal; margin-right: 3px; }
+  .mover .delta em { font-style: normal; color: var(--muted); font-weight: 600; font-size: 11px; }
+
+  .charthead { color: var(--ink2); font-size: 12.5px; font-weight: 600; margin: 20px 0 6px; }
+  /* Shock rows borrow the shared detail-row style; the date belongs under the
+     scoreline rather than running on from it. */
+  #tipish .hint { display: block; margin-top: 1px; }
+  #tipish .pbar { max-width: 320px; }
+
+  @media (max-width: 900px) {
+    .racerow { grid-template-columns: 1fr 78px; gap: 6px 12px; padding: 14px 2px; }
+    .racerow .big { text-align: right; grid-row: 1; grid-column: 2; }
+    .racerow .num { grid-column: 1 / -1; }
+    .racerow .runin { grid-column: 1 / -1; justify-content: flex-start; }
+    .runin .fdr { justify-content: flex-start; }
+    .mover { grid-template-columns: 1fr auto; gap: 4px 12px; }
+    .mover .metric { grid-row: 1; grid-column: 2; text-align: right; }
+    .mover .swap { grid-column: 1 / -1; }
+    .mover .delta { grid-column: 1 / -1; text-align: left; }
+    .racenav { position: static; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap" id="main">
+  <div class="pagehead">
+    <h1>The races</h1>
+    <p class="lede" id="lede">Loading the forecast…</p>
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <nav class="chips racenav" aria-label="Jump to a race">
+    <a class="chip-btn" href="#week">This week</a>
+    <a class="chip-btn" href="#title">The title</a>
+    <a class="chip-btn" href="#topfive">Top five</a>
+    <a class="chip-btn" href="#relegation">Relegation</a>
+  </nav>
+
+  <section class="card" id="week">
+    <div class="cardbar">
+      <h2 id="weekhead">This week</h2>
+      <a class="morelink" href="method.html">How the forecast is scored →</a>
+    </div>
+    <p class="sub" id="weeksub"></p>
+    <div id="weekbody"></div>
+  </section>
+
+  <section class="card" id="title">
+    <h2>The title race</h2>
+    <p class="sub">The five clubs with the best chance of winning it, with the run of
+      fixtures each faces next. Squares are shaded by the opponent's rating adjusted for
+      venue; outlined squares are away trips.</p>
+    <div id="titlerows"></div>
+    <div id="titlechart"></div>
+  </section>
+
+  <section class="card" id="topfive">
+    <h2>The top-five race</h2>
+    <p class="sub">The contested part of the table: clubs whose Champions League place is
+      neither settled nor gone. Ranked by their chance of finishing in the top five.</p>
+    <div id="uclrows"></div>
+    <div id="uclchart"></div>
+  </section>
+
+  <section class="card" id="relegation">
+    <h2>The relegation battle</h2>
+    <p class="sub">Every club the model gives a real chance of going down — anything above
+      one season in twenty. The last column is the margin between a club's projected total
+      and the points that usually keep a side up.</p>
+    <div id="relrows"></div>
+    <p class="hint" id="safetynote" style="margin-top:14px"></p>
+    <div id="relchart"></div>
+  </section>
+
+  <nav class="deeper" aria-label="Go deeper">
+    <a href="index.html"><b>The projected table</b>
+      <span>Every club, its points, and its full spread of finishing positions.</span></a>
+    <a href="matches.html"><b>Every match</b>
+      <span>All 380 fixtures, sorted by how much the result swings someone's season.</span></a>
+    <a href="method.html"><b>How it works, and how well</b>
+      <span>The model, the backtest, and the honest in-season scorecard.</span></a>
+  </nav>
+</main>
+
+<script type="module">
+import { data, pct, esc, initChrome, initPalette, chipColor,
+         lineChart, probBar } from './assets/app.js';
+initChrome('races');
+
+const fc = await data('forecast');
+/* Everything below the forecast is optional: the page has to be right on the
+   first build of a season, when none of these files exist yet. */
+const soft = async (n) => { try { return await data(n); } catch { return null; } };
+const [sc, rc, hs] = await Promise.all([soft('schedule'), soft('recap'), soft('history')]);
+const sched = sc?.schedule || {};
+const snaps = hs?.snapshots || [];
+const recap = rc || { mode: 'preseason', movers: [], shocks: [],
+                      note: 'Baseline preseason forecast — movement tracking begins once results arrive.' };
+
+const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
+const byTitle = [...fc.teams].sort((a, b) => b.title - a.title);
+const byReleg = [...fc.teams].sort((a, b) => b.releg - a.releg);
+const L = fc.lines;
+
+const METRIC = { title: 'title chance', ucl: 'top-five chance', releg: 'relegation risk' };
+/* A rising relegation risk is bad news; a rising title chance is good news. */
+const GOOD_UP = { title: true, ucl: true, releg: false };
+const fmtDay = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
+  { day: 'numeric', month: 'short' });
+
+initPalette(fc.teams);
+
+/* ---- lede and stamp ---- */
+const lead = byTitle[0], drop = byReleg[0];
+document.getElementById('lede').innerHTML =
+  `Three races decide a Premier League season, and the model has an opinion on all of them.
+   <b>${esc(lead.name)}</b> are the likeliest champions at ${pct(lead.title)},
+   and <b>${esc(drop.name)}</b> the likeliest to go down at ${pct(drop.releg)}.
+   Each contender is shown with the run of fixtures that will settle it.`;
+document.getElementById('stamp').innerHTML = `
+  <span>Season <b>${esc(fc.season)}</b></span>
+  <span><b>${fc.matches_played}</b> of ${fc.matches_total} played</span>
+  <span>Review as of <b>${esc(recap.asof || fc.generated.slice(0, 10))}</b></span>`;
+
+/* ---- fixture difficulty, on one scale for the whole page ----
+   Shading is only comparable between clubs if every strip is measured against
+   the same range, so the range comes from every remaining fixture in the league. */
+const remaining = (id) => (sched[id]?.fixtures || [])
+  .filter((f) => !f.played)
+  .sort((a, b) => (a.md || 0) - (b.md || 0) || String(a.date).localeCompare(String(b.date)))
+  .slice(0, 6);
+const allDiff = Object.keys(sched).flatMap((id) =>
+  (sched[id].fixtures || []).filter((f) => !f.played).map((f) => f.difficulty))
+  .filter((d) => typeof d === 'number');
+const dLo = allDiff.length ? Math.min(...allDiff) : 0;
+const dHi = allDiff.length ? Math.max(...allDiff) : 1;
+
+function runIn(id) {
+  const next = remaining(id);
+  if (!next.length) return '<span class="hint">No fixtures left.</span>';
+  return `<div class="fdr">${next.map((f) => {
+    const step = Math.min(6, Math.max(1, Math.ceil(((f.difficulty - dLo) / ((dHi - dLo) || 1)) * 6)));
+    const opp = meta[f.opp] || { name: f.opp, short: f.opp };
+    return `<span class="slot">
+      <span class="box ${f.home ? '' : 'away'}" style="background:var(--ramp-${step})"
+        title="Matchweek ${f.md} — ${f.home ? 'home to' : 'away at'} ${esc(opp.name)} on ${esc(fmtDay(f.date))}, opponent rating ${f.difficulty}"
+        >${esc(opp.short)}</span>
+      <span class="cap">MW${f.md} ${f.home ? 'H' : 'A'}</span></span>`;
+  }).join('')}</div>`;
+}
+
+const club = (t) => `<span class="who">
+    <span class="chip" style="background:${chipColor(t.primary)}"></span>
+    <a class="nm" href="team.html?t=${t.id}">${esc(t.name)}</a></span>`;
+
+/* ---- one race ---- */
+function raceRows(list, key, third) {
+  if (!list.length) return '<p class="empty">Nobody is in this race.</p>';
+  return list.map((t, i) => `
+    <div class="racerow">
+      ${club(t)}
+      <div class="big">${pct(t[key])}<small>${key === 'releg' ? 'down' : (key === 'title' ? 'title' : 'top 5')}</small></div>
+      <div class="num">${third(t, i)}</div>
+      <div class="runin">${runIn(t.id)}</div>
+    </div>`).join('');
+}
+
+/* ---- how a race has moved, when there is more than one snapshot ---- */
+function raceChart(list, key, what) {
+  if (snaps.length < 2) {
+    return `<p class="hint" style="margin-top:16px">The forecast keeps one snapshot a day,
+      and this build has ${snaps.length === 1 ? 'the first' : 'none'} of them. Tracking of
+      ${what} over time begins as snapshots accumulate.</p>`;
+  }
+  const series = list.map((t) => ({
+    label: t.short, color: chipColor(t.primary),
+    points: snaps.map((s) => s.teams?.[t.id]?.[key] ?? 0),
+  }));
+  const peak = Math.max(0.1, ...series.flatMap((s) => s.points));
+  const yMax = Math.min(1, Math.ceil(peak * 10 + 0.5) / 10);
+  return `<div class="charthead">How ${what} has moved</div>`
+    + lineChart(series, { yMax, fmt: (v) => `${Math.round(v * 100)}%`, yLabel: what })
+    + `<div class="hint">${snaps.length} snapshots · ${esc(snaps[0].date)} to
+       ${esc(snaps[snaps.length - 1].date)}</div>`;
+}
+
+/* ---- this week ---- */
+function weekly() {
+  const head = document.getElementById('weekhead');
+  const sub = document.getElementById('weeksub');
+  const body = document.getElementById('weekbody');
+
+  if (recap.mode === 'inseason') {
+    head.textContent = 'This week';
+    sub.textContent = `${recap.note} Only moves of a percentage point or more are listed,`
+      + ' and each club appears once, for whichever of its three numbers moved furthest.';
+    const movers = (recap.movers || []).map((m) => {
+      const t = meta[m.id];
+      if (!t) return '';
+      const up = m.delta > 0;
+      const good = up === GOOD_UP[m.metric];
+      const pp = Math.abs(m.delta * 100);
+      return `<div class="mover">
+        ${club(t)}
+        <div class="metric">${METRIC[m.metric]}</div>
+        <div class="swap">${pct(m.before)} → <b>${pct(m.after)}</b>
+          ${probBar(m.after, m.metric === 'releg' ? 'away' : 'accent')}</div>
+        <div class="delta ${good ? 'good' : 'bad'}"
+             aria-label="${METRIC[m.metric]} ${up ? 'up' : 'down'} ${pp.toFixed(1)} percentage points, ${good ? 'good' : 'bad'} news for ${esc(t.name)}">
+          <i aria-hidden="true">${up ? '▲' : '▼'}</i>${up ? '+' : '−'}${pp.toFixed(1)}
+          <em>pp</em></div>
+      </div>`;
+    }).join('');
+    const shocks = (recap.shocks || []).length ? `
+      <div class="charthead">Results the model did not see coming</div>
+      <div id="tipish">${recap.shocks.map((s) => `
+        <div class="r rb"><span>${esc(s.label)}
+          <span class="hint">Matchweek ${s.md} · ${esc(fmtDay(s.date))}</span>
+          ${probBar(s.p, 'away')}</span><b>${pct(s.p, 1)}</b></div>`).join('')}</div>
+      <p class="hint" style="margin-top:8px">The probability this model gave the result that
+        actually happened, taken from the forecast frozen before kick-off.</p>` : '';
+    body.innerHTML = (movers
+      ? movers
+      : '<p class="empty">Nothing moved by as much as a percentage point this week.</p>')
+      + shocks;
+    return;
+  }
+
+  /* Preseason: no movement to report yet, so answer the questions the reader
+     actually came with instead of apologising for an empty card. */
+  head.textContent = 'Where the season starts';
+  sub.textContent = 'The three questions the season will answer, as the model sees them'
+    + ' before a ball is kicked. Every later week is measured against this.';
+
+  const alive = (k) => fc.teams.filter((t) => t[k] >= 0.05 && t[k] <= 0.95).length;
+  const races = [['title', 'The title'], ['ucl', 'The top five'], ['releg', 'Relegation']]
+    .map(([k, label]) => ({ k, label, n: alive(k) }))
+    .sort((a, b) => b.n - a.n);
+  const tightest = races[0];
+  const second = byTitle[1];
+
+  body.innerHTML = `
+    <p class="hint" style="margin:0 0 16px">${esc(recap.note)}</p>
+    <div class="tiles" style="margin-bottom:0">
+      <div class="tile"><div class="k">Favourite</div>
+        <div class="v">${esc(lead.name)}</div>
+        <div class="n">${pct(lead.title)} to win it — ${esc(second.name)} next at ${pct(second.title)}</div></div>
+      <div class="tile"><div class="k">Most likely down</div>
+        <div class="v">${esc(drop.name)}</div>
+        <div class="n">${pct(drop.releg)} — then ${esc(byReleg[1].name)} at ${pct(byReleg[1].releg)}</div></div>
+      <div class="tile"><div class="k">Tightest race</div>
+        <div class="v">${esc(tightest.label)}</div>
+        <div class="n">${tightest.n} clubs still between 5% and 95% — more than
+          ${esc(races[1].label.toLowerCase())} (${races[1].n}) or
+          ${esc(races[2].label.toLowerCase())} (${races[2].n})</div></div>
+    </div>`;
+}
+
+/* ---- render everything that depends on club colours ---- */
+function render() {
+  weekly();
+
+  const top = byTitle.slice(0, 5);
+  const titleLead = Math.max(...top.map((t) => t.pts));
+  document.getElementById('titlerows').innerHTML = raceRows(top, 'title', (t) => {
+    const gap = titleLead - t.pts;
+    return `<b>${t.pts.toFixed(1)}</b> pts<br>
+      <span>${gap < 0.05 ? 'sets the pace' : `${gap.toFixed(1)} behind`}</span>`;
+  });
+  document.getElementById('titlechart').innerHTML =
+    raceChart(top, 'title', 'the title race');
+
+  const zone = [...fc.teams].filter((t) => t.ucl >= 0.05 && t.ucl <= 0.95)
+    .sort((a, b) => b.ucl - a.ucl).slice(0, 6);
+  const uclLead = zone.length ? Math.max(...zone.map((t) => t.pts)) : 0;
+  document.getElementById('uclrows').innerHTML = raceRows(zone, 'ucl', (t) => {
+    const gap = uclLead - t.pts;
+    return `<b>${t.pts.toFixed(1)}</b> pts<br>
+      <span>${gap < 0.05 ? 'leads this group' : `${gap.toFixed(1)} behind`}</span>`;
+  });
+  document.getElementById('uclchart').innerHTML =
+    raceChart(zone, 'ucl', 'the top-five race');
+
+  const danger = byReleg.filter((t) => t.releg >= 0.05).slice(0, 7);
+  const safe = L ? L.safety.p50 : null;
+  document.getElementById('relrows').innerHTML = raceRows(danger, 'releg', (t) => {
+    if (safe === null) return `<b>${t.pts.toFixed(1)}</b> pts`;
+    const m = t.pts - safe;
+    return `<b>${t.pts.toFixed(1)}</b> pts<br>
+      <span>${m >= 0 ? `+${m.toFixed(1)}` : `−${Math.abs(m).toFixed(1)}`} vs safety</span>`;
+  });
+  document.getElementById('safetynote').innerHTML = L
+    ? `Across 50,000 simulated seasons seventeenth place — the last safe spot — finishes on
+       about <b>${L.safety.p50}</b> points, and <b>${L.safety.enough90}</b> was enough to stay
+       up in nine seasons out of ten. ${danger.length
+        ? `${esc(danger[0].name)} are projected on ${danger[0].pts.toFixed(1)}.` : ''}`
+    : '';
+  document.getElementById('relchart').innerHTML =
+    raceChart(danger.slice(0, 5), 'releg', 'the relegation battle');
+}
+render();
+window.addEventListener('themechange', render);
+</script>
+</body>
+</html>
