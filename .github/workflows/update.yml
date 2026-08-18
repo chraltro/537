@@ -21,6 +21,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      pages_ready: ${{ steps.pages.outcome == 'success' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -63,14 +65,25 @@ jobs:
               print('backtest: not built')
           PY
 
+      # Tries to turn Pages on by itself. The workflow token is not always
+      # allowed to create a Pages site (it cannot on a private repo without a
+      # paid plan), so this must not sink an otherwise good build: the forecast
+      # is still built and uploaded, and the deploy job is skipped until a human
+      # enables Pages once under Settings -> Pages, source "GitHub Actions".
       - name: Configure Pages
         id: pages
+        continue-on-error: true
         uses: actions/configure-pages@v5
         with:
-          # Turns Pages on for the repository the first time this runs, so no
-          # manual switch-flipping is needed. If org policy blocks it, enable
-          # Pages once under Settings -> Pages (source: GitHub Actions).
           enablement: true
+
+      - name: Report Pages status
+        if: steps.pages.outcome != 'success'
+        run: |
+          echo "::warning::Pages is not enabled for this repository, so the site was" \
+               "built but not published. Enable it under Settings -> Pages with source" \
+               "'GitHub Actions'. A private repository also needs a paid plan for Pages;" \
+               "making the repository public is the other way to get there."
 
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -78,6 +91,7 @@ jobs:
 
   deploy:
     needs: build
+    if: needs.build.outputs.pages_ready == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -85,3 +99,4 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
