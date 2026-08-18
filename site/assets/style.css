@@ -137,7 +137,7 @@ thead th[data-dir]::after { content: " \25BE"; color: var(--accent); }
 thead th[data-dir="asc"]::after { content: " \25B4"; color: var(--accent); }
 tbody td { padding: 9px 8px; text-align: right; border-bottom: 1px solid var(--grid); font-size: 13.5px; }
 tbody tr:hover { background: var(--raised); }
-.scroller { overflow-x: auto; }
+.scroller { overflow-x: visible; }
 
 .club { display: flex; align-items: center; gap: 10px; min-width: 165px; }
 .chip { width: 4px; height: 20px; border-radius: 2px; flex: none; }
@@ -386,9 +386,17 @@ kbd {
 .fdr .box.away { box-shadow: inset 0 0 0 2px var(--rule); }
 .fdr .cap { color: var(--muted); font-size: 9.5px; letter-spacing: .04em; }
 
-/* ================= sticky table head ================= */
-thead th { position: sticky; top: 60px; background: var(--surface); z-index: 5; }
-@media (max-width: 620px) { thead th { top: 52px; } }
+/* ================= sticky table head =================
+   An ancestor with overflow-x:auto becomes the sticky scrollport, which drops
+   the header *below* the first row instead of pinning it above. So the table
+   only gets a scroll container on narrow screens, and stickiness only applies
+   where there is no such container. */
+@media (min-width: 861px) {
+  thead th { position: sticky; top: 60px; background: var(--surface); z-index: 5; }
+}
+@media (max-width: 860px) {
+  .scroller { overflow-x: auto; }
+}
 
 /* ================= misc ================= */
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
