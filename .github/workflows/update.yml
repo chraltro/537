@@ -42,11 +42,9 @@ jobs:
         run: python -m pytest tests/ -q
 
       - name: Build forecast
-        env:
-          # The walk-forward backtest only changes when the model changes, and it
-          # dominates the run time. Scheduled rebuilds refresh the forecast and
-          # keep the committed backtest.json; code pushes recompute it.
-          SKIP_BACKTEST: ${{ github.event_name == 'schedule' && '1' || '0' }}
+        # Includes the full walk-forward backtest: warm-starting each fit from
+        # the previous round brings it down to about twenty seconds, so there is
+        # no reason to skip it on scheduled runs.
         run: python -m model.run
 
       - name: Show headline numbers

@@ -61,10 +61,17 @@ def expected_goals(m: Match, a: float, b: float) -> tuple[float, float] | None:
 # Dixon-Coles
 # --------------------------------------------------------------------------
 class Fit:
-    """One fitted rating set."""
+    """One fitted rating set.
+
+    `warm` carries the raw parameters keyed by club, so a later fit over a
+    slightly different match window can start from here instead of from zero.
+    In the walk-forward backtest consecutive fits differ by about ten matches,
+    which turns hundreds of cold optimisations into a few iterations each.
+    """
 
     def __init__(self, teams: list[str], att: np.ndarray, dfn: np.ndarray,
-                 mu: float, home: float, rho: float) -> None:
+                 mu: float, home: float, rho: float,
+                 warm: dict | None = None) -> None:
         self.teams = teams
         self.index = {t: i for i, t in enumerate(teams)}
         self.att = att
@@ -72,6 +79,7 @@ class Fit:
         self.mu = mu
         self.home = home
         self.rho = rho
+        self.warm = warm or {}
 
     def lambdas(self, home: str, away: str, neutral: bool = False) -> tuple[float, float]:
         i, j = self.index[home], self.index[away]
@@ -103,6 +111,23 @@ def _pack(teams, matches, ref_date, decay):
         w.append(np.exp(-decay * (ref_date - m.date).days))
     return (np.array(hi), np.array(ai), np.asarray(hg, float),
             np.asarray(ag, float), np.asarray(w, float))
+
+
+def _warm_start(n, teams, warm, key):
+    """Rebuild a starting vector for `teams` from a previous fit's parameters.
+
+    Clubs the earlier fit never saw simply start at zero, which is the right
+    prior for a side entering the window.
+    """
+    if not warm or key not in warm:
+        return None
+    att_map, dfn_map, mu, home = warm[key]
+    x0 = np.zeros(2 * n + 2)
+    for i, t in enumerate(teams):
+        x0[i] = att_map.get(t, 0.0)
+        x0[n + i] = dfn_map.get(t, 0.0)
+    x0[2 * n], x0[2 * n + 1] = mu, home
+    return x0
 
 
 def _fit_core(n, hi, ai, y_h, y_a, w, ridge, x0=None):
@@ -176,24 +201,27 @@ def _fit_rho(hi, ai, y_h, y_a, w, att, dfn, mu, home):
 def fit(matches: list[Match], teams: list[str], ref_date, *,
         decay: float = config.TIME_DECAY, ridge: float = config.RIDGE,
         goals_weight: float = config.GOALS_WEIGHT,
-        shot_conv: tuple[float, float] | None = None) -> Fit:
+        shot_conv: tuple[float, float] | None = None,
+        warm: dict | None = None) -> Fit:
     """Fit ratings on goals and on shot-implied goals, then blend."""
     n = len(teams)
     hi, ai, y_h, y_a, w = _pack(teams, matches, ref_date, decay)
     if len(hi) == 0:
         return Fit(teams, np.zeros(n), np.zeros(n), np.log(1.35), 0.25, 0.0)
 
-    att_g, dfn_g, mu_g, home_g = _fit_core(n, hi, ai, y_h, y_a, w, ridge)
+    att_g, dfn_g, mu_g, home_g = _fit_core(
+        n, hi, ai, y_h, y_a, w, ridge, _warm_start(n, teams, warm, "goals"))
     rho = _fit_rho(hi, ai, y_h, y_a, w, att_g, dfn_g, mu_g, home_g)
+    out_warm = {"goals": (dict(zip(teams, att_g)), dict(zip(teams, dfn_g)), mu_g, home_g)}
 
     if goals_weight >= 0.999 or shot_conv is None:
-        return Fit(teams, att_g, dfn_g, mu_g, home_g, rho)
+        return Fit(teams, att_g, dfn_g, mu_g, home_g, rho, out_warm)
 
     a, b = shot_conv
     xg = [(m, expected_goals(m, a, b)) for m in matches]
     sub = [(m, xv) for m, xv in xg if xv is not None]
     if len(sub) < 200:
-        return Fit(teams, att_g, dfn_g, mu_g, home_g, rho)
+        return Fit(teams, att_g, dfn_g, mu_g, home_g, rho, out_warm)
 
     idx = {t: i for i, t in enumerate(teams)}
     keep = [(idx[m.home], idx[m.away], xv[0], xv[1],
@@ -204,7 +232,9 @@ def fit(matches: list[Match], teams: list[str], ref_date, *,
     sxh = np.array([k[2] for k in keep], float)
     sxa = np.array([k[3] for k in keep], float)
     sw = np.array([k[4] for k in keep], float)
-    att_x, dfn_x, mu_x, home_x = _fit_core(n, shi, sai, sxh, sxa, sw, ridge)
+    att_x, dfn_x, mu_x, home_x = _fit_core(
+        n, shi, sai, sxh, sxa, sw, ridge, _warm_start(n, teams, warm, "shots"))
+    out_warm["shots"] = (dict(zip(teams, att_x)), dict(zip(teams, dfn_x)), mu_x, home_x)
 
     # Only blend for clubs that actually have shot data. Championship matches
     # come from a goals-only feed, so blending a promoted club toward a rating
@@ -220,4 +250,4 @@ def fit(matches: list[Match], teams: list[str], ref_date, *,
                g * dfn_g + (1 - g) * dfn_x,
                float(goals_weight * mu_g + (1 - goals_weight) * mu_x),
                float(goals_weight * home_g + (1 - goals_weight) * home_x),
-               rho)
+               rho, out_warm)

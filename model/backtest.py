@@ -193,6 +193,7 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
     seasons_of: list[str] = []
     base_preds = {k: [] for k in ("base", "elo", "form")}
 
+    warm: dict | None = None
     train0 = [m for m in ds.pl if m.season < min(seasons)]
     elo = Elo()
     elo.fit_draw(train0)
@@ -216,7 +217,9 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
                     elo.update(m); form.update(m)
                 continue
             fit = ratings.fit(hist, pool, cutoff, decay=decay, ridge=config.RIDGE,
-                              goals_weight=goals_weight, shot_conv=shot_conv)
+                              goals_weight=goals_weight, shot_conv=shot_conv,
+                              warm=warm)
+            warm = fit.warm
             for m in chunk:
                 lh, la = fit.lambdas(m.home, m.away)
                 ph, pd, pa = outcome_probs(score_matrix(lh, la, fit.rho))
