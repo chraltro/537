@@ -91,7 +91,9 @@ jobs:
 
   deploy:
     needs: build
-    if: needs.build.outputs.pages_ready == 'true'
+    # The github-pages environment only accepts deployments from main; a branch
+    # run should build and stop green, not fail at the deploy gate.
+    if: needs.build.outputs.pages_ready == 'true' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
