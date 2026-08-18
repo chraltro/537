@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Premier League 2026/27 Forecast</title>
-<meta name="description" content="Every Premier League match and final table position for 2026/27, forecast with a Dixon-Coles rating model and 50,000 season simulations.">
+<meta name="description" content="Who wins the Premier League? A rating for every club, a probability for all 380 matches, and 50,000 simulations of the 2026/27 season.">
 <meta property="og:title" content="Who wins the Premier League? — 2026/27 forecast">
 <meta property="og:description" content="A rating for every club, a probability for all 380 matches, and 50,000 simulations of the 2026/27 season.">
 <meta property="og:type" content="website">
@@ -16,110 +16,124 @@
 <main class="wrap" id="main">
   <div class="pagehead">
     <h1>Who wins the Premier League?</h1>
-    <p class="lede">A rating for every club, a probability for all 380 matches, and 50,000
-      simulations of the 2026/27 season — rebuilt in the spirit of FiveThirtyEight's
-      Soccer Power Index, from public data anyone can check.</p>
+    <p class="lede" id="answer">Loading the forecast…</p>
     <div class="stamp" id="stamp"></div>
   </div>
 
   <div class="tiles" id="tiles"></div>
 
   <section class="card">
-    <h2>The matches that matter most</h2>
-    <p class="sub">Not the biggest names — the biggest swings. Each score is how far one
-      club's title, top-five or relegation chance moves between a home win and an away win,
-      measured across every simulation. Click any match for the full picture.</p>
-    <div id="bigmatches"></div>
-    <div class="hint" style="margin-top:12px">A dead rubber between two good sides scores
-      near zero; a relegation six-pointer between two poor ones scores highly.</div>
+    <div class="cardbar">
+      <h2>The season, projected</h2>
+      <div class="chips" role="tablist" aria-label="View">
+        <button class="chip-btn" data-view="table" aria-pressed="true" role="tab">Table</button>
+        <button class="chip-btn" data-view="dist" aria-pressed="false" role="tab">Every finish</button>
+      </div>
+    </div>
+    <p class="sub" id="viewsub">Average outcome across 50,000 simulated seasons.
+      Click a column to sort, or a club for its own page.</p>
+
+    <div id="tableview">
+      <div class="scroller">
+        <table id="tbl">
+          <thead><tr>
+            <th class="l" data-k="rank">#</th>
+            <th class="l" data-k="name">Club</th>
+            <th data-k="pts">Points</th>
+            <th data-k="title">Title</th>
+            <th class="p2" data-k="ucl">Top 5</th>
+            <th data-k="releg">Down</th>
+            <th class="x p3" data-k="spi" title="Expected share of points against an average team">SPI</th>
+            <th class="x p3" data-k="off" title="Goals expected to score vs an average team">Att</th>
+            <th class="x p3" data-k="def" title="Goals expected to concede vs an average team">Def</th>
+            <th class="x p3" data-k="gd">GD</th>
+            <th class="x p3" data-k="sos" title="Average rating of the opponents left to play">Sched</th>
+            <th class="x p3" data-k="europa">Europa</th>
+          </tr></thead>
+          <tbody id="tbody"><tr><td colspan="6" class="skeleton">Loading forecast…</td></tr></tbody>
+        </table>
+      </div>
+      <button class="chip-btn" id="morecols" aria-pressed="false"
+              style="margin-top:14px">Show ratings and schedule</button>
+    </div>
+
+    <div id="distview" hidden>
+      <div id="strip"></div>
+      <div class="legend">
+        <span>Chance of finishing in that position</span>
+        <span class="swatches" aria-hidden="true">
+          <i style="background:var(--ramp-0)"></i><i style="background:var(--ramp-1)"></i>
+          <i style="background:var(--ramp-2)"></i><i style="background:var(--ramp-3)"></i>
+          <i style="background:var(--ramp-4)"></i><i style="background:var(--ramp-5)"></i>
+          <i style="background:var(--ramp-6)"></i>
+        </span>
+        <span>never → certain</span>
+        <span>Rules mark the Champions League cut and the relegation places.</span>
+      </div>
+    </div>
   </section>
 
   <section class="card">
-    <h2>Projected final table</h2>
-    <p class="sub">Average outcome across every simulation. Click any column to sort;
-      hover a club for its full range.</p>
-    <div class="scroller">
-      <table id="tbl">
-        <thead><tr>
-          <th class="l" data-k="rank">#</th>
-          <th class="l" data-k="name">Club</th>
-          <th class="p3" data-k="spi" title="Expected share of points against an average team">SPI</th>
-          <th class="p4" data-k="off" title="Goals expected to score vs an average team">Att</th>
-          <th class="p4" data-k="def" title="Goals expected to concede vs an average team">Def</th>
-          <th data-k="pts">Points</th>
-          <th class="p3" data-k="gd">GD</th>
-          <th class="p4" data-k="sos" title="Average rating of the opponents left to play">Sched</th>
-          <th data-k="title">Title</th>
-          <th class="p2" data-k="ucl">Top 5</th>
-          <th class="p4" data-k="europa">Europa</th>
-          <th data-k="releg">Down</th>
-        </tr></thead>
-        <tbody id="tbody"><tr><td colspan="11" class="skeleton">Loading forecast…</td></tr></tbody>
-      </table>
+    <div class="cardbar">
+      <h2 id="nexthead">Next up</h2>
+      <a class="morelink" href="matches.html">All 380 matches →</a>
     </div>
+    <p class="sub">Every fixture carries a stakes bar: how far the result swings
+      someone's season. Click one for the full scoreline picture.</p>
+    <div id="nextup"></div>
   </section>
 
-  <section class="card" id="movecard" hidden>
-    <h2>How the forecast has moved</h2>
-    <p class="sub">The model's own opinion, tracked over time. A forecast that only ever
-      shows today's number can never be argued with; this one keeps its receipts.</p>
-    <div class="chips" style="margin-bottom:14px">
-      <button class="chip-btn" data-race="title" aria-pressed="true">Title race</button>
-      <button class="chip-btn" data-race="releg" aria-pressed="false">Relegation</button>
-      <button class="chip-btn" data-race="ucl" aria-pressed="false">Top five</button>
-    </div>
-    <div id="movechart"></div>
-  </section>
-
-  <section class="card">
-    <h2>Where every club finishes</h2>
-    <p class="sub">Each row is one club's full distribution of finishing positions across
-      50,000 simulated seasons. A tight band means the model is confident; a smear across
-      ten places means it genuinely is not.</p>
-    <div id="strip"></div>
-    <div class="legend">
-      <span>Chance of finishing in that position</span>
-      <span class="swatches" aria-hidden="true">
-        <i style="background:var(--ramp-0)"></i><i style="background:var(--ramp-1)"></i>
-        <i style="background:var(--ramp-2)"></i><i style="background:var(--ramp-3)"></i>
-        <i style="background:var(--ramp-4)"></i><i style="background:var(--ramp-5)"></i>
-        <i style="background:var(--ramp-6)"></i>
-      </span>
-      <span>never → certain</span>
-      <span style="margin-left:12px">Vertical rules mark the Champions League cut (top 5) and the relegation places.</span>
-    </div>
-  </section>
+  <nav class="deeper" aria-label="Go deeper">
+    <a href="matches.html"><b>Every match</b>
+      <span>Win, draw and loss probabilities for all 380 fixtures, sorted by what is at stake.</span></a>
+    <a href="team.html"><b>Club by club</b>
+      <span>Rating trends, finishing positions and the difficulty of the run ahead.</span></a>
+    <a href="method.html"><b>How it works, and how well</b>
+      <span>The model, the backtest against three baselines, and what it gets wrong.</span></a>
+  </nav>
 </main>
 
 <script type="module">
 import { data, pct, signed, esc, ord, initChrome, tip, tipRows, rampColor,
-         makeSortable, chipColor, initPalette, modal, scoreGrid, lineChart } from './assets/app.js';
+         makeSortable, chipColor, initPalette, modal, scoreGrid, swingBar } from './assets/app.js';
 initChrome('table');
 
 const fc = await data('forecast');
-const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-GB',
-  { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-
-document.getElementById('stamp').innerHTML = `
-  <span>Season <b>${esc(fc.season)}</b></span>
-  <span><b>${fc.matches_played}</b> of ${fc.matches_total} matches played</span>
-  <span><b>${fc.n_sims.toLocaleString()}</b> simulations</span>
-  <span>Updated <b>${fmtDate(fc.generated)}</b></span>`;
-
+const mm = await data('matches');
+const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
 const rows = fc.teams.map((t, i) => ({ ...t, rank: i + 1 }));
 const byTitle = [...rows].sort((a, b) => b.title - a.title);
 const byReleg = [...rows].sort((a, b) => b.releg - a.releg);
-const gapTop = byTitle[0].title - byTitle[1].title;
+
+const fmtStamp = (iso) => new Date(iso).toLocaleDateString('en-GB',
+  { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const fmtDay = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
+  { weekday: 'short', day: 'numeric', month: 'short' });
+
+/* ---- the answer, in one sentence ---- */
+const lead = byTitle[0], second = byTitle[1], drop = byReleg[0];
+const close = lead.title - second.title < 0.10;
+document.getElementById('answer').innerHTML =
+  `<b>${esc(lead.name)}</b> are favourites at ${pct(lead.title)}, `
+  + (close ? `with ${esc(second.name)} close behind on ${pct(second.title)}. `
+           : `clear of ${esc(second.name)} on ${pct(second.title)}. `)
+  + `<b>${esc(drop.name)}</b> are the most likely to go down, at ${pct(drop.releg)}. `
+  + `Everything here comes from 50,000 simulations of the season, rebuilt from public data every six hours.`;
+
+document.getElementById('stamp').innerHTML = `
+  <span>Season <b>${esc(fc.season)}</b></span>
+  <span><b>${fc.matches_played}</b> of ${fc.matches_total} played</span>
+  <span>Updated <b>${fmtStamp(fc.generated)}</b></span>`;
 
 document.getElementById('tiles').innerHTML = [
-  ['Title favourite', esc(byTitle[0].name), `${pct(byTitle[0].title)} — ${pct(byTitle[1].title)} for ${esc(byTitle[1].name)}`],
-  ['Projected champion', `${rows[0].pts} pts`, `80% of simulations land ${rows[0].pts_lo}–${rows[0].pts_hi}`],
-  ['Most likely to go down', esc(byReleg[0].name), `${pct(byReleg[0].releg)} — then ${esc(byReleg[1].name)} ${pct(byReleg[1].releg)}`],
-  ['Title race', gapTop < 0.10 ? 'Too close to call' : 'Clear favourite',
-    `${(gapTop * 100).toFixed(0)} percentage points between the top two`],
-].map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
+  ['Title favourite', esc(lead.name), `${pct(lead.title)} across every simulation`],
+  ['Projected champion', `${rows[0].pts.toFixed(0)} pts`,
+    `80% of seasons land ${rows[0].pts_lo}–${rows[0].pts_hi}`],
+  ['Most likely down', esc(drop.name), `${pct(drop.releg)} — then ${esc(byReleg[1].name)} at ${pct(byReleg[1].releg)}`],
+].map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div>
+    <div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
 
-/* ---- projected table ---- */
+/* ---- table ---- */
 const maxPts = Math.max(...rows.map((r) => r.pts));
 const tbody = document.getElementById('tbody');
 const cls = (p) => (p >= 0.10 ? 'p-hi' : 'p-lo');
@@ -133,18 +147,18 @@ function render(list) {
         <a href="team.html?t=${t.id}">${esc(t.name)}</a>
         ${t.promoted ? '<span class="tag">Promoted</span>' : ''}
       </span></td>
-      <td class="p3"><b>${t.spi.toFixed(1)}</b></td>
-      <td class="p4">${t.off.toFixed(2)}</td>
-      <td class="p4">${t.def.toFixed(2)}</td>
       <td><b>${t.pts.toFixed(1)}</b>
         <span class="minibar" style="width:${(t.pts / maxPts * 100).toFixed(1)}%"></span></td>
-      <td class="p3">${signed(t.gd)}</td>
-      <td title="Average opponent rating; ${t.sos_rank ? ord(t.sos_rank) + ' hardest' : ''}"
-          class="p4 ${t.sos_rank && t.sos_rank <= 5 ? 'p-hi' : 'p-lo'}">${t.sos ?? '—'}</td>
       <td class="${cls(t.title)}">${pct(t.title)}</td>
       <td class="p2 ${cls(t.ucl)}">${pct(t.ucl)}</td>
-      <td class="p4 ${cls(t.europa)}">${pct(t.europa)}</td>
       <td class="${cls(t.releg)}">${pct(t.releg)}</td>
+      <td class="x p3"><b>${t.spi.toFixed(1)}</b></td>
+      <td class="x p3">${t.off.toFixed(2)}</td>
+      <td class="x p3">${t.def.toFixed(2)}</td>
+      <td class="x p3">${signed(t.gd)}</td>
+      <td class="x p3 ${t.sos_rank && t.sos_rank <= 5 ? 'p-hi' : 'p-lo'}"
+          title="${t.sos_rank ? ord(t.sos_rank) + ' hardest run left' : ''}">${t.sos ?? '—'}</td>
+      <td class="x p3 ${cls(t.europa)}">${pct(t.europa)}</td>
     </tr>`).join('');
 }
 makeSortable(document.getElementById('tbl'), rows, render, 'pts');
@@ -156,8 +170,7 @@ tbody.addEventListener('mousemove', (e) => {
   tip(tipRows(esc(t.name), [
     ['Projected points', t.pts.toFixed(1)],
     ['80% of seasons', `${t.pts_lo}–${t.pts_hi} pts`],
-    ['Best simulated', `${t.pts_max} pts`],
-    ['Worst simulated', `${t.pts_min} pts`],
+    ['Best / worst simulated', `${t.pts_max} / ${t.pts_min} pts`],
     ['Win the league', pct(t.title, 1)],
     ['Champions League', pct(t.ucl, 1)],
     ['Relegated', pct(t.releg, 1)],
@@ -166,85 +179,92 @@ tbody.addEventListener('mousemove', (e) => {
 });
 tbody.addEventListener('mouseleave', () => tip(null));
 
-/* ---- season strip ---- */
+/* extra columns stay one click away rather than crowding the default view */
+const more = document.getElementById('morecols');
+more.addEventListener('click', () => {
+  const on = more.getAttribute('aria-pressed') !== 'true';
+  more.setAttribute('aria-pressed', String(on));
+  document.getElementById('tbl').classList.toggle('showx', on);
+  more.textContent = on ? 'Hide ratings and schedule' : 'Show ratings and schedule';
+});
+
+/* ---- distribution view ---- */
 const ucl = fc.ucl_places;
 const maxCell = Math.max(...rows.flatMap((t) => t.pos));
-/* Twenty numbers do not fit on a phone; show the ones that orient the reader. */
 const sparse = matchMedia('(max-width: 900px)').matches;
-const head = `<div class="strip-head"><span></span><div class="axis20">${
-  Array.from({ length: 20 }, (_, i) =>
-    `<span>${!sparse || [1, 5, 10, 15, 20].includes(i + 1) ? i + 1 : ''}</span>`).join('')
-  }</div></div>`;
+document.getElementById('strip').innerHTML =
+  `<div class="strip-head"><span></span><div class="axis20">${
+    Array.from({ length: 20 }, (_, i) =>
+      `<span>${!sparse || [1, 5, 10, 15, 20].includes(i + 1) ? i + 1 : ''}</span>`).join('')
+  }</div></div>` +
+  rows.map((t) => `
+    <div class="strip-row" data-id="${t.id}">
+      <span class="club">
+        <span class="chip" style="background:${chipColor(t.primary)}"></span>
+        <a href="team.html?t=${t.id}">${esc(t.short)}</a>
+        <span class="stripname">${esc(t.name)}</span>
+      </span>
+      <div class="strip-cells">${t.pos.map((p, i) =>
+        `<div class="cell" data-p="${p}" data-pos="${i + 1}"
+          ${i === ucl || i === 17 ? 'data-band="1"' : ''}
+          style="background:${rampColor(p, maxCell)}"></div>`).join('')}</div>
+    </div>`).join('');
 
-const strip = rows.map((t) => `
-  <div class="strip-row" data-id="${t.id}">
-    <span class="club">
-      <span class="chip" style="background:${chipColor(t.primary)}"></span>
-      <a href="team.html?t=${t.id}">${esc(t.short)}</a>
-      <span style="color:var(--muted);font-size:12px">${esc(t.name)}</span>
-    </span>
-    <div class="strip-cells">${t.pos.map((p, i) =>
-      `<div class="cell" data-p="${p}" data-pos="${i + 1}"
-        ${i === ucl || i === 20 - 3 ? 'data-band="1"' : ''}
-        style="background:${rampColor(p, maxCell)}"></div>`).join('')}</div>
-  </div>`).join('');
-
-const stripEl = document.getElementById('strip');
-stripEl.innerHTML = head + strip;
-stripEl.addEventListener('mousemove', (e) => {
+document.getElementById('strip').addEventListener('mousemove', (e) => {
   const c = e.target.closest('.cell');
   if (!c) return tip(null);
   const t = rows.find((r) => r.id === c.closest('.strip-row').dataset.id);
-  const pos = +c.dataset.pos;
-  tip(tipRows(`${esc(t.name)} — ${ord(pos)}`,
+  tip(tipRows(`${esc(t.name)} — ${ord(+c.dataset.pos)}`,
     [['Chance of finishing here', pct(+c.dataset.p, 1)],
      ['Projected finish', ord(t.rank)]]), e);
 });
-stripEl.addEventListener('mouseleave', () => tip(null));
+document.getElementById('strip').addEventListener('mouseleave', () => tip(null));
 
-/* Chip colours are surface-dependent, so they are recomputed when the theme flips. */
-window.addEventListener('themechange', () => {
-  document.querySelectorAll('.chip').forEach((el) => {
-    const id = el.closest('[data-id]')?.dataset.id;
-    const t = rows.find((r) => r.id === id);
-    if (t) el.style.background = chipColor(t.primary);
-  });
-});
+document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => {
+  const v = b.dataset.view;
+  document.querySelectorAll('[data-view]').forEach((x) =>
+    x.setAttribute('aria-pressed', String(x === b)));
+  document.getElementById('tableview').hidden = v !== 'table';
+  document.getElementById('distview').hidden = v !== 'dist';
+  document.getElementById('viewsub').textContent = v === 'table'
+    ? 'Average outcome across 50,000 simulated seasons. Click a column to sort, or a club for its own page.'
+    : 'Each row is one club’s full spread of finishing positions. A tight band means the model is confident; a smear across ten places means it is not.';
+}));
 
-initPalette(fc.teams);
-
-/* ---- the matches that matter most ---- */
-const mm = await data('matches');
-const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
+/* ---- next up ---- */
 const EVENT = { title: 'the title', ucl: 'a top-five finish', releg: 'relegation' };
-const upcoming = mm.matches.filter((m) => !m.played && m.lev > 0);
-const big = [...upcoming].sort((a, b) => b.lev - a.lev).slice(0, 6);
-const fmtD = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
-  { day: 'numeric', month: 'short' });
+const next = mm.matches.find((m) => !m.played);
+const round = next ? mm.matches.filter((m) => m.md === next.md) : [];
+document.getElementById('nexthead').textContent =
+  next ? `Next up — matchweek ${next.md}` : 'The season is complete';
+const maxLev = Math.max(0.05, ...round.map((m) => m.lev));
 
-document.getElementById('bigmatches').innerHTML = big.length ? big.map((m) => {
-  const s0 = m.swings[0];
-  const why = s0
-    ? `${esc(meta[s0.team].name)}'s chance of ${EVENT[s0.event]} moves `
-      + `${pct(Math.min(s0.home, s0.away))} → ${pct(Math.max(s0.home, s0.away))}`
-    : 'Little riding on this one';
-  return `<div class="bigmatch" data-key="${m.h}|${m.a}">
-      <span class="mdno">MW ${m.md}<br>${fmtD(m.date)}</span>
-      <span><span class="teams">${esc(meta[m.h].name)} v ${esc(meta[m.a].name)}</span>
-        <span class="why">${why}</span></span>
-      <span class="score"><b>${(m.lev * 100).toFixed(0)}</b><span>swing</span></span>
-    </div>`;
-}).join('') : '<p class="empty">No fixtures left to play.</p>';
+document.getElementById('nextup').innerHTML = round.length ? round.map((m) => `
+  <div class="fix" data-key="${m.h}|${m.a}" tabindex="0" role="button"
+       aria-label="${esc(meta[m.h].name)} versus ${esc(meta[m.a].name)}, details">
+    <span class="when">${fmtDay(m.date)}${m.time ? `<br>${m.time}` : ''}</span>
+    <span class="home"><span class="full">${esc(meta[m.h].name)}</span><span class="abbr">${esc(meta[m.h].short)}</span></span>
+    <span class="wdl">
+      <i class="h" style="flex:${Math.max(m.ph, .02)}">${m.ph >= .16 ? `<b>${Math.round(m.ph * 100)}</b>` : ''}</i>
+      <i class="d" style="flex:${Math.max(m.pd, .02)}">${m.pd >= .16 ? `<b>${Math.round(m.pd * 100)}</b>` : ''}</i>
+      <i class="a" style="flex:${Math.max(m.pa, .02)}">${m.pa >= .16 ? `<b>${Math.round(m.pa * 100)}</b>` : ''}</i>
+    </span>
+    <span class="away"><span class="full">${esc(meta[m.a].name)}</span><span class="abbr">${esc(meta[m.a].short)}</span></span>
+    <span class="stake" title="Stakes: ${(m.lev * 100).toFixed(0)} points of swing">
+      <i style="--f:${Math.min(100, (m.lev / maxLev) * 100).toFixed(0)}%"></i></span>
+  </div>`).join('') : '<p class="empty">No fixtures left to play.</p>';
 
-/* ---- match detail ---- */
 function openMatch(m) {
   const h = meta[m.h], a = meta[m.a];
-  const rows2 = m.swings.map((s) => `<div class="r">
-    <span>${esc(meta[s.team].name)} — ${EVENT[s.event]}</span>
-    <b>${pct(s.away, 1)} → ${pct(s.home, 1)}</b></div>`).join('');
+  const swings = (m.swings || []).map((s) => `
+    <div class="swing-row">
+      <span>${esc(meta[s.team].name)} — ${EVENT[s.event]}</span>
+      ${swingBar(s.away, s.home, meta[s.team].name + ' ' + EVENT[s.event])}
+      <b>${pct(s.away)} → ${pct(s.home)}</b>
+    </div>`).join('');
   modal(`
     <h3>${esc(h.name)} v ${esc(a.name)}</h3>
-    <p class="msub">Matchweek ${m.md} · ${fmtD(m.date)}${m.time ? ` · ${m.time}` : ''}
+    <p class="msub">Matchweek ${m.md} · ${fmtDay(m.date)}${m.time ? ` · ${m.time}` : ''}
       ${m.played ? ` · finished ${m.hg}–${m.ag}` : ''}</p>
     <div class="wdl" style="height:26px;margin-bottom:6px">
       <i class="h" style="flex:${Math.max(m.ph, .02)}"><b>${Math.round(m.ph * 100)}</b></i>
@@ -253,50 +273,44 @@ function openMatch(m) {
     </div>
     <div class="hint" style="margin-bottom:20px">
       ${esc(h.short)} win · draw · ${esc(a.short)} win &nbsp;·&nbsp;
-      expected goals ${m.xgh} – ${m.xga} &nbsp;·&nbsp;
-      over 2.5 goals ${pct(m.o25)} &nbsp;·&nbsp; both score ${pct(m.btts)}</div>
-    <h4 style="font-size:13px;margin:0 0 3px">Every plausible scoreline</h4>
-    <p class="hint" style="margin:0 0 10px">Percent chance of each exact result. The most
-      likely single score is ${m.sc[0]}–${m.sc[1]}, and even that only happens
-      ${pct(m.scp)} of the time — which is the honest shape of a football match.</p>
+      expected goals ${m.xgh} – ${m.xga} &nbsp;·&nbsp; over 2.5 goals ${pct(m.o25)}
+      &nbsp;·&nbsp; both score ${pct(m.btts)}</div>
+    <h4>Every plausible scoreline</h4>
+    <p class="hint" style="margin:0 0 12px">The likeliest single score is ${m.sc[0]}–${m.sc[1]},
+      and even that lands only ${pct(m.scp)} of the time.</p>
     ${scoreGrid(m.grid, h.short, a.short, m.sc)}
-    ${rows2 ? `<h4 style="font-size:13px;margin:22px 0 3px">What rides on it</h4>
-      <p class="hint" style="margin:0 0 10px">Chance if the away side wins → if the home side does.</p>
-      <div id="tipish">${rows2}</div>` : ''}`);
+    ${swings ? `<h4 style="margin-top:24px">What rides on it</h4>
+      <p class="hint" style="margin:0 0 6px">Where each club's season stands if the away
+        side wins, and if the home side does.</p>
+      ${swings}
+      <div class="swing-key">
+        <span><i style="background:var(--away)"></i>${esc(a.short)} win</span>
+        <span><i style="background:var(--accent)"></i>${esc(h.short)} win</span>
+      </div>` : ''}`);
 }
-document.getElementById('bigmatches').addEventListener('click', (e) => {
-  const el = e.target.closest('.bigmatch');
+const nx = document.getElementById('nextup');
+nx.addEventListener('click', (e) => {
+  const el = e.target.closest('.fix');
   if (!el) return;
   const [hh, aa] = el.dataset.key.split('|');
   openMatch(mm.matches.find((m) => m.h === hh && m.a === aa));
 });
+nx.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const el = e.target.closest('.fix');
+  if (!el) return;
+  e.preventDefault();
+  const [hh, aa] = el.dataset.key.split('|');
+  openMatch(mm.matches.find((m) => m.h === hh && m.a === aa));
+});
 
-/* ---- how the forecast has moved ---- */
-let hist = null;
-try { hist = await data('history'); } catch { /* first build */ }
-const snaps = hist?.snapshots || [];
-if (snaps.length >= 2) {
-  const card = document.getElementById('movecard');
-  card.hidden = false;
-  const draw = (key) => {
-    const top = [...rows].sort((a, b) => (b[key] || 0) - (a[key] || 0)).slice(0, 5);
-    const series = top.map((t) => ({
-      label: t.short,
-      color: chipColor(t.primary),
-      points: snaps.map((s) => s.teams[t.id]?.[key] ?? 0),
-    }));
-    document.getElementById('movechart').innerHTML =
-      lineChart(series, { yMax: 1, fmt: (v) => `${Math.round(v * 100)}%` })
-      + `<div class="hint" style="margin-top:6px">${snaps.length} snapshots · `
-      + `${snaps[0].date} to ${snaps[snaps.length - 1].date}</div>`;
-  };
-  draw('title');
-  card.querySelectorAll('[data-race]').forEach((b) => b.addEventListener('click', () => {
-    card.querySelectorAll('[data-race]').forEach((x) =>
-      x.setAttribute('aria-pressed', String(x === b)));
-    draw(b.dataset.race);
-  }));
-}
+initPalette(fc.teams);
+window.addEventListener('themechange', () => {
+  document.querySelectorAll('.chip').forEach((el) => {
+    const t = rows.find((r) => r.id === el.closest('[data-id]')?.dataset.id);
+    if (t) el.style.background = chipColor(t.primary);
+  });
+});
 </script>
 </body>
 </html>

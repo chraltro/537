@@ -45,6 +45,17 @@
       <i style="background:var(--away);width:14px;height:10px"></i></span><span>Away win</span>
   </div>
 
+  <section class="card" id="bigcard">
+    <div class="cardbar">
+      <h2>The matches that matter most</h2>
+      <button class="chip-btn" id="jumpstakes">Sort the whole season by stakes</button>
+    </div>
+    <p class="sub">Not the biggest names — the biggest swings. The score is how far one
+      club's title, top-five or relegation chance moves between a home win and an away win,
+      measured across every simulation.</p>
+    <div id="bigmatches"></div>
+  </section>
+
   <div class="match matchhead">
     <span class="when">Kick-off</span><span class="home">Home</span>
     <span style="text-align:center"><span class="full">Win / draw / loss %</span><span class="abbr">W/D/L</span></span>
@@ -55,7 +66,7 @@
 </main>
 
 <script type="module">
-import { data, pct, esc, initChrome, tip, tipRows, chipColor, initPalette, modal, scoreGrid } from './assets/app.js';
+import { data, pct, esc, initChrome, tip, tipRows, chipColor, initPalette, modal, scoreGrid, swingBar } from './assets/app.js';
 initChrome('matches');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
@@ -186,14 +197,15 @@ list.addEventListener('mouseleave', () => tip(null));
 document.getElementById('fsort').addEventListener('change', draw);
 
 const EVENT = { title: 'the title', ucl: 'a top-five finish', releg: 'relegation' };
-list.addEventListener('click', (e) => {
-  const el = e.target.closest('.match');
-  if (!el || el.classList.contains('matchhead')) return;
-  const m = matches[+el.dataset.i];
+
+function openMatch(m) {
   const h = meta[m.h], a = meta[m.a];
-  const rows2 = (m.swings || []).map((s) => `<div class="r">
-    <span>${esc(meta[s.team].name)} — ${EVENT[s.event]}</span>
-    <b>${pct(s.away, 1)} → ${pct(s.home, 1)}</b></div>`).join('');
+  const swings = (m.swings || []).map((s) => `
+    <div class="swing-row">
+      <span>${esc(meta[s.team].name)} — ${EVENT[s.event]}</span>
+      ${swingBar(s.away, s.home, meta[s.team].name + ' ' + EVENT[s.event])}
+      <b>${pct(s.away)} → ${pct(s.home)}</b>
+    </div>`).join('');
   tip(null);
   modal(`
     <h3>${esc(h.name)} v ${esc(a.name)}</h3>
@@ -208,16 +220,55 @@ list.addEventListener('click', (e) => {
       ${esc(h.short)} win · draw · ${esc(a.short)} win &nbsp;·&nbsp;
       expected goals ${m.xgh} – ${m.xga} &nbsp;·&nbsp; over 2.5 goals ${pct(m.o25)}
       &nbsp;·&nbsp; both score ${pct(m.btts)}</div>
-    <h4 style="font-size:13px;margin:0 0 3px">Every plausible scoreline</h4>
-    <p class="hint" style="margin:0 0 10px">Most likely single score is ${m.sc[0]}–${m.sc[1]},
-      and even that only happens ${pct(m.scp)} of the time.</p>
+    <h4>Every plausible scoreline</h4>
+    <p class="hint" style="margin:0 0 12px">The likeliest single score is ${m.sc[0]}–${m.sc[1]},
+      and even that lands only ${pct(m.scp)} of the time.</p>
     ${scoreGrid(m.grid, h.short, a.short, m.sc)}
-    ${rows2 ? `<h4 style="font-size:13px;margin:22px 0 3px">What rides on it</h4>
-      <p class="hint" style="margin:0 0 10px">Chance if the away side wins → if the home side does.</p>
-      <div id="tipish">${rows2}</div>` : ''}`);
+    ${swings ? `<h4 style="margin-top:24px">What rides on it</h4>
+      <p class="hint" style="margin:0 0 6px">Where each club's season stands if the away
+        side wins, and if the home side does.</p>
+      ${swings}
+      <div class="swing-key">
+        <span><i style="background:var(--away)"></i>${esc(a.short)} win</span>
+        <span><i style="background:var(--accent)"></i>${esc(h.short)} win</span>
+      </div>` : ''}`);
+}
+
+list.addEventListener('click', (e) => {
+  const el = e.target.closest('.match');
+  if (!el || el.classList.contains('matchhead')) return;
+  openMatch(matches[+el.dataset.i]);
 });
 
 initPalette(fc.teams);
+
+/* ---- the biggest games left, wherever they fall in the calendar ---- */
+const big = matches.filter((m) => !m.played && m.lev > 0)
+  .sort((a, b) => b.lev - a.lev).slice(0, 6);
+document.getElementById('bigmatches').innerHTML = big.length ? big.map((m) => {
+  const s0 = m.swings[0];
+  const why = s0
+    ? `${esc(meta[s0.team].name)}'s chance of ${EVENT[s0.event]} moves `
+      + `${pct(Math.min(s0.home, s0.away))} → ${pct(Math.max(s0.home, s0.away))}`
+    : 'Little riding on this one';
+  return `<div class="bigmatch" data-i="${m.i}">
+      <span class="mdno">MW ${m.md}<br>${fmt(m.date)}</span>
+      <span><span class="teams">${esc(meta[m.h].name)} v ${esc(meta[m.a].name)}</span>
+        <span class="why">${why}</span></span>
+      <span class="score"><b>${(m.lev * 100).toFixed(0)}</b><span>swing</span></span>
+    </div>`;
+}).join('') : '<p class="empty">No fixtures left to play.</p>';
+
+document.getElementById('bigmatches').addEventListener('click', (e) => {
+  const el = e.target.closest('.bigmatch');
+  if (el) openMatch(matches[+el.dataset.i]);
+});
+document.getElementById('jumpstakes').addEventListener('click', () => {
+  document.getElementById('fmw').value = '';
+  document.getElementById('fsort').value = 'lev';
+  draw();
+  document.getElementById('list').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 </script>
 </body>
 </html>

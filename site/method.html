@@ -58,6 +58,20 @@
     </div>
   </section>
 
+  <section class="card" id="movecard" hidden>
+    <div class="cardbar">
+      <h2>How the forecast has moved</h2>
+      <div class="chips">
+        <button class="chip-btn" data-race="title" aria-pressed="true">Title</button>
+        <button class="chip-btn" data-race="ucl" aria-pressed="false">Top five</button>
+        <button class="chip-btn" data-race="releg" aria-pressed="false">Relegation</button>
+      </div>
+    </div>
+    <p class="sub">The model's own opinion, tracked over time. A forecast that only ever
+      shows today's number can never be argued with; this one keeps its receipts.</p>
+    <div id="movechart"></div>
+  </section>
+
   <section class="card">
     <h2>Is it calibrated?</h2>
     <p class="sub">A forecast can rank teams correctly and still lie about how sure it is.
@@ -179,11 +193,35 @@
 </main>
 
 <script type="module">
-import { data, pct, esc, initChrome, tip, tipRows, initPalette } from './assets/app.js';
+import { data, pct, esc, initChrome, tip, tipRows, initPalette, lineChart, chipColor, probBar } from './assets/app.js';
 initChrome('method');
 
 const fc = await data('forecast');
 initPalette(fc.teams);
+
+/* ---- how the forecast has moved ---- */
+let hist = null;
+try { hist = await data('history'); } catch { /* first build */ }
+const snaps = hist?.snapshots || [];
+if (snaps.length >= 2) {
+  const card = document.getElementById('movecard');
+  card.hidden = false;
+  const draw = (key) => {
+    const top = [...fc.teams].sort((a, b) => (b[key] || 0) - (a[key] || 0)).slice(0, 5);
+    document.getElementById('movechart').innerHTML = lineChart(
+      top.map((t) => ({ label: t.short, color: chipColor(t.primary),
+                        points: snaps.map((s) => s.teams[t.id]?.[key] ?? 0) })),
+      { yMax: 1, fmt: (v) => `${Math.round(v * 100)}%` })
+      + `<div class="hint" style="margin-top:6px">${snaps.length} snapshots · `
+      + `${snaps[0].date} to ${snaps[snaps.length - 1].date}</div>`;
+  };
+  draw('title');
+  card.querySelectorAll('[data-race]').forEach((b) => b.addEventListener('click', () => {
+    card.querySelectorAll('[data-race]').forEach((x) =>
+      x.setAttribute('aria-pressed', String(x === b)));
+    draw(b.dataset.race);
+  }));
+}
 
 /* ---- in-season scorecard, judged only on forecasts frozen before kick-off ---- */
 let sr = null;
@@ -201,13 +239,14 @@ if (sr && sr.n > 0) {
     ['Right result', `${(sr.accuracy * 100).toFixed(1)}%`, 'Most likely outcome landed'],
   ].map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div>
       <div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
-  const line = (r) => `<div class="r"><span>${esc(r.label)}</span>
+  const line = (r, tone) => `<div class="r rb">
+      <span>${esc(r.label)}${probBar(r.p, tone)}</span>
       <b>${pct(r.p, 1)}</b></div>`;
   document.getElementById('surprises').innerHTML =
-    `<div id="tipish">${sr.surprises.map(line).join('')}</div>
+    `<div id="tipish">${sr.surprises.map((r) => line(r, 'away')).join('')}</div>
      <p class="hint" style="margin-top:8px">Probability the model gave the result that happened.</p>`;
   document.getElementById('confident').innerHTML =
-    `<div id="tipish">${sr.confident.map(line).join('')}</div>
+    `<div id="tipish">${sr.confident.map((r) => line(r, 'accent')).join('')}</div>
      <p class="hint" style="margin-top:8px">Correct calls where it was most sure.</p>`;
 }
 document.getElementById('mw').textContent =
@@ -264,9 +303,13 @@ if (!bt) {
   });
   document.getElementById('bars').addEventListener('mouseleave', () => tip(null));
 
+  const lls = (bt.by_season || []).map((r) => r.log_loss);
+  const lo = Math.min(...lls), hi = Math.max(...lls);
   document.querySelector('#bysea tbody').innerHTML = (bt.by_season || []).map((r) => `
     <tr><td class="l">${esc(r.season)}</td><td>${r.n}</td>
-      <td>${r.log_loss.toFixed(4)}</td><td>${r.rps.toFixed(4)}</td>
+      <td>${r.log_loss.toFixed(4)}
+        ${probBar(0.15 + 0.85 * (hi - r.log_loss) / ((hi - lo) || 1), 'accent')}</td>
+      <td>${r.rps.toFixed(4)}</td>
       <td>${(r.accuracy * 100).toFixed(1)}%</td>
       <td class="l" style="color:var(--muted)">${r.held_out ? 'Held out' : 'Used for tuning'}</td>
     </tr>`).join('');

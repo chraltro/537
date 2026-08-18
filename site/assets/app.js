@@ -223,10 +223,16 @@ export function initPalette(teams) {
       </li>`).join('') || '<li class="pal-empty">Nothing matches that.</li>';
   };
   const open = () => {
+    if (!el.hidden) return;
     el.hidden = false; input.value = ''; active = 0; render();
+    lockScroll();
     input.focus();
   };
-  const close = () => { el.hidden = true; };
+  const close = () => {
+    if (el.hidden) return;
+    el.hidden = true;
+    unlockScroll();
+  };
   const go = () => { if (shown[active]) location.href = shown[active].href; };
 
   addEventListener('keydown', (e) => {
@@ -252,25 +258,50 @@ export function initPalette(teams) {
     b.addEventListener('click', open));
 }
 
+/* ================= body scroll lock =================
+   Without this, dragging inside a dialog on a phone scrolls the page behind it
+   and the dialog appears frozen. Position-fixed is the only approach iOS
+   Safari honours, so the scroll offset is saved and restored by hand. */
+let lockedAt = 0, lockDepth = 0;
+export function lockScroll() {
+  if (lockDepth++) return;
+  lockedAt = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${lockedAt}px`;
+  document.body.style.width = '100%';
+}
+export function unlockScroll() {
+  if (--lockDepth > 0) return;
+  lockDepth = 0;
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.width = '';
+  window.scrollTo(0, lockedAt);
+}
+
 /* ================= modal ================= */
 export function modal(html) {
   let m = document.getElementById('modal');
   if (!m) {
     document.body.insertAdjacentHTML('beforeend',
       '<div id="modal" hidden><div class="pal-backdrop" data-close></div>' +
-      '<div class="modal-box" role="dialog" aria-modal="true"></div></div>');
+      '<div class="modal-box" role="dialog" aria-modal="true" tabindex="-1"></div></div>');
     m = document.getElementById('modal');
     m.addEventListener('click', (e) => { if (e.target.dataset.close !== undefined) closeModal(); });
     addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
   }
-  m.querySelector('.modal-box').innerHTML =
-    `<button class="modal-x" data-close aria-label="Close">✕</button>${html}`;
+  const box = m.querySelector('.modal-box');
+  box.innerHTML = `<button class="modal-x" data-close aria-label="Close">✕</button>${html}`;
+  box.scrollTop = 0;
   m.hidden = false;
-  m.querySelector('.modal-x').focus();
+  lockScroll();
+  box.focus();
 }
 export function closeModal() {
   const m = document.getElementById('modal');
-  if (m) m.hidden = true;
+  if (!m || m.hidden) return;
+  m.hidden = true;
+  unlockScroll();
 }
 
 /* ================= score heatmap =================
@@ -307,6 +338,31 @@ export function scoreGrid(grid, homeShort, awayShort, best) {
         <div class="gaxis-x">${esc(awayShort)} goals</div>
       </div>
     </div>`;
+}
+
+/* ================= swing bar =================
+   "49.1% → 29.4%" is a sentence, not a figure. A paired-dot track shows the
+   same two numbers as a distance, so the size of what is at stake is visible
+   rather than arithmetic the reader has to do. Ends carry the same colours as
+   the win/draw/loss bars: blue for the home result, red for the away one. */
+export function swingBar(away, home, label) {
+  const lo = Math.min(away, home), hi = Math.max(away, home);
+  return `<div class="swing" role="img"
+      aria-label="${esc(label)}: ${(away * 100).toFixed(1)} percent if the away side wins,
+                  ${(home * 100).toFixed(1)} percent if the home side wins">
+    <span class="swing-track">
+      <span class="swing-span" style="left:${lo * 100}%;width:${(hi - lo) * 100}%"></span>
+      <span class="swing-dot away" style="left:${away * 100}%"></span>
+      <span class="swing-dot home" style="left:${home * 100}%"></span>
+    </span>
+  </div>`;
+}
+
+/* ================= probability bar =================
+   One series, one colour: how likely the model said a thing was.          */
+export function probBar(p, tone = 'accent') {
+  return `<span class="pbar" role="img" aria-label="${(p * 100).toFixed(1)} percent">
+    <span style="width:${Math.max(p * 100, 1.5)}%;background:var(--${tone})"></span></span>`;
 }
 
 /* ================= multi-series line chart =================
