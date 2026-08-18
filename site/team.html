@@ -9,8 +9,12 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
 <style>
   .posbars { display: grid; grid-template-columns: repeat(20, 1fr); gap: 2px; align-items: end; height: 130px; }
-  .posbars .bslot { height: 100%; display: flex; align-items: flex-end; border-radius: 3px 3px 0 0; }
-  .posbars .bslot.ucl, .posbars .bslot.rel { background: var(--grid); }
+  .posbars .bslot { height: 100%; display: flex; align-items: flex-end; position: relative; }
+  /* Qualification cut-offs are geometry, not a second colour: one series, one hue. */
+  .posbars .bslot.cut::before {
+    content: ""; position: absolute; left: -3px; top: 0; bottom: -4px;
+    border-left: 1px solid var(--rule);
+  }
   .posbars .b { background: var(--accent); border-radius: 3px 3px 0 0; min-height: 2px; width: 100%; }
   .fixrow {
     display: grid; grid-template-columns: 40px 88px 1fr 150px 66px; gap: 12px;
@@ -56,7 +60,7 @@
     <section class="card">
       <h2>Finishing position</h2>
       <p class="sub">How often the club lands in each place across 50,000 seasons.
-        Darker bars are Champions League and relegation places.</p>
+        Vertical rules mark the Champions League cut and the relegation places.</p>
       <div class="posbars" id="posbars"></div>
       <div class="axis20" style="margin-top:6px">
         <span>1</span><span></span><span></span><span></span><span>5</span>
@@ -125,7 +129,7 @@ function render() {
 
   const maxP = Math.max(...t.pos);
   document.getElementById('posbars').innerHTML = t.pos.map((p, i) => `
-    <div class="bslot${i < fc.ucl_places ? ' ucl' : i >= 17 ? ' rel' : ''}">
+    <div class="bslot${i === fc.ucl_places || i === 17 ? ' cut' : ''}">
       <div class="b" data-i="${i}" data-p="${p}"
         style="height:${Math.max(2, (p / maxP) * 100)}%"></div>
     </div>`).join('');
