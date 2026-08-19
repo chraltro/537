@@ -368,17 +368,25 @@
   }
  ],
  "calibration_priors": {
+  "version": 2,
   "continuing": {
-   "slope": 0.9572874204243506,
-   "intercept": 0.007277688612711828,
+   "slope": 0.9572728768660788,
+   "intercept": 0.007224220151884848,
    "n": 221,
    "source": "la-liga"
   },
   "promoted": {
-   "slope": 0.122623279873993,
-   "intercept": -0.280384335038671,
+   "slope": 0.12117829467213782,
+   "intercept": -0.2847108298103515,
    "n": 39,
    "source": "la-liga"
+  },
+  "relegated": {
+   "slope": 0.9053,
+   "intercept": 0.025,
+   "n": 0,
+   "source": "premier-league",
+   "reason": "too few pairs"
   },
   "league": "la-liga",
   "generated": "2026-08-19"

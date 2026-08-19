@@ -174,6 +174,13 @@ document.getElementById('bandnote').textContent = W.isCup
     + `the last spot still in the cup.${W.relegTail}`
   : `Rules mark the ${W.topWord} and the ${W.relegPhrase}.${W.relegTail}`;
 
+/* Where a club came from, when it did not simply stay. A top flight only ever
+   receives clubs from below; a second tier also receives them from above, and in
+   the Championship that is the difference between a promotion favourite and a
+   promoted club. Older forecast files carry only `promoted`, so fall back. */
+const ARRIVED = { up: 'Promoted', down: 'Relegated' };
+fc.teams.forEach((t) => { t.arrived = t.arrived || (t.promoted ? 'up' : 'stayed'); });
+
 const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
 const rows = fc.teams.map((t, i) => ({ ...t, rank: i + 1 }));
 const byTitle = [...rows].sort((a, b) => b.title - a.title);
@@ -234,7 +241,7 @@ function render(list) {
       <td class="l"><span class="club">
         <span class="chip" style="background:${chipColor(t.primary)}"></span>
         <a href="${url(`team.html?t=${t.id}`)}">${esc(t.name)}</a>
-        ${t.promoted ? '<span class="tag">Promoted</span>' : ''}
+        ${ARRIVED[t.arrived] ? `<span class="tag">${ARRIVED[t.arrived]}</span>` : ''}
       </span></td>
       <td><b>${t.pts.toFixed(1)}</b>
         <span class="minibar" style="width:${(t.pts / maxPts * 100).toFixed(1)}%"></span></td>

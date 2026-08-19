@@ -248,6 +248,7 @@
   }
  ],
  "calibration_priors": {
+  "version": 2,
   "continuing": {
    "slope": 1.0336464712536744,
    "intercept": -0.02180375690211454,
@@ -261,6 +262,13 @@
    "source": "premier-league",
    "measured_slope": 2.0121,
    "reason": "measured slope 2.01 outside 0.02-1.25"
+  },
+  "relegated": {
+   "slope": 0.9053,
+   "intercept": 0.025,
+   "n": 0,
+   "source": "premier-league",
+   "reason": "too few pairs"
   },
   "league": "primeira-liga",
   "generated": "2026-08-19"

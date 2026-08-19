@@ -330,8 +330,7 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
         for start, chunk in _rounds(season_matches):
             cutoff = min(m.date for m in chunk)
             lo = dt.date(cutoff.year - history_years, 1, 1)
-            hist = [m for m in ds.top if lo <= m.date < cutoff] + \
-                   [m for m in ds.second if lo <= m.date < cutoff]
+            hist = [m for m in ds.before(cutoff) if m.date >= lo]
             pool = sorted({m.home for m in hist} | {m.away for m in hist})
             need = {m.home for m in chunk} | {m.away for m in chunk}
             if not need <= set(pool) or len(hist) < 500:

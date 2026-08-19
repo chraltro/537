@@ -24,8 +24,9 @@ class Dataset:
         self.league = league or leagues.DEFAULT
         self.season = season
         self.reg = TeamRegistry()
-        self.top: list[Match] = []           # top-flight history, with shots
-        self.second: list[Match] = []        # second-tier history, goals only
+        self.top: list[Match] = []           # this division's history
+        self.second: list[Match] = []        # the tier below, to rate clubs coming up
+        self.above: list[Match] = []         # the tier above, to rate clubs coming down
         self.fixtures: list[Match] = []      # the season ahead, in full
         #: Where this season's results actually came from, and how fresh they
         #: are. The build stamp says when the pipeline ran; this says what the
@@ -50,33 +51,17 @@ class Dataset:
     def load(self) -> "Dataset":
         lg = self.league
         print(f"Loading {lg.name} history…")
-        if lg.source == "openfootball":
-            # No football-datasets directory exists for this competition -- the
-            # mirror carries five leagues and no more -- so history comes from
-            # the same plain-text feed as the fixtures. Goals only: no shots, no
-            # cards, no half-time score, no referee.
-            for label in lg.top_season_labels(self.season):
-                if label == self.season:
-                    continue          # the fixture file below is that season
-                text = fetch.fixtures_text(lg, label, "top", required=False)
-                if not text:
-                    continue
-                self.top.extend(m for m in parse_openfootball(text, label, self.reg)
-                                if m.played)
-        else:
-            for code in lg.fd_season_codes(self.season):
-                label = _season_label(code)
-                current = label == self.season
-                text = fetch.results_csv(lg, code, required=not current)
-                if not text:
-                    if current:
-                        print(f"  · {label}: no results yet (season not started)")
-                    continue
-                got = parse_football_data_csv(text, label, self.reg)
-                self.top.extend(m for m in got if m.played)
+        self.top = self._division_history(lg)
         print(f"  · {len(self.top)} matches over "
               f"{len({m.season for m in self.top})} seasons "
               f"(source: {lg.source})")
+
+        if lg.above_slug:
+            above = leagues.get(lg.above_slug)
+            print(f"Loading {above.name} history (the division above)…")
+            self.above = self._division_history(above)
+            print(f"  · {len(self.above)} matches over "
+                  f"{len({m.season for m in self.above})} seasons")
 
         print("Loading second-tier history…")
         for label in lg.second_season_labels(self.season):
@@ -93,6 +78,54 @@ class Dataset:
         self._merge_current_results()
         self.validate()
         return self
+
+    def _division_history(self, lg: leagues.League) -> list[Match]:
+        """One division's played matches, from whichever feed carries it.
+
+        Used for this league and, for a second tier, for the division above it.
+        The two share `self.reg`, so a club is the same id in both and the fit
+        can bridge them the way it already bridges a top flight and its own
+        second tier.
+        """
+        out: list[Match] = []
+        if lg.source == "openfootball":
+            # No football-datasets directory exists for this competition -- the
+            # mirror carries five leagues and no more -- so history comes from
+            # the same plain-text feed as the fixtures. Goals only: no shots, no
+            # cards, no half-time score, no referee.
+            for label in lg.top_season_labels(self.season):
+                if lg is self.league and label == self.season:
+                    continue          # the fixture file below is that season
+                text = fetch.fixtures_text(lg, label, "top", required=False)
+                if not text:
+                    continue
+                out.extend(m for m in parse_openfootball(text, label, self.reg)
+                           if m.played)
+        else:
+            for code in lg.fd_season_codes(self.season):
+                label = _season_label(code)
+                current = label == self.season
+                required = (lg is self.league) and not current
+                text = fetch.results_csv(lg, code, required=required)
+                if not text:
+                    if current and lg is self.league:
+                        print(f"  · {label}: no results yet (season not started)")
+                    continue
+                out.extend(m for m in parse_football_data_csv(text, label, self.reg)
+                           if m.played)
+        return out
+
+    def before(self, cutoff: date) -> list[Match]:
+        """Every match the rating fit may see as of `cutoff`.
+
+        One place decides what is in the corpus, because there were four and
+        they had to agree: the live fit, the season-by-season rating history,
+        the prior calibration and the walk-forward backtest. For a top flight
+        this is its own record plus the tier below; for a second tier it is
+        also the tier above, which is the only evidence about the three clubs
+        that arrive from there every season.
+        """
+        return [m for m in self.top + self.second + self.above if m.date < cutoff]
 
     @property
     def kickoff(self) -> date:

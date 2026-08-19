@@ -368,6 +368,7 @@
   }
  ],
  "calibration_priors": {
+  "version": 2,
   "continuing": {
    "slope": 0.9369754065850421,
    "intercept": 0.005793922973281907,
@@ -379,6 +380,13 @@
    "intercept": -0.21398952707436922,
    "n": 32,
    "source": "ligue-1"
+  },
+  "relegated": {
+   "slope": 0.9053,
+   "intercept": 0.025,
+   "n": 0,
+   "source": "premier-league",
+   "reason": "too few pairs"
   },
   "league": "ligue-1",
   "generated": "2026-08-19"

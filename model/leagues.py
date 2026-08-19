@@ -79,6 +79,16 @@ class League:
     #: "openfootball". Listed rather than probed: 404s cost a round trip each.
     of_from: int = 2018
 
+    #: The division above this one, by slug, for a league that is not a top
+    #: flight. A top flight loads the tier BELOW so it can rate the clubs coming
+    #: up; a second tier needs the mirror image, because three of its clubs
+    #: every season arrive from above and have no recent record in it at all.
+    #: Without this a club relegated from the Premier League is rated on
+    #: whatever it did in the Championship years ago -- for West Ham, 2011-12,
+    #: which an eight-month half-life discounts to nothing -- and then shrunk
+    #: again by a correction measured on clubs promoted from below.
+    above_slug: str = ""
+
     #: Backtest window. The Premier League keeps the full record because it is
     #: the league the model was tuned on and the one whose scores are published
     #: as the headline; the others start later purely to keep the five-league
@@ -286,6 +296,7 @@ CHAMPIONSHIP = League(
     europa_places=4,
     of_top="england/master/{season}/2-championship",
     of_second="england/master/{season}/3-league1",
+    above_slug="premier-league",
     source="openfootball", of_from=2004, second_from=2004,
     backtest_from="2021-22",
 )

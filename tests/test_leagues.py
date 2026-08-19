@@ -459,3 +459,100 @@ def test_premier_league_still_has_its_legacy_flat_files():
         assert os.path.exists(flat), f"missing legacy {name}"
         assert open(flat, "rb").read() == \
             open(os.path.join(base, "premier-league", name), "rb").read()
+
+
+# ------------------------------------------------- arriving from above
+def test_only_a_second_tier_loads_the_division_above(dataset):
+    """A top flight loads the tier below to rate the clubs coming up. A second
+    tier needs the mirror image, because three of its clubs each season arrive
+    from above with no recent record in it at all."""
+    for slug in SLUGS:
+        ds = dataset(slug)
+        lg = leagues.get(slug)
+        if lg.above_slug:
+            assert ds.above, f"{slug}: nothing loaded from {lg.above_slug}"
+            # Deep enough to actually rate a club that has just come down.
+            assert len({m.season for m in ds.above}) >= 10, slug
+        else:
+            assert ds.above == [], f"{slug}: has no division above but loaded one"
+
+
+def test_the_corpus_is_assembled_in_one_place(dataset):
+    """Four call sites used to build the fit corpus by hand and had to agree.
+    `before` is now the only one that decides what is in it."""
+    ds = dataset("championship")
+    cutoff = dt.date(2026, 7, 1)
+    got = ds.before(cutoff)
+    assert all(m.date < cutoff for m in got)
+    assert len(got) == sum(1 for m in ds.top + ds.second + ds.above if m.date < cutoff)
+    # The tier above is genuinely in there, which is the whole point.
+    assert any(m in got for m in ds.above)
+
+
+def test_relegated_clubs_are_told_apart_from_promoted_ones(dataset):
+    """The bug this pins: every club new to a division was called 'promoted',
+    so a club dropping out of the Premier League was shrunk by a correction
+    measured on clubs arriving from League One. In 2025-26 the Premier League
+    relegated West Ham, Burnley and Wolves, and the Championship promoted
+    Cardiff, Lincoln and Bolton."""
+    ds = dataset("championship")
+    teams = ds.teams
+    how = priors.arrivals(ds, teams, "2025-26")
+    down = {t for t, v in how.items() if v == "down"}
+    up = {t for t, v in how.items() if v == "up"}
+    assert {"west-ham", "burnley", "wolves"} <= down, sorted(down)
+    assert down & up == set()
+    assert "west-ham" not in up
+    # Everyone else was already there.
+    assert how["millwall"] == "stayed"
+
+
+def test_a_top_flight_never_sees_an_arrival_from_above(dataset):
+    """`ds.above` is empty there, so the three-way split collapses back to the
+    two-way one and nothing about the big five changes."""
+    ds = dataset("premier-league")
+    how = priors.arrivals(ds, ds.teams, "2025-26")
+    assert set(how.values()) <= {"stayed", "up"}
+
+
+def test_each_kind_of_arrival_gets_its_own_correction():
+    """Routing, without the network: a relegated club must not be handed the
+    promoted club's level shift."""
+    cal = {
+        "continuing": {"slope": 1.0, "intercept": 0.0},
+        "promoted": {"slope": 1.0, "intercept": -1.0},
+        "relegated": {"slope": 1.0, "intercept": +0.5},
+    }
+
+    class FakeFit:
+        index = {"stay": 0, "came_up": 1, "came_down": 2}
+
+        @staticmethod
+        def offence(t):
+            return np.e          # every club identical, so only the correction shows
+
+        @staticmethod
+        def defence(t):
+            return 1.0
+
+    class FakeDs:
+        top = [type("M", (), {"home": "stay", "season": "2025-26"})()]
+        above = [type("M", (), {"home": "came_down", "season": "2025-26"})()]
+
+    teams = ["stay", "came_up", "came_down"]
+    out = priors.preseason_net(FakeDs(), FakeFit(), cal, teams, "2025-26")
+    # Ranking is what matters: down above stayed above up.
+    assert out["came_down"] > out["stay"] > out["came_up"]
+    # And the gaps are exactly the intercepts, recentred.
+    assert out["came_down"] - out["came_up"] == pytest.approx(1.5)
+
+
+def test_a_thin_relegated_sample_falls_back_to_the_carryover_not_the_shrink():
+    """With too few relegated cases to measure, a club coming down is treated
+    like a continuing one. Its rating is a real measurement on a shared scale,
+    so shrinking it like a promoted club would be the same error again."""
+    thin = [(0.2, 0.1), (-0.3, -0.2)]
+    got = priors.regress(thin, "relegated", "championship", fallback="continuing")
+    assert got["slope"] == pytest.approx(priors.PL_FALLBACK["continuing"]["slope"])
+    assert got["slope"] > priors.PL_FALLBACK["promoted"]["slope"]
+    assert got["intercept"] > priors.PL_FALLBACK["promoted"]["intercept"]

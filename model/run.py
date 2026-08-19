@@ -91,10 +91,8 @@ def _rating_history(ds: Dataset, teams, shot_conv, adj: dict[str, float],
     seasons = sorted({m.season for m in ds.top if m.season != ds.season})
     points = [(s, dt.date(int(s.split("-")[0]), 7, 1)) for s in seasons]
     points.append((ds.season, kickoff))
-    top = sorted(ds.top, key=lambda m: m.date)
-    second = sorted(ds.second, key=lambda m: m.date)
     for label, ref in points:
-        past = [m for m in top if m.date < ref] + [m for m in second if m.date < ref]
+        past = ds.before(ref)
         if len(past) < 1000:
             continue                   # too little history to fit anything honest
         pool = sorted({m.home for m in past} | {m.away for m in past})
@@ -241,7 +239,7 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
     shot_conv = ratings.fit_shot_conversion(ds.top)
     ref = max(dt.date.today(), kickoff)
     freshness = dict(ds.sources)
-    hist = [m for m in ds.top if m.date < ref] + [m for m in ds.second if m.date < ref]
+    hist = ds.before(ref)
     pool = sorted({m.home for m in hist} | {m.away for m in hist})
     if pooled:
         print("  · pooled fit: adding the European corpus")
@@ -251,10 +249,13 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
 
     print("Calibrating priors against history…")
     cal = priors.calibrate(ds, shot_conv)
-    print(f"  · continuing slope {cal['continuing']['slope']:.3f} "
-          f"(n={cal['continuing']['n']}, from {cal['continuing'].get('source', league.slug)})"
-          f", promoted slope {cal['promoted']['slope']:.3f} "
-          f"(n={cal['promoted']['n']}, from {cal['promoted'].get('source', league.slug)})")
+    for key in ("continuing", "promoted", "relegated"):
+        c = cal.get(key)
+        if not c or (key == "relegated" and not league.above_slug):
+            continue
+        print(f"  · {key} slope {c['slope']:.3f} (n={c['n']}, "
+              f"from {c.get('source', league.slug)}"
+              + (f"; {c['reason']}" if c.get("reason") else "") + ")")
     raw_net = priors._centred_net(fit, teams)
     prev_season = sorted({m.season for m in ds.top if m.season != ds.season})[-1]
     prior_net = priors.preseason_net(ds, fit, cal, teams, prev_season)
@@ -289,7 +290,7 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
     table = ds.season_table(ds.season)
     idx = {t: i for i, t in enumerate(teams)}
     history = _rating_history(ds, teams, shot_conv, adj, kickoff)
-    returning = {m.home for m in ds.top if m.season == prev_season}
+    how = priors.arrivals(ds, teams, prev_season)
 
     pos = sim["position"]
     # A second tier's table is read against a promotion line and a play-off
@@ -326,7 +327,11 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
             "l": cur.get("l", 0), "gf": cur.get("gf", 0), "ga": cur.get("ga", 0),
             "cur_pts": cur.get("pts", 0),
             "history": history.get(t, []),
-            "promoted": t not in returning,
+            "promoted": how[t] == "up",
+            # Which way they came. A top flight only ever sees "up"; a second
+            # tier also receives clubs from the division above, and calling
+            # those "promoted" was both wrong on the page and wrong in the fit.
+            "arrived": how[t],
         })
     rows.sort(key=lambda r: (-r["pts"], -r["gd"]))
 
@@ -637,7 +642,7 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
             "releg": float(pos[i, direct + playoff:].sum()),
             "pos": [round(float(x), 5) for x in pos[i]],
             "played": 0, "w": 0, "d": 0, "l": 0, "gf": 0, "ga": 0, "cur_pts": 0,
-            "history": [], "promoted": False,
+            "history": [], "promoted": False, "arrived": "stayed",
         })
     rows.sort(key=lambda r: (-r["pts"], -r["gd"]))
 

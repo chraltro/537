@@ -368,6 +368,7 @@
   }
  ],
  "calibration_priors": {
+  "version": 2,
   "continuing": {
    "slope": 0.949504618649657,
    "intercept": 0.001854060807184234,
@@ -379,6 +380,13 @@
    "intercept": -0.11990720078283357,
    "n": 27,
    "source": "bundesliga"
+  },
+  "relegated": {
+   "slope": 0.9053,
+   "intercept": 0.025,
+   "n": 0,
+   "source": "premier-league",
+   "reason": "too few pairs"
   },
   "league": "bundesliga",
   "generated": "2026-08-19"

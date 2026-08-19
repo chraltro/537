@@ -44,6 +44,10 @@ PL_FALLBACK = {
     "promoted": {"slope": 0.3225, "intercept": -0.3441, "n": 0, "source": "premier-league"},
 }
 
+#: Bump when the meaning of a cached calibration changes, so a stale file is
+#: recomputed instead of being read with a key it never had.
+CAL_VERSION = 2
+
 
 def cal_path(league: leagues.League) -> str:
     return os.path.join(CACHE, f"calibration-{league.slug}.json")
@@ -63,6 +67,12 @@ def _pl_seasons_present(ds: Dataset) -> list[str]:
 
 def _teams_in(ds: Dataset, season: str) -> set[str]:
     return {m.home for m in ds.top if m.season == season}
+
+
+def _teams_above(ds: Dataset, season: str) -> set[str]:
+    """Clubs that played in the division above in `season`. Empty for a top
+    flight, which is what makes every rule below a no-op there."""
+    return {m.home for m in ds.above if m.season == season}
 
 
 def _centred_net(fit: ratings.Fit, teams: list[str]) -> dict[str, float]:
@@ -88,7 +98,8 @@ def _centred_net(fit: ratings.Fit, teams: list[str]) -> dict[str, float]:
 SLOPE_BAND = (0.02, 1.25)
 
 
-def regress(pairs: list[tuple[float, float]], key: str, source: str) -> dict:
+def regress(pairs: list[tuple[float, float]], key: str, source: str,
+            fallback: str | None = None) -> dict:
     """Fit one league's own correction, or fall back to the Premier League's.
 
     Below MIN_PAIRS the slope is dominated by whichever two clubs happened to
@@ -101,14 +112,15 @@ def regress(pairs: list[tuple[float, float]], key: str, source: str) -> dict:
     slope of 2.0, and applying it would double every promoted club's rating gap
     instead of shrinking it.
     """
+    fb = PL_FALLBACK[fallback or key]
     if len(pairs) < MIN_PAIRS:
-        return {**PL_FALLBACK[key], "n": len(pairs), "reason": "too few pairs"}
+        return {**fb, "n": len(pairs), "reason": "too few pairs"}
     x = np.array([p[0] for p in pairs])
     y = np.array([p[1] for p in pairs])
     slope, intercept = np.polyfit(x, y, 1)
     lo, hi = SLOPE_BAND
     if not lo <= slope <= hi:
-        return {**PL_FALLBACK[key], "n": len(pairs),
+        return {**fb, "n": len(pairs),
                 "measured_slope": round(float(slope), 4),
                 "reason": f"measured slope {slope:.2f} outside {lo}-{hi}"}
     return {"slope": float(slope), "intercept": float(intercept),
@@ -120,21 +132,33 @@ def calibrate(ds: Dataset, shot_conv, *, refresh: bool = False) -> dict:
 
     For every past season: fit on data available before it started, then fit
     what really happened, and regress one on the other -- separately for clubs
-    that stayed up and clubs that had just come up.
+    that stayed, clubs that had just come up, and clubs that had just come down.
+
+    That third group only exists for a division with something above it, and
+    getting it wrong is expensive: lumping a relegated club in with the promoted
+    ones applies a correction measured on clubs arriving from a weaker league to
+    a club arriving from a stronger one, which pushes it the wrong way by about
+    a third of a goal a game.
     """
     path = cal_path(ds.league)
     if not refresh and os.path.exists(path):
-        return json.load(open(path))
+        try:
+            cached = json.load(open(path))
+            if cached.get("version") == CAL_VERSION:
+                return cached
+        except (OSError, ValueError):
+            pass
 
     seasons = _pl_seasons_present(ds)
     pairs_cont: list[tuple[float, float]] = []
     pairs_prom: list[tuple[float, float]] = []
+    pairs_releg: list[tuple[float, float]] = []
 
     for prev, cur in zip(seasons, seasons[1:]):
         if cur < "2013-14":
             continue
         ref = _season_start(cur)
-        hist = [m for m in ds.top if m.date < ref] + [m for m in ds.second if m.date < ref]
+        hist = ds.before(ref)
         if len(hist) < 2000:
             continue
         cur_teams = sorted(_teams_in(ds, cur))
@@ -154,15 +178,29 @@ def calibrate(ds: Dataset, shot_conv, *, refresh: bool = False) -> dict:
 
         pred = _centred_net(prior, cur_teams)
         real = _centred_net(actual, cur_teams)
-        promoted = cur_teams and (set(cur_teams) - _teams_in(ds, prev))
+        newcomers = set(cur_teams) - _teams_in(ds, prev)
+        came_down = newcomers & _teams_above(ds, prev)
         for t in cur_teams:
             if t not in pred or t not in real:
                 continue
-            (pairs_prom if t in promoted else pairs_cont).append((pred[t], real[t]))
+            if t in came_down:
+                pairs_releg.append((pred[t], real[t]))
+            elif t in newcomers:
+                pairs_prom.append((pred[t], real[t]))
+            else:
+                pairs_cont.append((pred[t], real[t]))
 
     out = {
+        "version": CAL_VERSION,
         "continuing": regress(pairs_cont, "continuing", ds.league.slug),
         "promoted": regress(pairs_prom, "promoted", ds.league.slug),
+        # A club dropping into this division is rated on its record in the one
+        # above, which the fit has placed on the same scale via the clubs that
+        # played in both. That is a measurement, not a guess, so when there are
+        # too few cases to regress it the honest fallback is to treat it like
+        # any continuing club rather than to shrink it like a promoted one.
+        "relegated": regress(pairs_releg, "relegated", ds.league.slug,
+                             fallback="continuing"),
         "league": ds.league.slug,
         "generated": dt.date.today().isoformat(),
     }
@@ -171,14 +209,38 @@ def calibrate(ds: Dataset, shot_conv, *, refresh: bool = False) -> dict:
     return out
 
 
-def preseason_net(ds: Dataset, fit: ratings.Fit, cal: dict, teams: list[str],
-                  prev_season: str) -> dict[str, float]:
-    """Apply the measured carryover / promotion corrections to raw ratings."""
-    pred = _centred_net(fit, teams)
+def arrivals(ds: Dataset, teams: list[str], prev_season: str) -> dict[str, str]:
+    """How each club got here: 'stayed', 'up' or 'down'.
+
+    A top flight only ever has the first two, because `ds.above` is empty and no
+    club can arrive from a division that is not loaded.
+    """
     returning = _teams_in(ds, prev_season)
+    above = _teams_above(ds, prev_season)
     out = {}
     for t in teams:
-        c = cal["continuing"] if t in returning else cal["promoted"]
+        if t in returning:
+            out[t] = "stayed"
+        elif t in above:
+            out[t] = "down"
+        else:
+            out[t] = "up"
+    return out
+
+
+#: Which measured correction each kind of arrival gets.
+_CORRECTION = {"stayed": "continuing", "up": "promoted", "down": "relegated"}
+
+
+def preseason_net(ds: Dataset, fit: ratings.Fit, cal: dict, teams: list[str],
+                  prev_season: str) -> dict[str, float]:
+    """Apply the measured carryover / promotion / relegation corrections."""
+    pred = _centred_net(fit, teams)
+    how = arrivals(ds, teams, prev_season)
+    out = {}
+    for t in teams:
+        key = _CORRECTION[how[t]]
+        c = cal.get(key) or cal["continuing"]
         out[t] = c["slope"] * pred.get(t, 0.0) + c["intercept"]
     m = float(np.mean(list(out.values())))
     return {t: v - m for t, v in out.items()}
