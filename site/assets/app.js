@@ -978,7 +978,7 @@ export function halfTime(m, h, a) {
     <div class="hint" style="margin-bottom:20px">${esc(h.short)} ahead ${pct(ph)} ·
       level ${pct(pd)} · ${esc(a.short)} ahead ${pct(pa)}${
       m.htsc ? ` &nbsp;·&nbsp; likeliest half-time score ${m.htsc[0]}–${m.htsc[1]} (${pct(m.htscp)})` : ''}
-      &nbsp;·&nbsp; fitted on half-time goals, which the results feed has always carried.</div>`;
+      &nbsp;·&nbsp; fitted on the half-time scores in the results feed.</div>`;
 }
 
 /* ================= match dialog =================
