@@ -1,8 +1,9 @@
-# Premier League 2026/27 Forecast
+# Big Five 2026/27 Forecast
 
 A rebuild of what FiveThirtyEight's Soccer Power Index did for club football: a rating for
-every club, a probability for all 380 matches, and a simulated final table — for the
-2026/27 Premier League season.
+every club, a probability for every match, and a simulated final table — for the 2026/27
+Premier League, La Liga, Serie A, Bundesliga and Ligue 1 seasons. One model, five leagues,
+one site with a league switcher.
 
 **→ [chraltro.github.io/537](https://chraltro.github.io/537/)**
 
@@ -21,9 +22,10 @@ opinions. It rebuilds itself every six hours on GitHub Actions and publishes to 
   is fitted across the Premier League *and* the Championship together, stitched into one
   scale by clubs that have played in both. The promotion penalty is then measured from every
   promoted club since 2013 rather than assumed.
-- **A market anchor that expires.** A results model cannot see a new manager or a £90m
-  signing, so the preseason forecast is anchored to a checked-in snapshot of bookmaker odds.
-  Its weight decays to zero over the first ten matchweeks.
+- **A market anchor that expires** (Premier League only). A results model cannot see a new
+  manager or a £90m signing, so the PL preseason forecast is anchored to a checked-in
+  snapshot of bookmaker odds whose weight decays to zero over the first ten matchweeks.
+  The other leagues run on results alone, and the method page says so.
 - **50,000 season simulations**, redrawing club ratings from their uncertainty between
   scenarios — without that, the forecast claims far more confidence than it has earned.
 - **A walk-forward backtest** against three baselines, published on the site. Every
@@ -48,7 +50,8 @@ opinions. It rebuilds itself every six hours on GitHub Actions and publishes to 
 ```bash
 pip install numpy scipy pytest
 python -m pytest tests/ -q       # parser, name mapping, simulation invariants
-python -m model.run              # writes site/data/*.json
+python -m model.run              # all five leagues -> site/data/<league>/*.json
+python -m model.run --league la-liga   # just one
 cd site && python -m http.server # then open http://localhost:8000
 ```
 
@@ -58,7 +61,8 @@ cd site && python -m http.server # then open http://localhost:8000
 
 ```
 model/       fetch, parse, ratings, priors, simulate, insight, backtest, run
-data/        team_meta.json (club aliases + colours), market_priors.json (odds snapshot)
+data/        team_meta.json (220 clubs: aliases + colours), market_priors/ (odds snapshots;
+             Premier League only — other leagues run without a market anchor)
 site/        the static site; site/data/*.json is generated
              (press `/` anywhere on the site to jump to a club or matchweek)
 tests/       parser, club-name mapping, simulation and leverage invariants

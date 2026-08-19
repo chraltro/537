@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The races — Premier League 2026/27</title>
-<meta name="description" content="The Premier League 2026/27 title race, the fight for the top five and the relegation battle — with the week's biggest forecast movers and the run of fixtures each contender faces.">
-<meta property="og:title" content="The races — Premier League 2026/27 forecast">
-<meta property="og:description" content="Who is winning the title, the top five and the relegation fight — and how the forecast has moved this week.">
+<meta name="description" content="The title race, the fight for Europe and the relegation battle — with the week's biggest forecast movers and the run of fixtures each contender faces.">
+<meta property="og:title" content="The races — season forecast">
+<meta property="og:description" content="Who is winning the title, the European places and the relegation fight — and how the forecast has moved this week.">
 <meta property="og:type" content="website">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -109,7 +109,7 @@
   <nav class="chips racenav" aria-label="Jump to a race">
     <a class="chip-btn" href="#week">This week</a>
     <a class="chip-btn" href="#title">The title</a>
-    <a class="chip-btn" href="#topfive">Top five</a>
+    <a class="chip-btn" href="#topfive" id="uclchip">Top five</a>
     <a class="chip-btn" href="#relegation">Relegation</a>
   </nav>
 
@@ -132,18 +132,18 @@
   </section>
 
   <section class="card" id="topfive">
-    <h2>The top-five race</h2>
-    <p class="sub">The contested part of the table: clubs whose Champions League place is
-      neither settled nor gone. Ranked by their chance of finishing in the top five.</p>
+    <h2 id="uclhead">The race for Europe</h2>
+    <p class="sub" id="uclsub">The contested part of the table: clubs whose Champions League
+      place is neither settled nor gone.</p>
     <div id="uclrows"></div>
     <div id="uclchart"></div>
   </section>
 
   <section class="card" id="relegation">
     <h2>The relegation battle</h2>
-    <p class="sub">Every club the model gives a real chance of going down — anything above
-      one season in twenty. The last column is the margin between a club's projected total
-      and the points that usually keep a side up.</p>
+    <p class="sub" id="relsub">Every club the model gives a real chance of going down —
+      anything above one season in twenty. The last column is the margin between a club's
+      projected total and the points that usually keep a side up.</p>
     <div id="relrows"></div>
     <p class="hint" id="safetynote" style="margin-top:14px"></p>
     <div id="relchart"></div>
@@ -153,18 +153,20 @@
     <a href="index.html"><b>The projected table</b>
       <span>Every club, its points, and its full spread of finishing positions.</span></a>
     <a href="matches.html"><b>Every match</b>
-      <span>All 380 fixtures, sorted by how much the result swings someone's season.</span></a>
+      <span id="deepermatches">Every fixture, sorted by how much the result swings
+        someone's season.</span></a>
     <a href="method.html"><b>How it works, and how well</b>
       <span>The model, the backtest, and the honest in-season scorecard.</span></a>
   </nav>
 </main>
 
 <script type="module">
-import { data, pct, esc, initChrome, initPalette, chipColor,
-         lineChart, probBar } from './assets/app.js';
+import { data, pct, esc, ord, initChrome, initPalette, chipColor,
+         lineChart, probBar, lg, url, setMeta } from './assets/app.js';
 initChrome('races');
 
 const fc = await data('forecast');
+const W = lg();
 /* Everything below the forecast is optional: the page has to be right on the
    first build of a season, when none of these files exist yet. */
 const soft = async (n) => { try { return await data(n); } catch { return null; } };
@@ -179,7 +181,7 @@ const byTitle = [...fc.teams].sort((a, b) => b.title - a.title);
 const byReleg = [...fc.teams].sort((a, b) => b.releg - a.releg);
 const L = fc.lines;
 
-const METRIC = { title: 'title chance', ucl: 'top-five chance', releg: 'relegation risk' };
+const METRIC = { title: 'title chance', ucl: `${W.topAdj} chance`, releg: 'relegation risk' };
 /* A rising relegation risk is bad news; a rising title chance is good news. */
 const GOOD_UP = { title: true, ucl: true, releg: false };
 const fmtDay = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
@@ -187,16 +189,38 @@ const fmtDay = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
 
 initPalette(fc.teams);
 
+/* ---- per-league wording ----
+   Every phrase that counts places is written from the league's own figures. */
+const nMatches = fc.matches_total || W.nMatches;
+setMeta({
+  title: `The races — ${W.name} ${fc.season}`,
+  ogTitle: `The races — ${W.name} ${fc.season} forecast`,
+  description: `The ${W.name} ${fc.season} title race, the fight for the ${W.topWord} and the `
+    + `relegation battle — with the week's biggest forecast movers and the run of fixtures `
+    + 'each contender faces.',
+});
+document.getElementById('uclchip').textContent = `Top ${W.uclPlaces}`;
+document.getElementById('uclhead').textContent = `The ${W.topAdj} race`;
+document.getElementById('uclsub').textContent =
+  'The contested part of the table: clubs whose Champions League place is neither settled '
+  + `nor gone. Ranked by their chance of finishing in the ${W.topWord}.`;
+document.getElementById('relsub').textContent =
+  'Every club the model gives a real chance of going down — anything above one season in '
+  + `twenty. The bottom ${W.relegPlaces} go down.${W.relegTail} The last column is the margin `
+  + "between a club's projected total and the points that usually keep a side up.";
+document.getElementById('deepermatches').textContent =
+  `All ${nMatches} fixtures, sorted by how much the result swings someone's season.`;
+
 /* ---- lede and stamp ---- */
 const lead = byTitle[0], drop = byReleg[0];
 document.getElementById('lede').innerHTML =
-  `Three races decide a Premier League season, and the model has an opinion on all of them.
+  `Three races decide a ${esc(W.name)} season, and the model has an opinion on all of them.
    <b>${esc(lead.name)}</b> are the likeliest champions at ${pct(lead.title)},
    and <b>${esc(drop.name)}</b> the likeliest to go down at ${pct(drop.releg)}.
    Each contender is shown with the run of fixtures that will settle it.`;
 document.getElementById('stamp').innerHTML = `
   <span>Season <b>${esc(fc.season)}</b></span>
-  <span><b>${fc.matches_played}</b> of ${fc.matches_total} played</span>
+  <span><b>${fc.matches_played}</b> of ${nMatches} matches played</span>
   <span>Review as of <b>${esc(recap.asof || fc.generated.slice(0, 10))}</b></span>`;
 
 /* ---- fixture difficulty, on one scale for the whole page ----
@@ -228,7 +252,7 @@ function runIn(id) {
 
 const club = (t) => `<span class="who">
     <span class="chip" style="background:${chipColor(t.primary)}"></span>
-    <a class="nm" href="team.html?t=${t.id}">${esc(t.name)}</a></span>`;
+    <a class="nm" href="${url(`team.html?t=${t.id}`)}">${esc(t.name)}</a></span>`;
 
 /* ---- one race ---- */
 function raceRows(list, key, third) {
@@ -236,7 +260,8 @@ function raceRows(list, key, third) {
   return list.map((t, i) => `
     <div class="racerow">
       ${club(t)}
-      <div class="big">${pct(t[key])}<small>${key === 'releg' ? 'down' : (key === 'title' ? 'title' : 'top 5')}</small></div>
+      <div class="big">${pct(t[key])}<small>${
+        key === 'releg' ? 'down' : (key === 'title' ? 'title' : `top ${W.uclPlaces}`)}</small></div>
       <div class="num">${third(t, i)}</div>
       <div class="runin">${runIn(t.id)}</div>
     </div>`).join('');
@@ -310,7 +335,7 @@ function weekly() {
     + ' before a ball is kicked. Every later week is measured against this.';
 
   const alive = (k) => fc.teams.filter((t) => t[k] >= 0.05 && t[k] <= 0.95).length;
-  const races = [['title', 'The title'], ['ucl', 'The top five'], ['releg', 'Relegation']]
+  const races = [['title', 'The title'], ['ucl', `The ${W.topWord}`], ['releg', 'Relegation']]
     .map(([k, label]) => ({ k, label, n: alive(k) }))
     .sort((a, b) => b.n - a.n);
   const tightest = races[0];
@@ -347,8 +372,10 @@ function render() {
   document.getElementById('titlechart').innerHTML =
     raceChart(top, 'title', 'the title race');
 
+  /* One more club than there are places, so the group always shows somebody
+     on the wrong side of the line. */
   const zone = [...fc.teams].filter((t) => t.ucl >= 0.05 && t.ucl <= 0.95)
-    .sort((a, b) => b.ucl - a.ucl).slice(0, 6);
+    .sort((a, b) => b.ucl - a.ucl).slice(0, Math.max(4, W.uclPlaces + 1));
   const uclLead = zone.length ? Math.max(...zone.map((t) => t.pts)) : 0;
   document.getElementById('uclrows').innerHTML = raceRows(zone, 'ucl', (t) => {
     const gap = uclLead - t.pts;
@@ -356,9 +383,9 @@ function render() {
       <span>${gap < 0.05 ? 'leads this group' : `${gap.toFixed(1)} behind`}</span>`;
   });
   document.getElementById('uclchart').innerHTML =
-    raceChart(zone, 'ucl', 'the top-five race');
+    raceChart(zone, 'ucl', `the ${W.topAdj} race`);
 
-  const danger = byReleg.filter((t) => t.releg >= 0.05).slice(0, 7);
+  const danger = byReleg.filter((t) => t.releg >= 0.05).slice(0, Math.max(5, W.relegPlaces + 4));
   const safe = L ? L.safety.p50 : null;
   document.getElementById('relrows').innerHTML = raceRows(danger, 'releg', (t) => {
     if (safe === null) return `<b>${t.pts.toFixed(1)}</b> pts`;
@@ -367,9 +394,10 @@ function render() {
       <span>${m >= 0 ? `+${m.toFixed(1)}` : `−${Math.abs(m).toFixed(1)}`} vs safety</span>`;
   });
   document.getElementById('safetynote').innerHTML = L
-    ? `Across 50,000 simulated seasons seventeenth place — the last safe spot — finishes on
-       about <b>${L.safety.p50}</b> points, and <b>${L.safety.enough90}</b> was enough to stay
-       up in nine seasons out of ten. ${danger.length
+    ? `Across ${fc.n_sims.toLocaleString()} simulated seasons ${ord(W.lastSafe)} place — the
+       last spot above the ${W.relegPhrase} — finishes on about <b>${L.safety.p50}</b> points,
+       and <b>${L.safety.enough90}</b> was enough to stay up in nine seasons out of
+       ten.${W.relegTail} ${danger.length
         ? `${esc(danger[0].name)} are projected on ${danger[0].pts.toFixed(1)}.` : ''}`
     : '';
   document.getElementById('relchart').innerHTML =

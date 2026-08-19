@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from . import config
+from . import config, leagues
 from .ratings import Fit, tau
 
 MAXG = config.MAX_GOALS
@@ -82,6 +82,7 @@ def build_lambdas(fit: Fit, fixtures, adj: dict[str, float] | None = None):
 
 
 def simulate_season(fit: Fit, fixtures, teams: list[str], *,
+                    league: leagues.League | None = None,
                     adj: dict[str, float] | None = None,
                     n_sims: int = config.N_SIMS,
                     rating_sd: float = config.RATING_SD,
@@ -91,8 +92,11 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
     """Play the rest of the season `n_sims` times.
 
     Results already on the board are carried in as fact; only the remaining
-    fixtures are simulated.
+    fixtures are simulated. `league` decides where the European and relegation
+    lines fall; it defaults to the Premier League for callers with none in hand.
     """
+    lg = league or leagues.DEFAULT
+    ucl, europa, releg = lg.ucl_places, lg.europa_places, lg.releg_places
     rng = np.random.default_rng(seed)
     idx = {t: i for i, t in enumerate(teams)}
     n = len(teams)
@@ -169,7 +173,10 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
         np.add.at(ga, (slice(None), ai), hg)
 
         gd = gf - ga
-        # Premier League order: points, then goal difference, then goals scored.
+        # Points, then goal difference, then goals scored. Serie A and La Liga
+        # actually settle level clubs on head-to-head first; over a full season
+        # that changes the odd placing, never the shape of the distribution, and
+        # tracking it would cost a per-pair tally in the hot loop.
         # A genuine tie is settled by a play-off, so break it at random here.
         key = (pts * 1e9 + (gd + 200) * 1e4 + gf * 1e0
                + rng.random((per, n)) * 1e-3)
@@ -187,8 +194,8 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
             rank = np.argsort(order, axis=1)            # rank[s, t] = finish (0-based)
             ev = np.empty((per, n, n_ev), dtype=np.float32)
             ev[:, :, 0] = rank == 0
-            ev[:, :, 1] = rank < config.UCL_PLACES
-            ev[:, :, 2] = rank >= n - config.RELEGATION_PLACES
+            ev[:, :, 1] = rank < ucl
+            ev[:, :, 2] = rank >= n - releg
             ev_flat = ev.reshape(per, n * n_ev)
             res = np.where(hg > ag, 0, np.where(hg == ag, 1, 2))     # (per, n_rem)
             for k in range(3):
@@ -208,16 +215,16 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
         "points_min": pts_team[:total].min(axis=0),
         "gd_mean": gd_sum / total,
         "title": p[:, 0],
-        "ucl": p[:, :config.UCL_PLACES].sum(axis=1),
-        "europa": p[:, config.UCL_PLACES:config.UCL_PLACES + config.EUROPA_PLACES].sum(axis=1),
-        "relegation": p[:, -config.RELEGATION_PLACES:].sum(axis=1),
+        "ucl": p[:, :ucl].sum(axis=1),
+        "europa": p[:, ucl:ucl + europa].sum(axis=1),
+        "relegation": p[:, -releg:].sum(axis=1),
         "n_sims": total,
-        "lines": _lines(pos_pts[:total]),
+        "lines": _lines(pos_pts[:total], lg),
         "leverage": _leverage(lev_hits, lev_n, remaining, teams) if leverage else None,
     }
 
 
-def _lines(pos_pts: np.ndarray) -> dict:
+def _lines(pos_pts: np.ndarray, league: leagues.League | None = None) -> dict:
     """The season's thresholds, read off the simulated tables.
 
     'How many points win the league' is a different question from 'how many
@@ -225,9 +232,12 @@ def _lines(pos_pts: np.ndarray) -> dict:
     doing arithmetic in April. Each line reports the points of the side that
     finished in the boundary position, plus the total that was enough in 90%
     of seasons."""
+    lg = league or leagues.DEFAULT
     out = {}
-    for key, pos in (("title", 0), ("top5", config.UCL_PLACES - 1),
-                     ("safety", config.N_TEAMS - config.RELEGATION_PLACES - 1)):
+    # 'top5' keeps its name across leagues even where the line is 3rd or 4th:
+    # the site reads the key and labels it from the manifest's ucl_places.
+    for key, pos in (("title", 0), ("top5", lg.ucl_places - 1),
+                     ("safety", lg.n_teams - lg.releg_places - 1)):
         col = pos_pts[:, pos]
         out[key] = {
             "p10": int(np.percentile(col, 10)),

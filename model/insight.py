@@ -11,9 +11,10 @@ import os
 
 import numpy as np
 
-from . import config
-
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+#: Default output directory. Both state files below live *inside* a league's own
+#: directory, so every function here takes `out_dir`; this is only the fallback
+#: for a caller that has none, and the one thing tests monkeypatch.
 OUT = os.path.join(HERE, "site", "data")
 
 
@@ -60,13 +61,16 @@ def strength_of_schedule(fixtures, teams, spi: dict[str, float],
 # --------------------------------------------------------------------------
 # Forecast history
 # --------------------------------------------------------------------------
-def append_history(rows: list[dict], played: int) -> list[dict]:
+def append_history(rows: list[dict], played: int, out_dir: str | None = None) -> list[dict]:
     """Keep one snapshot per day so the forecast's own movement is visible.
 
     A forecast that only ever shows today's number is impossible to argue with.
     This is what makes 'the model liked them in August' checkable in April.
+
+    The file is per league: two leagues sharing one history would overwrite each
+    other's snapshot every run and silently destroy the record.
     """
-    path = os.path.join(OUT, "history.json")
+    path = os.path.join(out_dir or OUT, "history.json")
     hist = []
     if os.path.exists(path):
         try:
@@ -92,7 +96,7 @@ def append_history(rows: list[dict], played: int) -> list[dict]:
 # --------------------------------------------------------------------------
 # Honest in-season scoring
 # --------------------------------------------------------------------------
-def freeze_predictions(matches: list[dict]) -> dict:
+def freeze_predictions(matches: list[dict], out_dir: str | None = None) -> dict:
     """Archive each match's probabilities from the last build before kick-off.
 
     Scoring the model against results using probabilities computed *after* those
@@ -100,7 +104,7 @@ def freeze_predictions(matches: list[dict]) -> dict:
     the answers in front of it. This stores the genuine pre-match forecast the
     first time a fixture is seen, and never overwrites it once played.
     """
-    path = os.path.join(OUT, "predictions.json")
+    path = os.path.join(out_dir or OUT, "predictions.json")
     store = {}
     if os.path.exists(path):
         try:

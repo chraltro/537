@@ -1,15 +1,167 @@
-/* Shared helpers: data loading, formatting, chrome, tooltip, small SVG charts. */
+/* Shared helpers: league state, data loading, formatting, chrome, tooltip,
+   small SVG charts. */
 
-const BASE = location.pathname.replace(/[^/]*$/, '');
+/* ================= where the site lives =================
+   Resolved from this module's own URL rather than the page's, so a 404 served
+   at an arbitrary depth still finds the data and still links home correctly. */
+const ROOT = new URL('..', import.meta.url).pathname;      // '/', '/537/', …
+const DATA = `${ROOT}data/`;
+
+/* ================= league state =================
+   One site, several leagues. Which one is a URL parameter so that every link is
+   shareable; the manifest decides what exists, what is ready, and the default.
+
+   The manifest is awaited at module load — the masthead needs the league list
+   and every data path needs the slug, so there is no useful work to do before
+   it lands. A broken manifest degrades to the Premier League rather than
+   blanking the site. */
+const FALLBACK_MANIFEST = {
+  default: 'premier-league',
+  leagues: [{
+    slug: 'premier-league', name: 'Premier League', country: 'England', ready: true,
+    n_teams: 20, ucl_places: 5, releg_places: 3, releg_note: null,
+  }],
+};
+
+async function loadManifest() {
+  try {
+    const r = await fetch(`${DATA}leagues.json`, { cache: 'no-cache' });
+    if (!r.ok) throw new Error(`leagues.json ${r.status}`);
+    const m = await r.json();
+    if (!m || !Array.isArray(m.leagues) || !m.leagues.length) throw new Error('empty manifest');
+    return m;
+  } catch (e) {
+    console.warn('league manifest unavailable, falling back to the Premier League:', e.message);
+    return FALLBACK_MANIFEST;
+  }
+}
+
+export const MANIFEST = await loadManifest();
+export const LEAGUES = MANIFEST.leagues;
+
+/* The default has to be a league that actually has data behind it, or the first
+   visit 404s on every fetch. */
+const _named = LEAGUES.find((l) => l.slug === MANIFEST.default);
+const _ready = LEAGUES.filter((l) => l.ready);
+export const DEFAULT_LEAGUE =
+  ((_named && _named.ready) ? _named : (_ready[0] || _named || LEAGUES[0])).slug;
+
+const _asked = new URLSearchParams(location.search).get('lg');
+/* An unknown or not-yet-built league falls back rather than 404ing. */
+const _chosen = LEAGUES.find((l) => l.slug === _asked && l.ready)
+             || LEAGUES.find((l) => l.slug === DEFAULT_LEAGUE);
+
+/* Live record for the current league. Starts as the manifest entry and is
+   topped up from the league's own JSON as that arrives (see absorb below), so
+   the manifest is a fallback rather than a second source of truth. */
+export const LG = { ...(_chosen || FALLBACK_MANIFEST.leagues[0]) };
+export const getLeague = () => LG.slug;
+
+const NUMWORD = ['zero', 'one', 'two', 'three', 'four', 'five',
+                 'six', 'seven', 'eight', 'nine', 'ten'];
+const numWord = (n) => NUMWORD[n] || String(n);
+
+/* "the Premier League" but "La Liga". A league name takes the definite article
+   unless it already carries one of its own, or ends in the bare letter or
+   number that makes it a name rather than a description (Serie A, Ligue 1). */
+function withArticle(name) {
+  const n = String(name || '').trim();
+  const last = n.split(/\s+/).pop() || '';
+  const ownArticle = /^(la|le|les|el|il|lo|los|die|der|das|de)\s/i.test(n);
+  const bareTail = /^(\d+|[A-Za-z])$/.test(last);
+  return (ownArticle || bareTail) ? n : `the ${n}`;
+}
+
+/* Every league-dependent phrase on the site is derived here, once, from
+   counts. Nothing downstream is allowed to write "top five" by hand. */
+export function lg() {
+  const n = LG.n_teams || 20;
+  const ucl = LG.ucl_places || 5;
+  const rel = LG.releg_places || 3;
+  const the = withArticle(LG.name);
+  return {
+    slug: LG.slug,
+    name: LG.name,
+    the,                                      // "the Premier League" / "La Liga"
+    The: the.charAt(0).toUpperCase() + the.slice(1),   // sentence-initial
+    country: LG.country || '',
+    nTeams: n,
+    uclPlaces: ucl,
+    relegPlaces: rel,
+    relegNote: LG.releg_note || '',
+    nMatches: n * (n - 1),                    // double round robin
+    nWeeks: (n - 1) * 2,
+    topN: `Top ${ucl}`,                       // column header
+    topWord: `top ${numWord(ucl)}`,           // "the top five"
+    topAdj: `top-${numWord(ucl)}`,            // "top-five race"
+    topFinish: `a top-${numWord(ucl)} finish`,
+    lastSafe: n - rel,                        // last position above the drop
+    relegPhrase: `${rel} relegation place${rel === 1 ? '' : 's'}`,
+    /* Appended, with its own leading space, wherever the drop is described. */
+    relegTail: LG.releg_note ? ` ${LG.releg_note}.` : '',
+  };
+}
+
+/* The events a fixture can swing, labelled for this league. */
+export function eventLabels() {
+  return { title: 'the title', ucl: lg().topFinish, releg: 'relegation' };
+}
+
+/* ================= links =================
+   The chosen league has to survive every hop, so an internal link is built
+   here rather than written literally. The default league is left clean: no
+   parameter, so Premier League URLs look exactly as they always have. */
+export function url(path) {
+  const u = new URL(path, `${location.origin}${ROOT}`);
+  if (LG.slug !== DEFAULT_LEAGUE) u.searchParams.set('lg', LG.slug);
+  else u.searchParams.delete('lg');
+  return u.pathname + u.search + u.hash;
+}
+
+/* For pages that rewrite their own query string (filters live in the URL). */
+export function withLg(params) {
+  if (LG.slug !== DEFAULT_LEAGUE) params.set('lg', LG.slug);
+  else params.delete('lg');
+  return params;
+}
+
+/* ================= data ================= */
 const store = {};
 
 export async function data(name) {
   if (!store[name]) {
-    const r = await fetch(`${BASE}data/${name}.json`, { cache: 'no-cache' });
+    const r = await fetch(`${DATA}${LG.slug}/${name}.json`, { cache: 'no-cache' });
     if (!r.ok) throw new Error(`${name}.json ${r.status}`);
     store[name] = await r.json();
+    absorb(name, store[name]);
   }
   return store[name];
+}
+
+/* A league's own files know more about it than the manifest does. Take what
+   they carry and leave the manifest value standing where they do not — the
+   first build of a league predates these fields. */
+function absorb(name, d) {
+  if (!d || typeof d !== 'object') return;
+  const num = (k) => { if (typeof d[k] === 'number') LG[k] = d[k]; };
+  if (name === 'forecast') {
+    num('ucl_places');                                  // legacy top-level field
+    if (d.league && typeof d.league === 'object') Object.assign(LG, d.league);
+  }
+  if (name === 'sim_input') { num('ucl_places'); num('releg_places'); num('n_teams'); }
+}
+
+/* ================= page metadata =================
+   Titles and descriptions name the league, so a shared link says which one. */
+export function setMeta({ title, ogTitle, description }) {
+  const set = (sel, v) => {
+    const el = document.querySelector(sel);
+    if (el && v) el.setAttribute('content', v);
+  };
+  if (title) document.title = title;
+  set('meta[property="og:title"]', ogTitle || title);
+  set('meta[name="description"]', description);
+  set('meta[property="og:description"]', description);
 }
 
 export const pct = (x, d = 0) =>
@@ -26,25 +178,50 @@ export function esc(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-/* ---------------- theme ---------------- */
+/* ---------------- chrome ---------------- */
+
+/* Links written into the HTML by hand still have to carry the league. Rewriting
+   them here means a new page cannot forget to, and same-page anchors and
+   outbound links are left alone. */
+function lgifyLinks(root) {
+  if (LG.slug === DEFAULT_LEAGUE) return;
+  root.querySelectorAll('a[href]').forEach((a) => {
+    const raw = a.getAttribute('href');
+    if (!raw || raw.startsWith('#') || /^[a-z]+:/i.test(raw)) return;
+    const u = new URL(raw, location.href);
+    if (u.origin !== location.origin) return;
+    u.searchParams.set('lg', LG.slug);
+    a.setAttribute('href', u.pathname + u.search + u.hash);
+  });
+}
+
 export function initChrome(page) {
   const saved = localStorage.getItem('plf-theme');
   if (saved) document.documentElement.setAttribute('data-theme', saved);
 
+  const W = lg();
+  const opts = LEAGUES.map((l) => `<option value="${esc(l.slug)}"${
+    l.slug === LG.slug ? ' selected' : ''}${
+    l.ready ? '' : ' disabled title="Coming soon"'}>${esc(l.name)}</option>`).join('');
+
   document.body.insertAdjacentHTML('afterbegin', `
     <a class="skip" href="#main">Skip to content</a>
     <header class="masthead"><div class="wrap">
-      <a class="brand" href="${BASE}index.html">
+      <a class="brand" href="${url('index.html')}">
         <span class="mark"></span>
-        <b>Ninety</b><span>Premier League forecast</span>
+        <b>Ninety</b><span>${esc(W.name)} forecast</span>
       </a>
+      <label class="lgswitch">
+        <span class="vh">League</span>
+        <select id="lgsel" aria-label="Choose a league">${opts}</select>
+      </label>
       <nav class="top">
-        <a href="${BASE}index.html"${page === 'table' ? ' aria-current="page"' : ''}>Table</a>
-        <a href="${BASE}matches.html"${page === 'matches' ? ' aria-current="page"' : ''}>Matches</a>
-        <a href="${BASE}team.html"${page === 'team' ? ' aria-current="page"' : ''}>Clubs</a>
-        <a href="${BASE}races.html"${page === 'races' ? ' aria-current="page"' : ''}>Races</a>
-        <a href="${BASE}simulator.html"${page === 'sim' ? ' aria-current="page"' : ''}>What&nbsp;if</a>
-        <a href="${BASE}method.html"${page === 'method' ? ' aria-current="page"' : ''}>Method</a>
+        <a href="${url('index.html')}"${page === 'table' ? ' aria-current="page"' : ''}>Table</a>
+        <a href="${url('matches.html')}"${page === 'matches' ? ' aria-current="page"' : ''}>Matches</a>
+        <a href="${url('team.html')}"${page === 'team' ? ' aria-current="page"' : ''}>Clubs</a>
+        <a href="${url('races.html')}"${page === 'races' ? ' aria-current="page"' : ''}>Races</a>
+        <a href="${url('simulator.html')}"${page === 'sim' ? ' aria-current="page"' : ''}>What&nbsp;if</a>
+        <a href="${url('method.html')}"${page === 'method' ? ' aria-current="page"' : ''}>Method</a>
         <button class="searchbtn" data-open-palette aria-label="Search (press slash)">
           <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
             <circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
@@ -67,17 +244,29 @@ export function initChrome(page) {
     window.dispatchEvent(new Event('themechange'));
   });
 
+  /* Switching league keeps you on the page you were reading. Other parameters
+     ride along; a club or match that does not exist over there degrades to that
+     page's own default rather than an error. */
+  document.getElementById('lgsel').addEventListener('change', (e) => {
+    const u = new URL(location.href);
+    if (e.target.value === DEFAULT_LEAGUE) u.searchParams.delete('lg');
+    else u.searchParams.set('lg', e.target.value);
+    location.href = u.toString();
+  });
+
   document.body.insertAdjacentHTML('beforeend', `
     <footer><div class="wrap">
-      <p>An open forecast of the Premier League, rebuilt in the spirit of FiveThirtyEight's
+      <p>An open forecast of ${esc(W.the)}, rebuilt in the spirit of FiveThirtyEight's
       Soccer Power Index. Ratings, match probabilities and season simulations are generated
       from public match data — no private feeds, no hand-tuned opinions.
-      <a href="${BASE}method.html">How it works and how accurate it is →</a></p>
+      <a href="${url('method.html')}">How it works and how accurate it is →</a></p>
       <p>Match data: <a href="https://github.com/datasets/football-datasets">football-datasets</a>
-      (mirroring football-data.co.uk) and <a href="https://github.com/openfootball/england">openfootball</a>.
-      Not affiliated with the Premier League. Not betting advice.</p>
+      (mirroring football-data.co.uk) and <a href="https://github.com/openfootball">openfootball</a>.
+      Not affiliated with ${esc(W.the)}. Not betting advice.</p>
     </div></footer>`);
   document.body.insertAdjacentHTML('beforeend', '<div id="tip" role="tooltip"></div>');
+
+  lgifyLinks(document);
 }
 
 /* ---------------- tooltip ---------------- */
@@ -188,13 +377,27 @@ export function sparkline(values, { w = 260, h = 54, pad = 6 } = {}) {
    clubs, matchweeks and pages; Enter goes. A dense data site is only fast
    if you can skip the navigation.                                        */
 export function initPalette(teams) {
+  const W = lg();
+  /* Switching league from here lands on the same page, without the club or
+     matchweek parameters that only meant something in the league you left. */
+  const here = location.pathname.split('/').pop() || 'index.html';
+  const swap = (slug) => {
+    const u = new URL(here, `${location.origin}${ROOT}`);
+    if (slug !== DEFAULT_LEAGUE) u.searchParams.set('lg', slug);
+    return u.pathname + u.search;
+  };
+
   const items = [
-    { label: 'Projected table', kind: 'Page', href: `${BASE}index.html` },
-    { label: 'All 380 matches', kind: 'Page', href: `${BASE}matches.html` },
-    { label: 'Method and accuracy', kind: 'Page', href: `${BASE}method.html` },
-    ...teams.map((t) => ({ label: t.name, kind: 'Club', href: `${BASE}team.html?t=${t.id}`, hint: t.short })),
-    ...Array.from({ length: 38 }, (_, i) => ({
-      label: `Matchweek ${i + 1}`, kind: 'Matchweek', href: `${BASE}matches.html?mw=${i + 1}` })),
+    { label: 'Projected table', kind: 'Page', href: url('index.html') },
+    { label: `All ${W.nMatches} matches`, kind: 'Page', href: url('matches.html') },
+    { label: 'The races', kind: 'Page', href: url('races.html') },
+    { label: 'What if? simulator', kind: 'Page', href: url('simulator.html') },
+    { label: 'Method and accuracy', kind: 'Page', href: url('method.html') },
+    ...teams.map((t) => ({ label: t.name, kind: 'Club', href: url(`team.html?t=${t.id}`), hint: t.short })),
+    ...Array.from({ length: W.nWeeks }, (_, i) => ({
+      label: `Matchweek ${i + 1}`, kind: 'Matchweek', href: url(`matches.html?mw=${i + 1}`) })),
+    ...LEAGUES.filter((l) => l.ready && l.slug !== LG.slug).map((l) => ({
+      label: `Switch to ${l.name}`, kind: 'League', href: swap(l.slug), hint: l.country || '' })),
   ];
 
   document.body.insertAdjacentHTML('beforeend', `
@@ -395,7 +598,7 @@ export function lineChart(series, { w = 720, h = 260, pad = 34, fmt = (v) => v,
    One implementation shared by every page that can open a match. `meta` is the
    forecast's team map; `opts.link` adds a permalink to the matches page. */
 export function matchModal(m, meta, opts = {}) {
-  const EVENT = { title: 'the title', ucl: 'a top-five finish', releg: 'relegation' };
+  const EVENT = eventLabels();
   const h = meta[m.h], a = meta[m.a];
   const fmtDay = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
     { weekday: 'short', day: 'numeric', month: 'short' });
@@ -411,7 +614,7 @@ export function matchModal(m, meta, opts = {}) {
     <p class="msub">Matchweek ${m.md} · ${fmtDay(m.date)}${m.time ? ` · ${m.time}` : ''}
       ${m.played ? ` · finished ${m.hg}–${m.ag}` : ''}
       ${opts.link === false ? '' :
-        ` · <a href="${BASE}matches.html?m=${m.h}--${m.a}">link to this match</a>`}</p>
+        ` · <a href="${url(`matches.html?m=${m.h}--${m.a}`)}">link to this match</a>`}</p>
     <div class="wdl" style="height:26px;margin-bottom:6px">
       <i class="h" style="flex:${Math.max(m.ph, .02)}"><b>${Math.round(m.ph * 100)}</b></i>
       <i class="d" style="flex:${Math.max(m.pd, .02)}"><b>${Math.round(m.pd * 100)}</b></i>

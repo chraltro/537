@@ -56,13 +56,13 @@ jobs:
         run: |
           python - <<'PY'
           import json
-          fc = json.load(open('site/data/forecast.json'))
+          fc = json.load(open('site/data/premier-league/forecast.json'))
           print(f"{fc['season']}  {fc['matches_played']}/{fc['matches_total']} played  "
                 f"{fc['n_sims']:,} sims")
           for t in fc['teams'][:5]:
               print(f"  {t['name']:24s} {t['pts']:5.1f} pts  title {t['title']*100:5.1f}%")
           try:
-              bt = json.load(open('site/data/backtest.json'))['model']
+              bt = json.load(open('site/data/premier-league/backtest.json'))['model']
               print(f"backtest: log-loss {bt['log_loss']:.4f} over {bt['n']} matches")
           except FileNotFoundError:
               print('backtest: not built')

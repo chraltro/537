@@ -16,9 +16,9 @@
   <div class="tiles">
     <a class="tile" href="/537/index.html" style="text-decoration:none">
       <div class="k">Table</div><div class="v" style="font-size:20px">Projected final table</div>
-      <div class="n">Title, Champions League and relegation odds for all 20 clubs</div></a>
+      <div class="n" id="ntable">Title, Champions League and relegation odds for every club</div></a>
     <a class="tile" href="/537/matches.html" style="text-decoration:none">
-      <div class="k">Matches</div><div class="v" style="font-size:20px">All 380 fixtures</div>
+      <div class="k">Matches</div><div class="v" style="font-size:20px" id="vmatches">Every fixture</div>
       <div class="n">Win, draw and loss probabilities for every match</div></a>
     <a class="tile" href="/537/team.html" style="text-decoration:none">
       <div class="k">Clubs</div><div class="v" style="font-size:20px">Club by club</div>
@@ -29,8 +29,15 @@
   </div>
 </main>
 <script type="module">
-  import { initChrome } from '/537/assets/app.js';
+  /* initChrome rewrites every internal link on the page to carry ?lg=, so the
+     four tiles below land in the league the reader was already in. */
+  import { initChrome, lg, setMeta } from '/537/assets/app.js';
   initChrome('');
+  const W = lg();
+  setMeta({ title: `Page not found — ${W.name} Forecast` });
+  document.getElementById('ntable').textContent =
+    `Title, Champions League and relegation odds for all ${W.nTeams} clubs`;
+  document.getElementById('vmatches').textContent = `All ${W.nMatches} fixtures`;
 </script>
 </body>
 </html>

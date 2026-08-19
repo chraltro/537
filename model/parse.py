@@ -6,6 +6,7 @@ import csv
 import json
 import os
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
@@ -22,8 +23,18 @@ def normalise(name: str) -> str:
 
     'AFC Bournemouth', 'Bournemouth' and 'Bournemouth FC' all land on the same
     key; 'Man City' and 'Man United' deliberately do not.
+
+    Accents are folded first, because the two feeds disagree about them within a
+    single club: the results mirror writes 'Malaga' and 'M'gladbach' where
+    openfootball writes 'Málaga CF' and 'Borussia Mönchengladbach'. Decomposing
+    to NFKD and dropping the combining marks makes those the same key without a
+    per-club alias for every accented name in four countries.
     """
-    s = name.lower().replace("&", " and ")
+    s = unicodedata.normalize("NFKD", name)
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    # Ligatures and the Nordic/German letters NFKD leaves alone.
+    s = s.lower().replace("ß", "ss").replace("ø", "o").replace("æ", "ae")
+    s = s.replace("đ", "d").replace("ł", "l").replace("&", " and ")
     s = re.sub(r"[^a-z0-9 ]+", " ", s)
     toks = [t for t in s.split() if t not in _DROP_TOKENS]
     return " ".join(toks)
@@ -121,6 +132,15 @@ _EXTRA = r"(?:\s*(?:a\.?e\.?t\.?|pen\.?s?\.?|aet))?"
 _TRAIL_SCORE = re.compile(r"\s{2,}(\d+)\s*-\s*(\d+)" + _EXTRA + r"\s*(?:\([^)]*\))?" + _EXTRA + r"\s*$", re.I)
 _TIME = re.compile(r"^\s*(\d{1,2}:\d{2})\s+")
 _NOTE = re.compile(r"\s*\[[^\]]*\]\s*")
+# Club names outside England are full of digits -- 'Como 1907', '1. FC Köln',
+# 'Bayer 04 Leverkusen', 'Stade Rennais FC 1901'. So a side cannot be rejected
+# for containing a digit; it is rejected for not containing a word.
+_WORD = re.compile(r"[^\W\d_]{2,}", re.UNICODE)
+_NOT_A_CLUB = re.compile(r"\d\s*[-:]\s*\d")
+
+
+def _is_club(s: str) -> bool:
+    return bool(s) and bool(_WORD.search(s)) and not _NOT_A_CLUB.search(s)
 
 
 def parse_openfootball(text: str, season: str, reg: TeamRegistry) -> list[Match]:
@@ -174,7 +194,7 @@ def parse_openfootball(text: str, season: str, reg: TeamRegistry) -> list[Match]
             home, away = body[:sm2.start()], body[sm2.end():]
 
         home, away = home.strip(), away.strip()
-        if not home or not away or any(c.isdigit() for c in home + away):
+        if not _is_club(home) or not _is_club(away):
             continue
         out.append(Match(date=cur_date, home=reg.resolve(home), away=reg.resolve(away),
                          hg=hg, ag=ag, matchday=matchday, time=time, season=season,

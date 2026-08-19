@@ -10,11 +10,11 @@ import time
 import urllib.error
 import urllib.request
 
-from . import config
+from . import leagues
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CACHE = os.path.join(HERE, ".cache")
-UA = "premier-league-forecast/1.0 (+https://github.com/chraltro/537)"
+UA = "football-forecast/1.0 (+https://github.com/chraltro/537)"
 
 
 class SourceError(RuntimeError):
@@ -63,11 +63,23 @@ def get(url: str, max_age: float = 6 * 3600, required: bool = True) -> str | Non
     return None
 
 
+def results_csv(league: leagues.League, code: str, required: bool = True) -> str | None:
+    """One season of results from the mirror. `code` is a code such as '2526'."""
+    return get(league.fd_csv_url(code), required=required)
+
+
+def fixtures_text(league: leagues.League, season: str, tier: str = "top",
+                  required: bool = True) -> str | None:
+    """One openfootball league file. `tier` is 'top' or 'second'."""
+    return get(league.of_url(season, tier), required=required)
+
+
+# -- Premier League shorthands, kept so callers with no league in hand still work
 def premier_league_csv(code: str, required: bool = True) -> str | None:
-    """`code` is a football-datasets season code such as '2526'."""
-    return get(f"{config.FD_BASE}/season-{code}.csv", required=required)
+    return results_csv(leagues.PREMIER_LEAGUE, code, required=required)
 
 
-def openfootball(season: str, league: str, required: bool = True) -> str | None:
-    """`league` is '1-premierleague' or '2-championship'."""
-    return get(f"{config.OF_BASE}/{season}/{league}.txt", required=required)
+def openfootball(season: str, tier_file: str, required: bool = True) -> str | None:
+    """`tier_file` is '1-premierleague' or '2-championship'."""
+    tier = "second" if tier_file.startswith("2-") else "top"
+    return fixtures_text(leagues.PREMIER_LEAGUE, season, tier, required=required)

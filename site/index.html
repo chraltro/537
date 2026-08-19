@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Premier League 2026/27 Forecast</title>
-<meta name="description" content="Who wins the Premier League? A rating for every club, a probability for all 380 matches, and 50,000 simulations of the 2026/27 season.">
-<meta property="og:title" content="Who wins the Premier League? — 2026/27 forecast">
-<meta property="og:description" content="A rating for every club, a probability for all 380 matches, and 50,000 simulations of the 2026/27 season.">
+<meta name="description" content="A rating for every club, a probability for every match, and 50,000 simulations of the season.">
+<meta property="og:title" content="Who wins the league? — season forecast">
+<meta property="og:description" content="A rating for every club, a probability for every match, and 50,000 simulations of the season.">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="assets/style.css">
@@ -15,7 +15,7 @@
 <body>
 <main class="wrap" id="main">
   <div class="pagehead">
-    <h1>Who wins the Premier League?</h1>
+    <h1 id="h1">Who wins the league?</h1>
     <p class="lede" id="answer">Loading the forecast…</p>
     <div class="stamp" id="stamp"></div>
   </div>
@@ -41,8 +41,8 @@
             <th class="l" data-k="name">Club</th>
             <th data-k="pts">Points</th>
             <th data-k="title">Title</th>
-            <th class="p2" data-k="ucl">Top 5</th>
-            <th data-k="releg">Down</th>
+            <th class="p2" data-k="ucl" id="uclhead">Top 5</th>
+            <th data-k="releg" id="downhead">Down</th>
             <th class="x p3" data-k="spi" title="Expected share of points against an average team">SPI</th>
             <th class="x p3" data-k="off" title="Goals expected to score vs an average team">Att</th>
             <th class="x p3" data-k="def" title="Goals expected to concede vs an average team">Def</th>
@@ -68,7 +68,7 @@
           <i style="background:var(--ramp-6)"></i>
         </span>
         <span>never → certain</span>
-        <span>Rules mark the Champions League cut and the relegation places.</span>
+        <span id="bandnote"></span>
       </div>
     </div>
     <p class="hint" id="lines" style="margin-top:16px"></p>
@@ -77,7 +77,7 @@
   <section class="card">
     <div class="cardbar">
       <h2 id="nexthead">Next up</h2>
-      <a class="morelink" href="matches.html">All 380 matches →</a>
+      <a class="morelink" href="matches.html" id="alllink">All matches →</a>
     </div>
     <p class="sub">Every fixture carries a stakes bar: how far the result swings
       someone's season. Click one for the full scoreline picture.</p>
@@ -86,7 +86,8 @@
 
   <nav class="deeper" aria-label="Go deeper">
     <a href="matches.html"><b>Every match</b>
-      <span>Win, draw and loss probabilities for all 380 fixtures, sorted by what is at stake.</span></a>
+      <span id="deepermatches">Win, draw and loss probabilities for every fixture,
+        sorted by what is at stake.</span></a>
     <a href="team.html"><b>Club by club</b>
       <span>Rating trends, finishing positions and the difficulty of the run ahead.</span></a>
     <a href="method.html"><b>How it works, and how well</b>
@@ -96,13 +97,36 @@
 
 <script type="module">
 import { data, pct, signed, esc, ord, initChrome, tip, tipRows, rampColor,
-         makeSortable, chipColor, initPalette, matchModal } from './assets/app.js';
+         makeSortable, chipColor, initPalette, matchModal,
+         lg, url, setMeta } from './assets/app.js';
 initChrome('table');
 
 /* forecast.json is 28KB and paints the whole page; matches.json is 350KB and
    only feeds the next-up card. Fetch both at once, render on the first. */
 const mmPromise = data('matches');
 const fc = await data('forecast');
+
+/* Every league-dependent word on this page comes from here: how many clubs,
+   how many qualify, how many go down. Read after the forecast so the league's
+   own figures win over the manifest's. */
+const W = lg();
+const nMatches = fc.matches_total || W.nMatches;
+
+setMeta({
+  title: `${W.name} ${fc.season} Forecast`,
+  ogTitle: `Who wins ${W.the}? — ${fc.season} forecast`,
+  description: `Who wins ${W.the}? A rating for every club, a probability for all `
+    + `${nMatches} matches, and ${fc.n_sims.toLocaleString()} simulations of the ${fc.season} season.`,
+});
+document.getElementById('h1').textContent = `Who wins ${W.the}?`;
+document.getElementById('uclhead').textContent = W.topN;
+document.getElementById('downhead').title = `Bottom ${W.relegPlaces}`;
+document.getElementById('alllink').textContent = `All ${nMatches} matches →`;
+document.getElementById('deepermatches').textContent =
+  `Win, draw and loss probabilities for all ${nMatches} fixtures, sorted by what is at stake.`;
+document.getElementById('bandnote').textContent =
+  `Rules mark the ${W.topWord} and the ${W.relegPhrase}.${W.relegTail}`;
+
 const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
 const rows = fc.teams.map((t, i) => ({ ...t, rank: i + 1 }));
 const byTitle = [...rows].sort((a, b) => b.title - a.title);
@@ -125,14 +149,14 @@ document.getElementById('answer').innerHTML =
 
 document.getElementById('stamp').innerHTML = `
   <span>Season <b>${esc(fc.season)}</b></span>
-  <span><b>${fc.matches_played}</b> of ${fc.matches_total} played</span>
+  <span><b>${fc.matches_played}</b> of ${nMatches} matches played</span>
   <span>Updated <b>${fmtStamp(fc.generated)}</b></span>`;
 
 if (fc.lines) {
   const L = fc.lines;
   document.getElementById('lines').textContent =
     `Across these simulations the title is usually won with about ${L.title.p50} points, `
-    + `the top five taken with ${L.top5.p50}, and ${L.safety.enough90} is enough to stay up `
+    + `the ${W.topWord} taken with ${L.top5.p50}, and ${L.safety.enough90} is enough to stay up `
     + `in nine seasons out of ten.`;
 }
 
@@ -155,7 +179,7 @@ function render(list) {
       <td class="l rank">${t.rank}</td>
       <td class="l"><span class="club">
         <span class="chip" style="background:${chipColor(t.primary)}"></span>
-        <a href="team.html?t=${t.id}">${esc(t.name)}</a>
+        <a href="${url(`team.html?t=${t.id}`)}">${esc(t.name)}</a>
         ${t.promoted ? '<span class="tag">Promoted</span>' : ''}
       </span></td>
       <td><b>${t.pts.toFixed(1)}</b>
@@ -183,7 +207,7 @@ tbody.addEventListener('mousemove', (e) => {
     ['80% of seasons', `${t.pts_lo}–${t.pts_hi} pts`],
     ['Best / worst simulated', `${t.pts_max} / ${t.pts_min} pts`],
     ['Win the league', pct(t.title, 1)],
-    ['Champions League', pct(t.ucl, 1)],
+    [`Champions League (${W.topWord})`, pct(t.ucl, 1)],
     ['Relegated', pct(t.releg, 1)],
     ['Schedule left', t.sos ? `${t.sos} avg opponent (${ord(t.sos_rank)} hardest)` : '—'],
   ]), e);
@@ -200,24 +224,29 @@ more.addEventListener('click', () => {
 });
 
 /* ---- distribution view ---- */
-const ucl = fc.ucl_places;
+/* One column per finishing position, however many the league has. The two
+   rules fall immediately before the first non-qualifying place and before the
+   first relegation place. */
+const nPos = rows[0].pos.length || W.nTeams;
 const maxCell = Math.max(...rows.flatMap((t) => t.pos));
 const sparse = matchMedia('(max-width: 900px)').matches;
+const ticks = new Set([1, nPos]);
+for (let k = 5; k < nPos; k += 5) ticks.add(k);
 document.getElementById('strip').innerHTML =
-  `<div class="strip-head"><span></span><div class="axis20">${
-    Array.from({ length: 20 }, (_, i) =>
-      `<span>${!sparse || [1, 5, 10, 15, 20].includes(i + 1) ? i + 1 : ''}</span>`).join('')
+  `<div class="strip-head"><span></span><div class="axis20" style="--n:${nPos}">${
+    Array.from({ length: nPos }, (_, i) =>
+      `<span>${!sparse || ticks.has(i + 1) ? i + 1 : ''}</span>`).join('')
   }</div></div>` +
   rows.map((t) => `
     <div class="strip-row" data-id="${t.id}">
       <span class="club">
         <span class="chip" style="background:${chipColor(t.primary)}"></span>
-        <a href="team.html?t=${t.id}">${esc(t.short)}</a>
+        <a href="${url(`team.html?t=${t.id}`)}">${esc(t.short)}</a>
         <span class="stripname">${esc(t.name)}</span>
       </span>
-      <div class="strip-cells">${t.pos.map((p, i) =>
+      <div class="strip-cells" style="--n:${nPos}">${t.pos.map((p, i) =>
         `<div class="cell" data-p="${p}" data-pos="${i + 1}"
-          ${i === ucl || i === 17 ? 'data-band="1"' : ''}
+          ${i === W.uclPlaces || i === W.lastSafe ? 'data-band="1"' : ''}
           style="background:${rampColor(p, maxCell)}"></div>`).join('')}</div>
     </div>`).join('');
 

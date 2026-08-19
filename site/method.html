@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Method and accuracy — Premier League 2026/27 Forecast</title>
-<meta name="description" content="How the Premier League forecast works: Dixon-Coles ratings on a shots-and-goals blend, measured promotion priors, a decaying market anchor, and a walk-forward backtest against three baselines.">
+<meta name="description" content="How the forecast works: Dixon-Coles ratings on a shots-and-goals blend, measured promotion priors, a decaying market anchor, and a walk-forward backtest against three baselines.">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
 <style>
@@ -45,6 +45,7 @@
 
   <section class="card">
     <h2>Out-of-sample accuracy</h2>
+    <p class="hint" id="leaguenote" style="margin:0 0 10px"></p>
     <p class="sub" id="btsub">Loading backtest…</p>
     <div id="bars"></div>
     <p style="color:var(--muted);font-size:12px;margin:16px 0 0" id="btfoot">
@@ -60,9 +61,8 @@
 
   <section class="card" id="linescard" hidden>
     <h2>The lines</h2>
-    <p class="sub">Not what the winner averages — what it actually takes. Each figure is read
-      off the boundary position of the simulated tables: the champion's points, fifth place's,
-      and seventeenth's (the last safe spot).</p>
+    <p class="sub" id="linesub">Not what the winner averages — what it actually takes. Each
+      figure is read off the boundary position of the simulated tables.</p>
     <div class="tiles" id="linetiles" style="margin-bottom:6px"></div>
     <p class="hint">The range is where 80% of simulations land. "Enough" is the total that
       cleared the line in nine seasons out of ten.</p>
@@ -73,7 +73,7 @@
       <h2>How the forecast has moved</h2>
       <div class="chips">
         <button class="chip-btn" data-race="title" aria-pressed="true">Title</button>
-        <button class="chip-btn" data-race="ucl" aria-pressed="false">Top five</button>
+        <button class="chip-btn" data-race="ucl" aria-pressed="false" id="uclchip">Top five</button>
         <button class="chip-btn" data-race="releg" aria-pressed="false">Relegation</button>
       </div>
     </div>
@@ -118,19 +118,19 @@
       rather than left as an implication.</p>
 
     <h3>Rating clubs that have never played in this league</h3>
-    <p>Coventry, Ipswich and Hull arrive with no Premier League record. Rather than guess,
-      the model is fitted across the Premier League and the Championship <em>together</em>.
-      Clubs are promoted and relegated every year, so the two divisions are stitched into one
-      rating scale by the clubs that have played in both.</p>
+    <p>Every season brings up clubs with no record in this division at all. Rather than guess,
+      the model is fitted across <span id="tiername">the top flight</span> and the division
+      below it <em>together</em>. Clubs are promoted and relegated every year, so the two
+      divisions are stitched into one rating scale by the clubs that have played in both.</p>
     <p>That alone would flatter promoted clubs, so the correction is measured rather than
       assumed. Taking every promoted club since 2013 — <span id="promn">39 of them</span> —
       and comparing the rating they arrived with against the rating they went on to earn
       gives two numbers:</p>
     <ul>
       <li><b id="promi">a level shift</b>: promoted clubs perform meaningfully below what
-        their Championship form implies. The step up is real and it is large.</li>
+        their second-tier form implies. The step up is real and it is large.</li>
       <li><b id="proms">a flattening</b>: the gaps <em>between</em> promoted clubs barely
-        survive the jump. Winning the Championship at a canter says much less about the
+        survive the jump. Winning the second tier at a canter says much less about the
         season ahead than it feels like it should.</li>
     </ul>
     <p>Established clubs, by contrast, carry <span id="conts">most of their rating</span>
@@ -147,6 +147,8 @@
       the first ten matchweeks, as the season's own results become better evidence than any
       preseason opinion. The odds snapshot, its capture date and its sources are checked into
       the repository, so anyone can see exactly what was used.
+      The betting-market anchor is applied to the Premier League only; the other four leagues
+      run without it.
       <b id="mw">Current market weight: —</b></p>
     </div>
 
@@ -164,8 +166,8 @@
     <h3>What a match is worth</h3>
     <p>Every simulated season also records what happened in each remaining fixture, which
       makes a second question nearly free to answer: given a home win, how often does each
-      club end up champion, in the top five, or relegated — and how does that differ given an
-      away win? The gap between those two numbers is what the site calls the swing, and it is
+      club end up champion, <span id="swingtop">in the top five</span>, or relegated — and how
+      does that differ given an away win? The gap between those two numbers is what the site calls the swing, and it is
       the honest measure of whether a fixture matters. Two mid-table sides with nothing to
       play for score near zero however famous they are; a relegation six-pointer between two
       poor teams scores near the top.</p>
@@ -193,8 +195,8 @@
     <h2>Data and code</h2>
     <p>Match results, shots and cards come from
       <a href="https://github.com/datasets/football-datasets">datasets/football-datasets</a>,
-      a daily-updated mirror of football-data.co.uk. Fixtures and Championship results come
-      from <a href="https://github.com/openfootball/england">openfootball/england</a>.
+      a daily-updated mirror of football-data.co.uk. Fixtures and second-tier results come
+      from <a href="https://github.com/openfootball">openfootball</a>.
       The forecast rebuilds itself every six hours on GitHub Actions.
       Everything — model, site and the odds snapshot — is in
       <a href="https://github.com/chraltro/537">the repository</a>.</p>
@@ -203,11 +205,34 @@
 </main>
 
 <script type="module">
-import { data, pct, esc, initChrome, tip, tipRows, initPalette, lineChart, chipColor, probBar } from './assets/app.js';
+import { data, pct, esc, initChrome, tip, tipRows, initPalette, lineChart, chipColor,
+         probBar, lg, ord, setMeta } from './assets/app.js';
 initChrome('method');
 
 const fc = await data('forecast');
+const W = lg();
 initPalette(fc.teams);
+
+setMeta({
+  title: `Method and accuracy — ${W.name} ${fc.season} Forecast`,
+  description: `How the ${W.name} forecast works: Dixon-Coles ratings on a shots-and-goals `
+    + 'blend, measured promotion priors, a decaying market anchor, and a walk-forward '
+    + 'backtest against three baselines.',
+});
+
+/* Each league is fitted, backtested and calibrated on its own history, so the
+   figures below are not shared between them. Worth saying outright, because the
+   page otherwise looks like one universal scorecard. */
+document.getElementById('leaguenote').textContent =
+  `Every figure on this page — the backtest, the calibration curve and the in-season `
+  + `scorecard — is computed from ${W.the}'s own match history, not pooled across leagues.`;
+document.getElementById('uclchip').textContent = `Top ${W.uclPlaces}`;
+document.getElementById('tiername').textContent = W.name;
+document.getElementById('swingtop').textContent = `in the ${W.topWord}`;
+document.getElementById('linesub').textContent =
+  'Not what the winner averages — what it actually takes. Each figure is read off the '
+  + `boundary position of the simulated tables: the champion's points, ${ord(W.uclPlaces)} `
+  + `place's, and ${ord(W.lastSafe)}'s (the last spot above the ${W.relegPhrase}).${W.relegTail}`;
 
 /* ---- the lines ---- */
 if (fc.lines) {
@@ -215,7 +240,7 @@ if (fc.lines) {
   document.getElementById('linescard').hidden = false;
   document.getElementById('linetiles').innerHTML = [
     ['Winning the title', `${L.title.p50} pts`, `80% of champions land ${L.title.p10}–${L.title.p90}`],
-    ['Making the top five', `${L.top5.p50} pts`, `${L.top5.enough90} was enough in 90% of seasons`],
+    [`Making the ${W.topWord}`, `${L.top5.p50} pts`, `${L.top5.enough90} was enough in 90% of seasons`],
     ['Staying up', `${L.safety.p50} pts`, `${L.safety.enough90} was enough in 90% of seasons`],
   ].map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div>
       <div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
@@ -271,8 +296,9 @@ if (sr && sr.n > 0) {
     `<div id="tipish">${sr.confident.map((r) => line(r, 'accent')).join('')}</div>
      <p class="hint" style="margin-top:8px">Correct calls where it was most sure.</p>`;
 }
-document.getElementById('mw').textContent =
-  `Current market weight: ${(fc.market_weight * 100).toFixed(0)}%.`;
+document.getElementById('mw').textContent = fc.market_weight
+  ? `Current market weight: ${(fc.market_weight * 100).toFixed(0)}%.`
+  : `Current market weight: 0% — ${W.name} runs on results alone.`;
 
 let bt = null;
 try { bt = await data('backtest'); } catch { /* backtest not built yet */ }

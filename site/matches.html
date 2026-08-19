@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Every match forecast — Premier League 2026/27</title>
-<meta name="description" content="Win, draw and loss probabilities plus a projected scoreline for all 380 Premier League matches in 2026/27.">
-<meta property="og:title" content="All 380 Premier League matches — 2026/27 forecast">
+<meta name="description" content="Win, draw and loss probabilities plus a projected scoreline for every match of the season.">
+<meta property="og:title" content="Every match — season forecast">
 <meta property="og:description" content="Win, draw and loss probabilities plus a projected scoreline for every fixture.">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -13,9 +13,9 @@
 <body>
 <main class="wrap" id="main">
   <div class="pagehead">
-    <h1>All 380 matches</h1>
-    <p class="lede">A probability for every fixture in the season, from the opening night at
-      the Emirates to the final Sunday. Bars show the chance of a home win, a draw and an
+    <h1 id="h1">Every match</h1>
+    <p class="lede">A probability for every fixture in the season, from the opening weekend to
+      the final Sunday. Bars show the chance of a home win, a draw and an
       away win; the projected score is the single most likely result, which is usually far
       from a sure thing.</p>
     <div class="stamp" id="stamp"></div>
@@ -50,9 +50,9 @@
       <h2>The matches that matter most</h2>
       <button class="chip-btn" id="jumpstakes">Sort the whole season by stakes</button>
     </div>
-    <p class="sub">Not the biggest names — the biggest swings. The score is how far one
-      club's title, top-five or relegation chance moves between a home win and an away win,
-      measured across every simulation.</p>
+    <p class="sub" id="bigsub">Not the biggest names — the biggest swings. The score is how
+      far one club's title, qualification or relegation chance moves between a home win and an
+      away win, measured across every simulation.</p>
     <div id="bigmatches"></div>
   </section>
 
@@ -66,12 +66,27 @@
 </main>
 
 <script type="module">
-import { data, pct, esc, initChrome, tip, tipRows, chipColor, initPalette, matchModal } from './assets/app.js';
+import { data, pct, esc, initChrome, tip, tipRows, chipColor, initPalette, matchModal,
+         lg, withLg, setMeta, eventLabels } from './assets/app.js';
 initChrome('matches');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
+const W = lg();
 const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
 const matches = mm.matches;
+const nMatches = fc.matches_total || W.nMatches;
+
+setMeta({
+  title: `Every match forecast — ${W.name} ${fc.season}`,
+  ogTitle: `All ${nMatches} ${W.name} matches — ${fc.season} forecast`,
+  description: `Win, draw and loss probabilities plus a projected scoreline for all `
+    + `${nMatches} ${W.name} matches in ${fc.season}.`,
+});
+document.getElementById('h1').textContent = `All ${nMatches} matches`;
+document.getElementById('bigsub').textContent =
+  `Not the biggest names — the biggest swings. The score is how far one club's title, `
+  + `${W.topAdj} or relegation chance moves between a home win and an away win, `
+  + `measured across every simulation.`;
 
 document.getElementById('stamp').innerHTML =
   `<span><b>${matches.filter((m) => m.played).length}</b> played</span>
@@ -122,7 +137,7 @@ const list = document.getElementById('list');
 /* Filters live in the URL, so any view of this page is a link someone can send. */
 const params = new URLSearchParams(location.search);
 
-/* Opening on all 380 fixtures is a 48,000px page on a phone and answers nobody's
+/* Opening on every fixture in the season is a 48,000px page on a phone and answers nobody's
    question. Default to the round that is actually next, and leave the whole
    season one dropdown away. */
 const nextMw = (matches.find((m) => !m.played) || matches[matches.length - 1]).md;
@@ -138,7 +153,7 @@ function draw() {
   const sort = document.getElementById('fsort').value;
   const onlyPlayed = document.getElementById('fplayed').checked;
 
-  const q = new URLSearchParams();
+  const q = withLg(new URLSearchParams());
   if (t) q.set('t', t);
   q.set('mw', w);            // recorded even when empty, so "all" survives a reload
   if (sort !== 'date') q.set('sort', sort);
@@ -196,7 +211,7 @@ list.addEventListener('mousemove', (e) => {
 list.addEventListener('mouseleave', () => tip(null));
 document.getElementById('fsort').addEventListener('change', draw);
 
-const EVENT = { title: 'the title', ucl: 'a top-five finish', releg: 'relegation' };
+const EVENT = eventLabels();
 const openMatch = (m) => matchModal(m, meta, { link: false });
 
 list.addEventListener('click', (e) => {

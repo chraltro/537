@@ -97,6 +97,23 @@ nav.top a[aria-current="page"] { background: var(--raised); color: var(--ink); }
 }
 .themetoggle:hover { background: var(--raised); color: var(--ink); }
 
+/* The league switcher sits with the brand rather than in the nav: it says which
+   site you are on, not where in it you are. */
+.lgswitch { display: flex; align-items: center; flex: none; }
+.lgswitch select {
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 8px; font-size: 12.5px; font-weight: 550;
+  font-family: inherit; max-width: 168px; cursor: pointer;
+}
+.lgswitch select:hover { background: var(--raised); }
+.lgswitch select option:disabled { color: var(--muted); }
+
+/* Screen-reader-only label. */
+.vh {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+
 /* ---------- page head ---------- */
 .pagehead { padding: 40px 0 26px; }
 .pagehead h1 {
@@ -162,13 +179,14 @@ tbody tr:hover { background: var(--raised); }
 .strip-head { display: grid; grid-template-columns: 210px 1fr; gap: 14px; align-items: end; margin-bottom: 6px; }
 .strip-row { display: grid; grid-template-columns: 210px 1fr; gap: 14px; align-items: center; }
 .strip-row + .strip-row { margin-top: 3px; }
-.strip-cells { display: grid; grid-template-columns: repeat(20, 1fr); gap: 2px; }
+.strip-cells { display: grid; grid-template-columns: repeat(var(--n, 20), 1fr); gap: 2px; }
 .cell { height: 20px; border-radius: 3px; background: var(--ramp-0); position: relative; }
 .cell[data-band]::after {
   content: ""; position: absolute; left: -2px; top: -3px; bottom: -3px;
   border-left: 1px solid var(--rule);
 }
-.axis20 { display: grid; grid-template-columns: repeat(20, 1fr); gap: 2px; }
+/* One column per finishing position; --n is the league's club count. */
+.axis20 { display: grid; grid-template-columns: repeat(var(--n, 20), 1fr); gap: 2px; }
 .axis20 span { font-size: 10px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
 .legend { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11.5px; margin-top: 14px; flex-wrap: wrap; }
 .legend .swatches { display: flex; gap: 2px; }
@@ -255,6 +273,7 @@ footer a { color: var(--ink2); }
   .wrap { padding: 0 14px; }
   .masthead .wrap { gap: 12px; }
   .brand span { display: none; }
+  .lgswitch select { max-width: 132px; font-size: 12px; padding: 5px 6px; }
   nav.top a { padding: 7px 9px; font-size: 13px; }
   .strip-head, .strip-row { grid-template-columns: 92px 1fr; gap: 8px; }
   .strip-row .club span:last-child { display: none; }   /* keep the code, drop the name */
@@ -291,6 +310,11 @@ footer a { color: var(--ink2); }
   nav.top a { padding: 5px 6px; font-size: 12px; white-space: nowrap; flex: none; }
   .brand span { display: none; }
   .themetoggle { width: 26px; height: 26px; margin-left: 0; }
+  /* The switcher keeps its place on a phone — it is how you get to the other
+     four leagues — but gives up everything it can spare. */
+  .lgswitch select {
+    max-width: 96px; font-size: 11px; padding: 4px 4px; border-radius: 7px;
+  }
   .brand { gap: 7px; }
   .brand b { font-size: 14px; }
   .brand .mark { width: 8px; height: 18px; }

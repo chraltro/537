@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>What if? — Premier League 2026/27</title>
-<meta name="description" content="Pick results for the fixtures still to come and watch the Premier League 2026/27 forecast recompute, five thousand seasons at a time, in your browser.">
-<meta property="og:title" content="What if? — Premier League 2026/27 simulator">
-<meta property="og:description" content="Fix any remaining result and see what it does to the title race, the top five and the relegation places.">
+<meta name="description" content="Pick results for the fixtures still to come and watch the forecast recompute, five thousand seasons at a time, in your browser.">
+<meta property="og:title" content="What if? — season simulator">
+<meta property="og:description" content="Fix any remaining result and see what it does to the title race, the European places and the relegation places.">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
 <style>
@@ -124,8 +124,8 @@ tr.touched td.name { box-shadow: inset 2px 0 0 var(--accent); }
             <th class="l">Club</th>
             <th>Pts</th>
             <th>Title</th>
-            <th>Top 5</th>
-            <th>Down</th>
+            <th id="uclhead">Top 5</th>
+            <th id="downhead">Down</th>
           </tr></thead>
           <tbody id="tbody"><tr><td colspan="6" class="skeleton">Simulating…</td></tr></tbody>
         </table>
@@ -139,12 +139,27 @@ tr.touched td.name { box-shadow: inset 2px 0 0 var(--accent); }
 </main>
 
 <script type="module">
-import { data, pct, esc, initChrome, initPalette, chipColor } from './assets/app.js';
+import { data, pct, esc, initChrome, initPalette, chipColor,
+         lg, setMeta } from './assets/app.js';
 initChrome('sim');
 
 const N_SIMS = 5000;
 
 const fc = await data('sim_input');
+/* sim_input.json carries the league's own lines; where an older build does not,
+   lg() still answers from the manifest. */
+const W = lg();
+setMeta({
+  title: `What if? — ${W.name}`,
+  ogTitle: `What if? — ${W.name} simulator`,
+  description: 'Pick results for the fixtures still to come and watch '
+    + `${W.the} forecast recompute, five thousand seasons at a time, in your browser.`,
+});
+document.getElementById('uclhead').textContent = W.topN;
+document.getElementById('uclhead').title = `Chance of finishing in the ${W.topWord}`;
+document.getElementById('downhead').title =
+  `Chance of finishing in the ${W.relegPhrase}.${W.relegTail}`;
+
 const teams = fc.teams;
 const meta = Object.fromEntries(teams.map((t) => [t.id, t]));
 const idx = Object.fromEntries(teams.map((t, i) => [t.id, i]));
@@ -164,8 +179,9 @@ const fmtDay = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
   { weekday: 'short', day: 'numeric', month: 'short' });
 
 document.getElementById('stamp').innerHTML =
-  `<span><b>${remaining.length}</b> fixtures still to play</span>
+  `<span><b>${remaining.length}</b> of ${W.nMatches} fixtures still to play</span>
    <span><b>${N_SIMS.toLocaleString()}</b> seasons per re-run</span>
+   <span>Top ${W.uclPlaces} qualify · bottom ${W.relegPlaces} go down</span>
    <span>Runs in this browser — nothing is sent anywhere</span>`;
 
 /* ---------------- picks ---------------- */
@@ -199,6 +215,7 @@ function simulate(payloadPicks, onProgress) {
     worker.postMessage({
       runId: id, fixtures: remaining, rho: fc.rho,
       basePts, baseGf, baseGa, picks: payloadPicks, nSims: N_SIMS, seed: 537,
+      uclPlaces: W.uclPlaces, relegPlaces: W.relegPlaces, nTeams: W.nTeams,
     });
   });
 }
@@ -240,7 +257,7 @@ function render(res) {
       </span></td>
       <td class="num">${r.meanPts.toFixed(1)}</td>
       ${cell(r.title, b && b.title)}
-      ${cell(r.top5, b && b.top5)}
+      ${cell(r.top, b && b.top)}
       ${cell(r.releg, b && b.releg)}
     </tr>`;
   }).join('');

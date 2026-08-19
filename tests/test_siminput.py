@@ -64,7 +64,8 @@ def written(tmp_path):
 
 def test_file_is_valid_json_with_the_expected_shape(written):
     doc = json.loads(written.read_text())
-    assert set(doc) == {"generated", "rho", "teams", "fixtures"}
+    assert set(doc) == {"generated", "rho", "ucl_places", "releg_places",
+                        "n_teams", "teams", "fixtures"}
     assert doc["rho"] == pytest.approx(-0.06)
     dt.datetime.fromisoformat(doc["generated"])          # parses, or this raises
     assert len(doc["teams"]) == len(TEAMS)
@@ -73,6 +74,17 @@ def test_file_is_valid_json_with_the_expected_shape(written):
     assert len(doc["fixtures"]) == len(_fixtures())
     for f in doc["fixtures"]:
         assert {"h", "a", "md", "date", "played"} <= set(f)
+
+
+def test_league_shape_travels_with_the_payload(tmp_path):
+    """The browser worker draws the European and relegation lines from this
+    file, so a Bundesliga payload has to say 18 clubs and two down."""
+    from model import leagues
+    path = tmp_path / "sim_input.json"
+    siminput.write_sim_input(_fit(), _fixtures(), TEAMS, {}, META, str(path),
+                             league=leagues.BUNDESLIGA)
+    doc = json.loads(path.read_text())
+    assert (doc["n_teams"], doc["ucl_places"], doc["releg_places"]) == (18, 4, 2)
 
 
 def test_lambdas_are_present_only_for_unplayed_fixtures(written):

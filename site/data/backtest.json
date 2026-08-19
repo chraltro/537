@@ -254,15 +254,19 @@
  ],
  "calibration_priors": {
   "continuing": {
-   "slope": 0.9268753525917713,
-   "intercept": 0.02601187336929353,
-   "n": 221
+   "slope": 0.9053340842026695,
+   "intercept": 0.02497789376787459,
+   "n": 221,
+   "source": "premier-league"
   },
   "promoted": {
-   "slope": 0.41166790034211387,
-   "intercept": -0.29346227779383116,
-   "n": 39
+   "slope": 0.3225481619549528,
+   "intercept": -0.3441140121303866,
+   "n": 39,
+   "source": "premier-league"
   },
-  "generated": "2026-08-18"
- }
+  "league": "premier-league",
+  "generated": "2026-08-19"
+ },
+ "league": "premier-league"
 }

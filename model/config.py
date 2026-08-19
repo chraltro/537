@@ -1,30 +1,37 @@
 """Central configuration. Every tunable the model has lives here, on purpose:
-a forecast whose dials are scattered through the code is a forecast nobody can audit."""
+a forecast whose dials are scattered through the code is a forecast nobody can audit.
+
+What is *not* here any more: anything that differs between leagues. Team counts,
+season lengths, European places, relegation lines and source paths all live on a
+`League` object in `model.leagues`, and every computation path takes one. The
+constants below are kept as Premier League aliases so a caller with no league in
+hand still gets the league this project started with -- `tests/test_leagues.py`
+pins them to `leagues.PREMIER_LEAGUE` so the two cannot drift apart.
+"""
 from __future__ import annotations
+
+from . import leagues
 
 # ---- Season under forecast -------------------------------------------------
 SEASON = "2026-27"
 SEASON_LABEL = "2026/27"
-N_TEAMS = 20
-N_MATCHES = 380
 
-# European qualification. England earned a fifth Champions League place for
-# 2026/27 via the UEFA European Performance Spot, so the UCL line is 5th.
-UCL_PLACES = 5
-EUROPA_PLACES = 2          # 6th-7th, approximate: domestic cup winners move this line
-RELEGATION_PLACES = 3
+# ---- Premier League aliases (see module docstring) -------------------------
+DEFAULT_LEAGUE = leagues.PREMIER_LEAGUE
+N_TEAMS = DEFAULT_LEAGUE.n_teams
+N_MATCHES = DEFAULT_LEAGUE.n_matches
+UCL_PLACES = DEFAULT_LEAGUE.ucl_places
+EUROPA_PLACES = DEFAULT_LEAGUE.europa_places
+RELEGATION_PLACES = DEFAULT_LEAGUE.releg_places
 
 # ---- Data sources ----------------------------------------------------------
-# Both are reachable as raw GitHub content, which keeps the pipeline identical
-# locally and on an Actions runner, with no API keys anywhere.
-FD_BASE = "https://raw.githubusercontent.com/datasets/football-datasets/main/datasets/premier-league"
-OF_BASE = "https://raw.githubusercontent.com/openfootball/england/master"
+FD_BASE = leagues.FD_BASE
+OF_BASE = leagues.OF_BASE
 
-# Premier League seasons pulled for model fitting (football-datasets CSV codes).
-# 2000-01 is where shots-on-target coverage becomes reliable.
-PL_SEASONS = [f"{y%100:02d}{(y+1)%100:02d}" for y in range(2000, 2027)]
-# Championship seasons, used only to rate promoted clubs.
-CH_SEASONS = [f"{y}-{(y+1)%100:02d}" for y in range(2010, 2027)]
+# Premier League seasons pulled for model fitting (football-datasets CSV codes)
+# and the Championship seasons used only to rate promoted clubs.
+PL_SEASONS = DEFAULT_LEAGUE.fd_season_codes(SEASON)
+CH_SEASONS = DEFAULT_LEAGUE.second_season_labels(SEASON)
 
 # ---- Ratings ---------------------------------------------------------------
 # Weight on actual goals vs the shot-derived expectation when measuring how well

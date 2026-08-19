@@ -3,6 +3,11 @@
 Club-name mapping and fixture integrity get the most attention here: a source
 renaming a club, or dropping a match, degrades the forecast without raising
 anything, which is the worst kind of bug for a site that publishes numbers.
+
+This module is the Premier League's own suite -- it is the league the model was
+tuned on and the one whose numbers are published as the headline, so its shape
+is asserted against `config`'s Premier League constants deliberately. The
+five-league generalisation is covered in `test_leagues.py`.
 """
 from __future__ import annotations
 
@@ -15,7 +20,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from model import config, ratings, simulate                      # noqa: E402
+from model import config, leagues, ratings, simulate             # noqa: E402
 from model.data import Dataset                                    # noqa: E402
 from model.parse import TeamRegistry, normalise, parse_openfootball  # noqa: E402
 from model.priors import devig                                    # noqa: E402
@@ -23,7 +28,7 @@ from model.priors import devig                                    # noqa: E402
 
 @pytest.fixture(scope="module")
 def ds() -> Dataset:
-    return Dataset().load()
+    return Dataset(leagues.PREMIER_LEAGUE).load()
 
 
 # ---------------------------------------------------------------- naming
@@ -165,9 +170,9 @@ def test_simulation_probabilities_are_coherent(ds):
     UCL_PLACES qualifiers and RELEGATION_PLACES relegations per season."""
     fit = ratings.fit(
         [m for m in ds.pl if m.season >= "2024-25"],
-        ds.teams, dt.date(2026, 8, 21))
+        ds.teams, ds.kickoff)
     sim = simulate.simulate_season(fit, ds.fixtures, ds.teams,
-                                   n_sims=4000, scenarios=20)
+                                   league=ds.league, n_sims=4000, scenarios=20)
     assert abs(sim["title"].sum() - 1) < 0.02
     assert abs(sim["ucl"].sum() - config.UCL_PLACES) < 0.05
     assert abs(sim["relegation"].sum() - config.RELEGATION_PLACES) < 0.05
@@ -179,8 +184,8 @@ def test_simulation_probabilities_are_coherent(ds):
 def test_leverage_is_symmetric_and_bounded(ds):
     """A result that helps one club must hurt another, and no swing can exceed 1."""
     fit = ratings.fit([m for m in ds.pl if m.season >= "2024-25"],
-                      ds.teams, dt.date(2026, 8, 21))
-    sim = simulate.simulate_season(fit, ds.fixtures, ds.teams,
+                      ds.teams, ds.kickoff)
+    sim = simulate.simulate_season(fit, ds.fixtures, ds.teams, league=ds.league,
                                    n_sims=4000, scenarios=20, leverage=True)
     lev = sim["leverage"]
     assert lev is not None and len(lev) == len(
@@ -196,8 +201,8 @@ def test_leverage_is_symmetric_and_bounded(ds):
 def test_a_top_two_clash_outranks_a_dead_rubber(ds):
     """The score has to track intuition or it is not measuring importance."""
     fit = ratings.fit([m for m in ds.pl if m.season >= "2023-24"],
-                      ds.teams, dt.date(2026, 8, 21))
-    sim = simulate.simulate_season(fit, ds.fixtures, ds.teams,
+                      ds.teams, ds.kickoff)
+    sim = simulate.simulate_season(fit, ds.fixtures, ds.teams, league=ds.league,
                                    n_sims=8000, scenarios=40, leverage=True)
     rem = [f for f in ds.fixtures if not f.played]
     scores = {(f.home, f.away): l["score"] for f, l in zip(rem, sim["leverage"])}

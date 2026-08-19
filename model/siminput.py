@@ -18,7 +18,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 
-from . import simulate
+from . import leagues, simulate
 
 
 def _standings(fixtures, teams: list[str]) -> dict[str, dict]:
@@ -38,12 +38,16 @@ def _standings(fixtures, teams: list[str]) -> dict[str, dict]:
     return rows
 
 
-def write_sim_input(fit, fixtures, teams, adj, meta, path) -> dict:
+def write_sim_input(fit, fixtures, teams, adj, meta, path, *,
+                    league: leagues.League | None = None) -> dict:
     """Write sim_input.json: the standing table plus every fixture's expectation.
 
     Unplayed fixtures carry the two Poisson means; played ones carry the score.
-    Nothing else, because this file is fetched before the page can draw anything.
+    Nothing else, because this file is fetched before the page can draw anything
+    -- except the three league shape numbers, so the worker can draw the European
+    and relegation lines without a second request or a hardcoded constant.
     """
+    lg = league or leagues.DEFAULT
     table = _standings(fixtures, teams)
     out_teams = []
     for t in teams:
@@ -73,6 +77,9 @@ def write_sim_input(fit, fixtures, teams, adj, meta, path) -> dict:
     payload = {
         "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "rho": round(float(fit.rho), 6),
+        "ucl_places": lg.ucl_places,
+        "releg_places": lg.releg_places,
+        "n_teams": lg.n_teams,
         "teams": out_teams,
         "fixtures": out_fixtures,
     }

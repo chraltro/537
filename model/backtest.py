@@ -174,8 +174,10 @@ def _rounds(matches: list[Match]) -> list[tuple[dt.date, list[Match]]]:
     return out
 
 
-#: Seasons whose results were used to choose GOALS_WEIGHT and TIME_DECAY. They
-#: are still scored, but they are not fully out of sample and the site says so.
+#: Seasons whose results were used to choose GOALS_WEIGHT and TIME_DECAY. The
+#: grid search ran on the Premier League only, so for the other four leagues
+#: every season here is genuinely out of sample -- but the parameters were still
+#: not chosen on them, and the site says so rather than claiming a clean split.
 TUNED_ON = ("2022-23", "2023-24", "2024-25")
 
 
@@ -183,10 +185,10 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
         goals_weight: float = config.GOALS_WEIGHT,
         decay: float = config.TIME_DECAY,
         history_years: int = 5, quiet: bool = False) -> dict:
-    all_seasons = sorted({m.season for m in ds.pl if m.season != config.SEASON})
-    seasons = seasons or [s for s in all_seasons if s >= "2015-16"]
+    all_seasons = sorted({m.season for m in ds.top if m.season != ds.season})
+    seasons = seasons or [s for s in all_seasons if s >= ds.league.backtest_from]
     shot_conv = ratings.fit_shot_conversion(
-        [m for m in ds.pl if m.season < min(seasons)])
+        [m for m in ds.top if m.season < min(seasons)])
 
     preds: list[np.ndarray] = []
     ys: list[int] = []
@@ -194,7 +196,7 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
     base_preds = {k: [] for k in ("base", "elo", "form")}
 
     warm: dict | None = None
-    train0 = [m for m in ds.pl if m.season < min(seasons)]
+    train0 = [m for m in ds.top if m.season < min(seasons)]
     elo = Elo()
     elo.fit_draw(train0)
     form = SeasonForm(train0)
@@ -203,13 +205,13 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
     base = BaseRate(train0)
 
     for season in seasons:
-        season_matches = sorted([m for m in ds.pl if m.season == season],
+        season_matches = sorted([m for m in ds.top if m.season == season],
                                 key=lambda x: x.date)
         for start, chunk in _rounds(season_matches):
             cutoff = min(m.date for m in chunk)
             lo = dt.date(cutoff.year - history_years, 1, 1)
-            hist = [m for m in ds.pl if lo <= m.date < cutoff] + \
-                   [m for m in ds.ch if lo <= m.date < cutoff]
+            hist = [m for m in ds.top if lo <= m.date < cutoff] + \
+                   [m for m in ds.second if lo <= m.date < cutoff]
             pool = sorted({m.home for m in hist} | {m.away for m in hist})
             need = {m.home for m in chunk} | {m.away for m in chunk}
             if not need <= set(pool) or len(hist) < 500:

@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Club forecast — Premier League 2026/27</title>
-<meta name="description" content="Per-club Premier League 2026/27 forecast: rating trajectory, finishing-position distribution and every remaining fixture.">
+<meta name="description" content="Per-club season forecast: rating trajectory, finishing-position distribution and every remaining fixture.">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
 <style>
-  .posbars { display: grid; grid-template-columns: repeat(20, 1fr); gap: 2px; align-items: end; height: 130px; }
+  .posbars { display: grid; grid-template-columns: repeat(var(--n, 20), 1fr); gap: 2px; align-items: end; height: 130px; }
   .posbars .bslot { height: 100%; display: flex; align-items: flex-end; position: relative; }
   /* Qualification cut-offs are geometry, not a second colour: one series, one hue. */
   .posbars .bslot.cut::before {
@@ -59,15 +59,9 @@
 
     <section class="card">
       <h2>Finishing position</h2>
-      <p class="sub">How often the club lands in each place across 50,000 seasons.
-        Vertical rules mark the Champions League cut and the relegation places.</p>
+      <p class="sub" id="possub">How often the club lands in each place across 50,000 seasons.</p>
       <div class="posbars" id="posbars"></div>
-      <div class="axis20" style="margin-top:6px">
-        <span>1</span><span></span><span></span><span></span><span>5</span>
-        <span></span><span></span><span></span><span></span><span>10</span>
-        <span></span><span></span><span></span><span></span><span>15</span>
-        <span></span><span></span><span>18</span><span></span><span>20</span>
-      </div>
+      <div class="axis20" id="posaxis" style="margin-top:6px"></div>
     </section>
   </div>
 
@@ -82,8 +76,8 @@
 
   <section class="card">
     <h2>The matches that will decide their season</h2>
-    <p class="sub">Ranked by how far the result moves this club's own title, top-five or
-      relegation chances. Click one for the full picture.</p>
+    <p class="sub" id="bigsub">Ranked by how far the result moves this club's own title,
+      qualification or relegation chances. Click one for the full picture.</p>
     <div id="clubbig"></div>
   </section>
 
@@ -95,11 +89,25 @@
 </main>
 
 <script type="module">
-import { data, pct, signed, esc, ord, initChrome, tip, tipRows, sparkline, chipColor, initPalette, matchModal } from './assets/app.js';
+import { data, pct, signed, esc, ord, initChrome, tip, tipRows, sparkline, chipColor,
+         initPalette, matchModal, lg, withLg, setMeta, eventLabels } from './assets/app.js';
 initChrome('team');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
+const W = lg();
 const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
+
+setMeta({
+  title: `Club forecast — ${W.name} ${fc.season}`,
+  description: `Per-club ${W.name} ${fc.season} forecast: rating trajectory, `
+    + 'finishing-position distribution and every remaining fixture.',
+});
+document.getElementById('possub').textContent =
+  `How often the club lands in each place across ${fc.n_sims.toLocaleString()} seasons. `
+  + `Vertical rules mark the ${W.topWord} and the ${W.relegPhrase}.${W.relegTail}`;
+document.getElementById('bigsub').textContent =
+  `Ranked by how far the result moves this club's own title, ${W.topAdj} or relegation `
+  + 'chances. Click one for the full picture.';
 const pick = document.getElementById('pick');
 pick.innerHTML = [...fc.teams].sort((a, b) => a.name.localeCompare(b.name))
   .map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
@@ -109,7 +117,9 @@ let current = meta[params.get('t')] ? params.get('t') : fc.teams[0].id;
 pick.value = current;
 pick.addEventListener('change', () => {
   current = pick.value;
-  history.replaceState({}, '', `?t=${current}`);
+  const q = withLg(new URLSearchParams());
+  q.set('t', current);
+  history.replaceState({}, '', `?${q}`);
   render();
 });
 
@@ -125,7 +135,7 @@ document.getElementById('clubbig').addEventListener('click', (e) => {
 function render() {
   const t = meta[current];
   const rank = fc.teams.findIndex((x) => x.id === current) + 1;
-  document.title = `${t.name} — Premier League 2026/27 forecast`;
+  document.title = `${t.name} — ${W.name} ${fc.season} forecast`;
   document.getElementById('title').innerHTML =
     `<span class="chip" style="background:${chipColor(t.primary)};height:.85em;width:6px;display:inline-block;vertical-align:baseline;margin-right:12px"></span>${esc(t.name)}`;
   document.getElementById('lede').textContent =
@@ -135,12 +145,12 @@ function render() {
     `<span>SPI <b>${t.spi.toFixed(1)}</b></span>
      <span>Attack <b>${t.off.toFixed(2)}</b> goals/game vs average</span>
      <span>Defence <b>${t.def.toFixed(2)}</b> conceded/game vs average</span>
-     ${t.promoted ? '<span><b>Promoted</b> from the Championship</span>' : ''}`;
+     ${t.promoted ? '<span><b>Promoted</b> from the division below</span>' : ''}`;
 
   document.getElementById('tiles').innerHTML = [
     ['Projected finish', ord(rank), `${t.pts.toFixed(1)} points, GD ${signed(t.gd)}`],
     ['Win the title', pct(t.title, 1), t.title < 0.005 ? 'Effectively out of reach' : 'Across all simulations'],
-    ['Champions League', pct(t.ucl, 1), `Top ${fc.ucl_places} qualifies`],
+    ['Champions League', pct(t.ucl, 1), `${W.topN} qualifies`],
     ['Relegated', pct(t.releg, 1), `Best case ${t.pts_max} pts, worst ${t.pts_min}`],
   ].map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
 
@@ -151,12 +161,23 @@ function render() {
   document.getElementById('sparklab').textContent = hist.length > 1
     ? hist.map((h) => `${h.season} ${h.spi}`).join('   ·   ') : '';
 
+  /* One bar per finishing place, with the qualification and relegation cuts
+     drawn where this league puts them. */
+  const nPos = t.pos.length || W.nTeams;
   const maxP = Math.max(...t.pos);
-  document.getElementById('posbars').innerHTML = t.pos.map((p, i) => `
-    <div class="bslot${i === fc.ucl_places || i === 17 ? ' cut' : ''}">
+  const bars = document.getElementById('posbars');
+  bars.style.setProperty('--n', nPos);
+  bars.innerHTML = t.pos.map((p, i) => `
+    <div class="bslot${i === W.uclPlaces || i === W.lastSafe ? ' cut' : ''}">
       <div class="b" data-i="${i}" data-p="${p}"
         style="height:${Math.max(2, (p / maxP) * 100)}%"></div>
     </div>`).join('');
+  const axis = document.getElementById('posaxis');
+  axis.style.setProperty('--n', nPos);
+  const ticks = new Set([1, nPos]);
+  for (let k = 5; k < nPos; k += 5) ticks.add(k);
+  axis.innerHTML = Array.from({ length: nPos }, (_, i) =>
+    `<span>${ticks.has(i + 1) ? i + 1 : ''}</span>`).join('');
 
   /* run of fixtures */
   const nxt = t.next || [];
@@ -179,7 +200,7 @@ function render() {
     : '';
 
   /* the club's own highest-stakes fixtures, from the same conditional sims */
-  const EVENT = { title: 'the title', ucl: 'a top-five finish', releg: 'relegation' };
+  const EVENT = eventLabels();
   const fmtD = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
     { day: 'numeric', month: 'short' });
   const mine = mm.matches

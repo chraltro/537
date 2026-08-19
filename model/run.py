@@ -1,18 +1,38 @@
-"""Build every JSON file the site reads."""
+"""Build every JSON file the site reads, for one league or for all five.
+
+    python -m model.run                     # all five leagues
+    python -m model.run --league la-liga    # just one
+    SKIP_BACKTEST=1 python -m model.run     # skip the walk-forward evaluation
+
+Each league gets its own directory under site/data/<slug>/, and the manifest at
+site/data/leagues.json is regenerated from `model.leagues` every run so the
+site's switcher can never disagree with what was actually built. The Premier
+League's files are additionally copied to the legacy flat site/data/*.json paths
+the current pages still read; that is a copy of finished output, not a second
+computation, and it goes away when the site refactor lands.
+"""
 from __future__ import annotations
 
+import argparse
 import datetime as dt
 import json
 import os
+import shutil
+import time
 
 import numpy as np
 
-from . import backtest, config, insight, priors, ratings, simulate
+from . import backtest, config, insight, leagues, priors, ratings, simulate
 from .data import Dataset
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(HERE, "site", "data")
-KICKOFF = dt.date(2026, 8, 21)
+
+#: Files copied from site/data/premier-league/ to site/data/ for the pages that
+#: have not moved to the per-league layout yet.
+LEGACY_FILES = ("forecast.json", "matches.json", "schedule.json", "history.json",
+                "predictions.json", "season_report.json", "recap.json",
+                "sim_input.json", "backtest.json")
 
 
 def spi(fit: ratings.Fit, team: str, adj: float = 0.0) -> float:
@@ -33,7 +53,8 @@ def spi(fit: ratings.Fit, team: str, adj: float = 0.0) -> float:
     return float(pts / 6.0 * 100.0)
 
 
-def _rating_history(ds: Dataset, teams, shot_conv, adj: dict[str, float]) -> dict[str, list]:
+def _rating_history(ds: Dataset, teams, shot_conv, adj: dict[str, float],
+                    kickoff: dt.date) -> dict[str, list]:
     """SPI at the start of each of the last few seasons, so each club has a
     trajectory to show rather than a single number with no context.
 
@@ -41,16 +62,16 @@ def _rating_history(ds: Dataset, teams, shot_conv, adj: dict[str, float]) -> dic
     rating, so the trajectory ends exactly where the club's SPI is quoted.
     """
     hist: dict[str, list] = {t: [] for t in teams}
-    seasons = sorted({m.season for m in ds.pl if m.season != config.SEASON})[-4:]
+    seasons = sorted({m.season for m in ds.top if m.season != ds.season})[-4:]
     points = [(s, dt.date(int(s.split("-")[0]), 8, 1)) for s in seasons]
-    points.append((config.SEASON, KICKOFF))
+    points.append((ds.season, kickoff))
     for label, ref in points:
-        past = [m for m in ds.pl if m.date < ref] + [m for m in ds.ch if m.date < ref]
+        past = [m for m in ds.top if m.date < ref] + [m for m in ds.second if m.date < ref]
         if len(past) < 1000:
             continue
         pool = sorted({m.home for m in past} | {m.away for m in past})
         f = ratings.fit(past, pool, ref, shot_conv=shot_conv)
-        live = label == config.SEASON
+        live = label == ds.season
         for t in teams:
             if t in f.index:
                 a = adj.get(t, 0.0) if live else 0.0
@@ -58,44 +79,65 @@ def _rating_history(ds: Dataset, teams, shot_conv, adj: dict[str, float]) -> dic
     return hist
 
 
-def main() -> None:
-    os.makedirs(OUT, exist_ok=True)
-    ds = Dataset().load()
+# --------------------------------------------------------------------------
+# One league
+# --------------------------------------------------------------------------
+def build(league: leagues.League, *, skip_backtest: bool | None = None) -> None:
+    """Run the whole pipeline for one league and write its JSON directory."""
+    if skip_backtest is None:
+        skip_backtest = os.environ.get("SKIP_BACKTEST") == "1"
+    out = os.path.join(OUT, league.slug)
+    os.makedirs(out, exist_ok=True)
+
+    print(f"\n=== {league.name} ({league.country}) "
+          f"— {league.n_teams} clubs, {league.n_matches} matches ===")
+    ds = Dataset(league).load()
     teams = ds.teams
     meta = ds.reg.meta
+    kickoff = ds.kickoff
 
     print("Fitting ratings…")
-    shot_conv = ratings.fit_shot_conversion(ds.pl)
-    today = dt.date.today()
-    ref = max(today, KICKOFF)
-    hist = [m for m in ds.pl if m.date < ref] + [m for m in ds.ch if m.date < ref]
+    shot_conv = ratings.fit_shot_conversion(ds.top)
+    ref = max(dt.date.today(), kickoff)
+    hist = [m for m in ds.top if m.date < ref] + [m for m in ds.second if m.date < ref]
     pool = sorted({m.home for m in hist} | {m.away for m in hist})
     fit = ratings.fit(hist, pool, ref, shot_conv=shot_conv)
 
     print("Calibrating priors against history…")
     cal = priors.calibrate(ds, shot_conv)
+    print(f"  · continuing slope {cal['continuing']['slope']:.3f} "
+          f"(n={cal['continuing']['n']}, from {cal['continuing'].get('source', league.slug)})"
+          f", promoted slope {cal['promoted']['slope']:.3f} "
+          f"(n={cal['promoted']['n']}, from {cal['promoted'].get('source', league.slug)})")
     raw_net = priors._centred_net(fit, teams)
-    prior_net = priors.preseason_net(ds, fit, cal, teams, sorted(
-        {m.season for m in ds.pl if m.season != config.SEASON})[-1])
+    prev_season = sorted({m.season for m in ds.top if m.season != ds.season})[-1]
+    prior_net = priors.preseason_net(ds, fit, cal, teams, prev_season)
     base_adj = {t: prior_net[t] - raw_net[t] for t in teams}
 
     played = sum(1 for f in ds.fixtures if f.played)
-    market = priors.load_market(os.path.join(HERE, "data", "market_priors.json"))
-    w = priors.market_weight(played)
+    market = priors.load_market(priors.market_path(league))
+    w = priors.market_weight(played, league)
     if market and w > 0:
         print(f"Anchoring to the preseason market (weight {w:.2f})…")
         fitted = priors.fit_market_adjustment(fit, ds.fixtures, teams, market,
-                                              base_adj=base_adj, verbose=True)
+                                              league=league, base_adj=base_adj,
+                                              verbose=True)
         adj = {t: base_adj[t] + w * (fitted[t] - base_adj[t]) for t in teams}
     else:
+        if not market:
+            print("No market anchor for this league (data/market_priors/"
+                  f"{league.market_file} absent) — ratings alone.")
         adj = base_adj
+        w = 0.0
 
     print(f"Simulating the season {config.N_SIMS:,} times…")
-    sim = simulate.simulate_season(fit, ds.fixtures, teams, adj=adj, leverage=True)
+    sim = simulate.simulate_season(fit, ds.fixtures, teams, league=league,
+                                   adj=adj, leverage=True)
 
-    table = ds.season_table(config.SEASON)
+    table = ds.season_table(ds.season)
     idx = {t: i for i, t in enumerate(teams)}
-    history = _rating_history(ds, teams, shot_conv, adj)
+    history = _rating_history(ds, teams, shot_conv, adj, kickoff)
+    returning = {m.home for m in ds.top if m.season == prev_season}
 
     rows = []
     for t in teams:
@@ -121,9 +163,7 @@ def main() -> None:
             "l": cur.get("l", 0), "gf": cur.get("gf", 0), "ga": cur.get("ga", 0),
             "cur_pts": cur.get("pts", 0),
             "history": history.get(t, []),
-            "promoted": t not in {mm.home for mm in ds.pl
-                                  if mm.season == sorted({x.season for x in ds.pl
-                                                          if x.season != config.SEASON})[-1]},
+            "promoted": t not in returning,
         })
     rows.sort(key=lambda r: (-r["pts"], -r["gd"]))
 
@@ -153,7 +193,7 @@ def main() -> None:
             "swings": lv["swings"] if lv else [],
             "played": f.played, "hg": f.hg, "ag": f.ag,
         })
-    json.dump({"matches": ms}, open(os.path.join(OUT, "matches.json"), "w"),
+    json.dump({"matches": ms}, open(os.path.join(out, "matches.json"), "w"),
               separators=(",", ":"))
     print(f"  → matches.json ({len(ms)} matches)")
 
@@ -170,74 +210,161 @@ def main() -> None:
                                 "played": sos[t]["played"],
                                 "rank": sos[t].get("rank"),
                                 "fixtures": sos[t]["fixtures"]} for t in teams}},
-              open(os.path.join(OUT, "schedule.json"), "w"), separators=(",", ":"))
+              open(os.path.join(out, "schedule.json"), "w"), separators=(",", ":"))
 
     # Optional derived outputs; each module is owned by its feature and the
     # pipeline must keep working whether or not it exists yet.
     try:
         from . import siminput
         siminput.write_sim_input(fit, ds.fixtures, teams, adj, meta,
-                                 os.path.join(OUT, "sim_input.json"))
+                                 os.path.join(out, "sim_input.json"), league=league)
         print("  → sim_input.json")
     except ImportError:
         pass
     try:
         from . import recap
-        recap.write_recap(os.path.join(OUT, "recap.json"), rows, played)
+        recap.write_recap(os.path.join(out, "recap.json"), rows, played)
         print("  → recap.json")
     except ImportError:
         pass
 
-    frozen = insight.freeze_predictions(ms)
+    frozen = insight.freeze_predictions(ms, out)
     report = insight.season_report(ms, frozen, {t: meta[t]["name"] for t in teams})
-    json.dump(report, open(os.path.join(OUT, "season_report.json"), "w"),
+    json.dump(report, open(os.path.join(out, "season_report.json"), "w"),
               separators=(",", ":"))
-    hist = insight.append_history(rows, played)
+    snaps = insight.append_history(rows, played, out)
     print(f"  → schedule.json, predictions.json, season_report.json "
-          f"({report['n']} scored), history.json ({len(hist)} snapshots)")
+          f"({report['n']} scored), history.json ({len(snaps)} snapshots)")
 
     json.dump({
         "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "season": config.SEASON_LABEL,
+        "league": league.public(),
         "matches_played": played,
-        "matches_total": config.N_MATCHES,
+        "matches_total": league.n_matches,
         "market_weight": round(w, 3),
         "home_advantage": round(float(np.exp(fit.home)), 3),
-        "ucl_places": config.UCL_PLACES,
+        "ucl_places": league.ucl_places,
         "n_sims": int(sim["n_sims"]),
         "lines": sim.get("lines"),
         "teams": rows,
-    }, open(os.path.join(OUT, "forecast.json"), "w"), separators=(",", ":"))
+    }, open(os.path.join(out, "forecast.json"), "w"), separators=(",", ":"))
     print(f"  → forecast.json ({len(rows)} teams)")
 
-    if os.environ.get("SKIP_BACKTEST") != "1":
-        print("Running the walk-forward backtest…")
+    if not skip_backtest:
+        print(f"Running the walk-forward backtest (from {league.backtest_from})…")
         bt = backtest.run(ds)
         bt["calibration_priors"] = cal
-        json.dump(bt, open(os.path.join(OUT, "backtest.json"), "w"), indent=1)
+        bt["league"] = league.slug
+        json.dump(bt, open(os.path.join(out, "backtest.json"), "w"), indent=1)
         m = bt["model"]
         print(f"  → backtest.json  log-loss {m['log_loss']:.4f} "
               f"rps {m['rps']:.4f} acc {m['accuracy'] * 100:.1f}% over {m['n']} matches")
-    validate()
+    validate(league)
 
 
-def validate() -> None:
+# --------------------------------------------------------------------------
+# Integrity and manifest
+# --------------------------------------------------------------------------
+def validate(league: leagues.League) -> None:
     """Refuse to ship a broken forecast."""
-    fc = json.load(open(os.path.join(OUT, "forecast.json")))
-    ms = json.load(open(os.path.join(OUT, "matches.json")))["matches"]
-    assert len(fc["teams"]) == config.N_TEAMS, "wrong team count"
-    assert len(ms) == config.N_MATCHES, "wrong match count"
+    out = os.path.join(OUT, league.slug)
+    fc = json.load(open(os.path.join(out, "forecast.json")))
+    ms = json.load(open(os.path.join(out, "matches.json")))["matches"]
+    assert len(fc["teams"]) == league.n_teams, "wrong team count"
+    assert len(ms) == league.n_matches, "wrong match count"
+    assert fc["league"]["slug"] == league.slug, "forecast is labelled as another league"
     for t in fc["teams"]:
         s = sum(t["pos"])
         assert abs(s - 1) < 1e-3, f"{t['id']} position distribution sums to {s}"
-    for k, want in (("title", 1), ("ucl", config.UCL_PLACES),
-                    ("releg", config.RELEGATION_PLACES)):
+    for k, want in (("title", 1), ("ucl", league.ucl_places),
+                    ("releg", league.releg_places)):
         s = sum(t[k] for t in fc["teams"])
         assert abs(s - want) < 0.02, f"{k} probabilities sum to {s}, expected {want}"
     for m in ms:
         s = m["ph"] + m["pd"] + m["pa"]
         assert abs(s - 1) < 1e-3, f"{m['h']}-{m['a']} outcome probabilities sum to {s}"
-    print("Validation passed.")
+    print(f"Validation passed. ({league.slug})")
+
+
+def write_manifest(ready: set[str]) -> dict:
+    """Regenerate site/data/leagues.json from the registry.
+
+    'ready' means the directory on disk actually has a forecast in it, so a
+    league that failed to build this run drops back to false and the site shows
+    it as coming soon instead of 404ing.
+    """
+    payload = {
+        "default": leagues.DEFAULT.slug,
+        "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+        "leagues": [lg.manifest_entry(lg.slug in ready) for lg in leagues.LEAGUES],
+    }
+    os.makedirs(OUT, exist_ok=True)
+    json.dump(payload, open(os.path.join(OUT, "leagues.json"), "w"), indent=1)
+    return payload
+
+
+def has_forecast(league: leagues.League) -> bool:
+    return os.path.exists(os.path.join(OUT, league.slug, "forecast.json"))
+
+
+def copy_legacy(league: leagues.League) -> None:
+    """Mirror one league's output to the flat site/data/*.json the site still reads."""
+    src = os.path.join(OUT, league.slug)
+    n = 0
+    for name in LEGACY_FILES:
+        p = os.path.join(src, name)
+        if os.path.exists(p):
+            shutil.copyfile(p, os.path.join(OUT, name))
+            n += 1
+    print(f"Copied {n} {league.slug} files to the legacy flat site/data/ paths.")
+
+
+# --------------------------------------------------------------------------
+def main(argv: list[str] | None = None) -> None:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--league", "-l", action="append", metavar="SLUG",
+                    help="build only this league (repeatable); default is all five")
+    ap.add_argument("--skip-backtest", action="store_true",
+                    help="same as SKIP_BACKTEST=1")
+    args = ap.parse_args(argv)
+
+    try:
+        todo = ([leagues.get(s) for s in args.league] if args.league
+                else list(leagues.LEAGUES))
+    except KeyError as exc:
+        raise SystemExit(str(exc).strip('"')) from None
+    skip = args.skip_backtest or os.environ.get("SKIP_BACKTEST") == "1"
+
+    t0 = time.perf_counter()
+    timings: list[tuple[str, float]] = []
+    failures: list[tuple[str, Exception]] = []
+    for lg in todo:
+        t1 = time.perf_counter()
+        try:
+            build(lg, skip_backtest=skip)
+        except Exception as exc:                      # noqa: BLE001
+            # One league's source going missing must not take the other four
+            # down: the manifest marks it not-ready and the run exits non-zero.
+            failures.append((lg.slug, exc))
+            print(f"!! {lg.slug} failed: {exc}")
+        timings.append((lg.slug, time.perf_counter() - t1))
+
+    if leagues.DEFAULT in todo and has_forecast(leagues.DEFAULT):
+        copy_legacy(leagues.DEFAULT)
+
+    ready = {lg.slug for lg in leagues.LEAGUES if has_forecast(lg)}
+    write_manifest(ready)
+    total = time.perf_counter() - t0
+    print("\n--- timings ---")
+    for slug, secs in timings:
+        print(f"  {slug:15s} {secs:7.1f}s")
+    print(f"  {'TOTAL':15s} {total:7.1f}s")
+    print(f"Manifest: {len(ready)}/{len(leagues.LEAGUES)} leagues ready "
+          f"({', '.join(sorted(ready))}).")
+    if failures:
+        raise SystemExit(f"{len(failures)} league(s) failed: "
+                         + ", ".join(s for s, _ in failures))
 
 
 if __name__ == "__main__":

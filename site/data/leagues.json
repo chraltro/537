@@ -1,17 +1,56 @@
 {
-  "default": "premier-league",
-  "leagues": [
-    {"slug": "premier-league", "name": "Premier League", "country": "England", "ready": true,
-     "n_teams": 20, "ucl_places": 5, "releg_places": 3, "releg_note": null},
-    {"slug": "la-liga", "name": "La Liga", "country": "Spain", "ready": false,
-     "n_teams": 20, "ucl_places": 5, "releg_places": 3, "releg_note": null},
-    {"slug": "serie-a", "name": "Serie A", "country": "Italy", "ready": false,
-     "n_teams": 20, "ucl_places": 4, "releg_places": 3, "releg_note": null},
-    {"slug": "bundesliga", "name": "Bundesliga", "country": "Germany", "ready": false,
-     "n_teams": 18, "ucl_places": 4, "releg_places": 2,
-     "releg_note": "16th enters a relegation play-off"},
-    {"slug": "ligue-1", "name": "Ligue 1", "country": "France", "ready": false,
-     "n_teams": 18, "ucl_places": 4, "releg_places": 2,
-     "releg_note": "16th enters a relegation play-off"}
-  ]
+ "default": "premier-league",
+ "generated": "2026-08-19T07:55:56+00:00",
+ "leagues": [
+  {
+   "slug": "premier-league",
+   "name": "Premier League",
+   "country": "England",
+   "ready": true,
+   "n_teams": 20,
+   "ucl_places": 5,
+   "releg_places": 3,
+   "releg_note": null
+  },
+  {
+   "slug": "la-liga",
+   "name": "La Liga",
+   "country": "Spain",
+   "ready": true,
+   "n_teams": 20,
+   "ucl_places": 5,
+   "releg_places": 3,
+   "releg_note": null
+  },
+  {
+   "slug": "serie-a",
+   "name": "Serie A",
+   "country": "Italy",
+   "ready": true,
+   "n_teams": 20,
+   "ucl_places": 4,
+   "releg_places": 3,
+   "releg_note": null
+  },
+  {
+   "slug": "bundesliga",
+   "name": "Bundesliga",
+   "country": "Germany",
+   "ready": true,
+   "n_teams": 18,
+   "ucl_places": 4,
+   "releg_places": 2,
+   "releg_note": "16th plays a two-legged relegation play-off against the third-placed 2. Bundesliga club"
+  },
+  {
+   "slug": "ligue-1",
+   "name": "Ligue 1",
+   "country": "France",
+   "ready": true,
+   "n_teams": 18,
+   "ucl_places": 3,
+   "releg_places": 2,
+   "releg_note": "16th plays a two-legged relegation play-off against a Ligue 2 club; 4th enters Champions League qualifying"
+  }
+ ]
 }

@@ -4,12 +4,16 @@
    arithmetic over 5,000, on one thread, and it has to finish while somebody is
    looking at it. Three things buy that: every fixture's scoreline distribution
    is turned into a flattened cumulative table ONCE, before the first season is
-   played; the tables live in one Float32Array rather than 380 small ones; and
+   played; the tables live in one Float32Array rather than one per fixture; and
    the per-season state is three reused typed arrays instead of fresh objects.
 
    Message in:
-     { fixtures, rho, basePts, baseGf, baseGa, picks, nSims, seed, runId }
-   where `fixtures` are the unplayed matches as
+     { fixtures, rho, basePts, baseGf, baseGa, picks, nSims, seed, runId,
+       uclPlaces, relegPlaces, nTeams }
+   where the last three come from the league's sim_input.json — how many places
+   take a Champions League spot, how many go down automatically, and how many
+   clubs are in the league. Nothing here assumes twenty, five and three.
+   `fixtures` are the unplayed matches as
      { h, a, hi, ai, lh, la }                    (hi/ai are team indices)
    and `picks` maps "home|away" to either { res: "H" | "D" | "A" } or
    { hg, ag }. An exact score is simply fixed. A result-only pick is sampled
@@ -109,8 +113,19 @@ self.onmessage = function (ev) {
   const baseGf = Int32Array.from(msg.baseGf);
   const baseGa = Int32Array.from(msg.baseGa);
   const n = basePts.length;
-  const TOP = msg.uclPlaces || 5;
-  const DOWN = msg.relegationPlaces || 3;
+
+  /* The league's own lines, clamped so a bad manifest cannot ask for more
+     qualifying places than there are clubs. nTeams is carried for the sanity
+     check: the standings decide the real count. */
+  const clamp = function (v, dflt) {
+    const x = Math.round(Number(v));
+    return (x >= 1 && x < n) ? x : Math.min(dflt, n - 1);
+  };
+  const TOP = clamp(msg.uclPlaces, 5);
+  const DOWN = clamp(msg.relegPlaces != null ? msg.relegPlaces : msg.relegationPlaces, 3);
+  if (msg.nTeams && msg.nTeams !== n) {
+    console.warn('sim-worker: nTeams ' + msg.nTeams + ' but ' + n + ' clubs in the standings');
+  }
 
   const rem = (msg.fixtures || []).filter(function (f) { return !f.played; });
   const nR = rem.length;
@@ -150,7 +165,7 @@ self.onmessage = function (ev) {
   const cDown = new Int32Array(n);
   const rand = rng32(msg.seed || 537);
 
-  /* Premier League order: points, then goal difference, then goals scored.
+  /* League order: points, then goal difference, then goals scored.
      A genuine tie is settled by a play-off, so it is broken at random here. */
   const cmp = function (x, y) {
     return (pts[y] - pts[x])
@@ -205,7 +220,7 @@ self.onmessage = function (ev) {
   for (let i = 0; i < n; i++) {
     out[i] = {
       title: cTitle[i] / nSims,
-      top5: cTop[i] / nSims,
+      top: cTop[i] / nSims,
       releg: cDown[i] / nSims,
       meanPts: sumPts[i] / nSims,
       meanPos: sumPos[i] / nSims,
@@ -213,6 +228,7 @@ self.onmessage = function (ev) {
   }
   self.postMessage({
     type: 'result', runId: runId, nSims: nSims, remaining: nR,
+    uclPlaces: TOP, relegPlaces: DOWN,
     ms: clock.now() - t0, teams: out,
   });
 };
