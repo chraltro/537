@@ -80,18 +80,34 @@ jobs:
         # Frozen predictions must outlive the build that froze them, and history
         # snapshots must accumulate. Pushes from GITHUB_TOKEN do not retrigger
         # workflows, so this cannot loop.
+        #
+        # --autostash is load-bearing. The build regenerates every other file
+        # under site/data/, and those are never staged, so the working tree is
+        # always dirty at this point and a plain `git pull --rebase` refuses
+        # with "cannot pull with rebase: You have unstaged changes". That made
+        # the retry loop unable to ever succeed: when a scheduled run and a
+        # push run overlapped, the second one lost its state commit entirely.
         if: github.ref == 'refs/heads/main'
         run: |
           git config user.name "forecast-bot"
           git config user.email "actions@users.noreply.github.com"
           git add site/data/history.json site/data/predictions.json 2>/dev/null || true
           git add site/data/*/history.json site/data/*/predictions.json 2>/dev/null || true
-          if ! git diff --cached --quiet; then
-            git commit -m "Persist forecast state (history + frozen predictions)"
-            for i in 1 2 3; do git push && break || { git pull --rebase && true; }; done
-          else
+          if git diff --cached --quiet; then
             echo "No state changes to persist."
+            exit 0
           fi
+          git commit -m "Persist forecast state (history + frozen predictions)"
+          for i in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $i); rebasing onto origin/main"
+            git pull --rebase --autostash origin main || exit 1
+            sleep $((i * 3))
+          done
+          echo "::error::could not persist forecast state after 5 attempts"
+          exit 1
 
       - name: Configure Pages
         id: pages
