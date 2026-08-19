@@ -1043,7 +1043,9 @@
   "primary": "#87D8F7",
   "secondary": "#0B2D5B",
   "aliases": [
-   "SS Lazio"
+   "Lazio Roma",
+   "SS Lazio",
+   "SS Lazio Roma"
   ]
  },
  "napoli": {
@@ -1472,11 +1474,13 @@
   "primary": "#1D1D1B",
   "secondary": "#00A94F",
   "aliases": [
-   "M'gladbach",
+   "Bor. Monchengladbach",
+   "Bor. Mönchengladbach",
    "Borussia Mönchengladbach",
+   "Gladbach",
+   "M'gladbach",
    "Monchengladbach",
-   "Mönchengladbach",
-   "Gladbach"
+   "Mönchengladbach"
   ]
  },
  "eintracht-frankfurt": {
@@ -1597,6 +1601,7 @@
   "primary": "#1C63B7",
   "secondary": "#FFFFFF",
   "aliases": [
+   "1899 Hoffenheim",
    "Hoffenheim",
    "TSG 1899 Hoffenheim"
   ]
@@ -2275,6 +2280,780 @@
   "aliases": [
    "Ajaccio GFCO",
    "Gazélec FC Ajaccio"
+  ]
+ },
+ "ajax": {
+  "id": "ajax",
+  "name": "Ajax",
+  "short": "AJA",
+  "primary": "#D2122E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "AFC Ajax",
+   "Ajax Amsterdam"
+  ]
+ },
+ "psv": {
+  "id": "psv",
+  "name": "PSV",
+  "short": "PSV",
+  "primary": "#EE2223",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "PSV Eindhoven"
+  ]
+ },
+ "feyenoord": {
+  "id": "feyenoord",
+  "name": "Feyenoord",
+  "short": "FEY",
+  "primary": "#DA020E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Feyenoord Rotterdam"
+  ]
+ },
+ "az-alkmaar": {
+  "id": "az-alkmaar",
+  "name": "AZ Alkmaar",
+  "short": "AZA",
+  "primary": "#E4022D",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "AZ",
+   "AZ 67 Alkmaar"
+  ]
+ },
+ "twente": {
+  "id": "twente",
+  "name": "FC Twente",
+  "short": "TWE",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FC Twente Enschede",
+   "Twente Enschede"
+  ]
+ },
+ "benfica": {
+  "id": "benfica",
+  "name": "Benfica",
+  "short": "BEN",
+  "primary": "#E31B23",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Benfica Lisbon",
+   "SL Benfica",
+   "Sport Lisboa e Benfica"
+  ]
+ },
+ "porto": {
+  "id": "porto",
+  "name": "Porto",
+  "short": "POR",
+  "primary": "#00428C",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FC Porto",
+   "Futebol Clube do Porto"
+  ]
+ },
+ "sporting-cp": {
+  "id": "sporting-cp",
+  "name": "Sporting CP",
+  "short": "SPO",
+  "primary": "#008057",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Sporting",
+   "Sporting Clube de Portugal",
+   "Sporting Lisbon",
+   "Sporting Lissabon"
+  ]
+ },
+ "braga": {
+  "id": "braga",
+  "name": "Braga",
+  "short": "BRG",
+  "primary": "#B4131E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "SC Braga",
+   "Sporting Braga",
+   "Sporting Clube de Braga"
+  ]
+ },
+ "club-brugge": {
+  "id": "club-brugge",
+  "name": "Club Brugge",
+  "short": "CLB",
+  "primary": "#0A50A1",
+  "secondary": "#000000",
+  "aliases": [
+   "Club Bruges",
+   "Club Brugge KV",
+   "FC Bruegge"
+  ]
+ },
+ "union-sg": {
+  "id": "union-sg",
+  "name": "Union Saint-Gilloise",
+  "short": "USG",
+  "primary": "#FFC72C",
+  "secondary": "#003DA5",
+  "aliases": [
+   "Royale Union SG",
+   "Royale Union Saint-Gilloise",
+   "Union SG"
+  ]
+ },
+ "anderlecht": {
+  "id": "anderlecht",
+  "name": "Anderlecht",
+  "short": "AND",
+  "primary": "#3C2C6E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "RSC Anderlecht"
+  ]
+ },
+ "gent": {
+  "id": "gent",
+  "name": "Gent",
+  "short": "GEN",
+  "primary": "#0E4C92",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "AA Gent",
+   "KAA Gent"
+  ]
+ },
+ "genk": {
+  "id": "genk",
+  "name": "Genk",
+  "short": "GNK",
+  "primary": "#005CA9",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "KRC Genk",
+   "RC Genk"
+  ]
+ },
+ "celtic": {
+  "id": "celtic",
+  "name": "Celtic",
+  "short": "CEL",
+  "primary": "#016A3A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Celtic FC",
+   "Celtic Glasgow"
+  ]
+ },
+ "rangers": {
+  "id": "rangers",
+  "name": "Rangers",
+  "short": "RAN",
+  "primary": "#1B458F",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Glasgow Rangers",
+   "Rangers FC"
+  ]
+ },
+ "salzburg": {
+  "id": "salzburg",
+  "name": "Red Bull Salzburg",
+  "short": "RBS",
+  "primary": "#D1002E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FC Red Bull Salzburg",
+   "RB Salzburg",
+   "Red Bull Salzburg"
+  ]
+ },
+ "sturm-graz": {
+  "id": "sturm-graz",
+  "name": "Sturm Graz",
+  "short": "STG",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "SK Sturm Graz"
+  ]
+ },
+ "lask": {
+  "id": "lask",
+  "name": "LASK",
+  "short": "LSK",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "LASK Linz",
+   "LASK Linz AG"
+  ]
+ },
+ "rapid-wien": {
+  "id": "rapid-wien",
+  "name": "Rapid Wien",
+  "short": "RAP",
+  "primary": "#008E51",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Rapid Vienna",
+   "SK Rapid Wien"
+  ]
+ },
+ "galatasaray": {
+  "id": "galatasaray",
+  "name": "Galatasaray",
+  "short": "GAL",
+  "primary": "#A90432",
+  "secondary": "#FBB717",
+  "aliases": [
+   "Galatasaray SK"
+  ]
+ },
+ "fenerbahce": {
+  "id": "fenerbahce",
+  "name": "Fenerbahce",
+  "short": "FEN",
+  "primary": "#00296B",
+  "secondary": "#FFED00",
+  "aliases": [
+   "Fenerbahce SK",
+   "Fenerbahçe",
+   "Fenerbahçe SK"
+  ]
+ },
+ "besiktas": {
+  "id": "besiktas",
+  "name": "Besiktas",
+  "short": "BJK",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Besiktas JK",
+   "Beşiktaş"
+  ]
+ },
+ "trabzonspor": {
+  "id": "trabzonspor",
+  "name": "Trabzonspor",
+  "short": "TRA",
+  "primary": "#7B1420",
+  "secondary": "#63C4E8",
+  "aliases": []
+ },
+ "olympiakos": {
+  "id": "olympiakos",
+  "name": "Olympiakos",
+  "short": "OLY",
+  "primary": "#D50000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Olympiacos",
+   "Olympiakos Piraeus",
+   "Olympiakos Pireus",
+   "PAE Olympiakos SFP"
+  ]
+ },
+ "panathinaikos": {
+  "id": "panathinaikos",
+  "name": "Panathinaikos",
+  "short": "PAN",
+  "primary": "#007A3D",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Panathinaikos FC"
+  ]
+ },
+ "paok": {
+  "id": "paok",
+  "name": "PAOK",
+  "short": "PAK",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "PAOK FC",
+   "PAOK Saloniki",
+   "PAOK Thessaloniki"
+  ]
+ },
+ "aek-athens": {
+  "id": "aek-athens",
+  "name": "AEK Athens",
+  "short": "AEK",
+  "primary": "#FFCC00",
+  "secondary": "#000000",
+  "aliases": [
+   "AEK Athen",
+   "AEK Athens FC",
+   "AEK Athina"
+  ]
+ },
+ "slavia-praha": {
+  "id": "slavia-praha",
+  "name": "Slavia Praha",
+  "short": "SLA",
+  "primary": "#D01317",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "SK Slavia Praha",
+   "Slavia Prag",
+   "Slavia Prague"
+  ]
+ },
+ "sparta-praha": {
+  "id": "sparta-praha",
+  "name": "Sparta Praha",
+  "short": "SPP",
+  "primary": "#8B1A1A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "AC Sparta Praha",
+   "Sparta Prag",
+   "Sparta Prague"
+  ]
+ },
+ "viktoria-plzen": {
+  "id": "viktoria-plzen",
+  "name": "Viktoria Plzen",
+  "short": "PLZ",
+  "primary": "#D0021B",
+  "secondary": "#0B3C8C",
+  "aliases": [
+   "FC Viktoria Plzen",
+   "Viktoria Pilsen",
+   "Viktoria Plzeň"
+  ]
+ },
+ "slovan-bratislava": {
+  "id": "slovan-bratislava",
+  "name": "Slovan Bratislava",
+  "short": "SLB",
+  "primary": "#003DA5",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "SK Slovan Bratislava",
+   "ŠK Slovan Bratislava"
+  ]
+ },
+ "young-boys": {
+  "id": "young-boys",
+  "name": "Young Boys",
+  "short": "YBB",
+  "primary": "#FFED00",
+  "secondary": "#000000",
+  "aliases": [
+   "BSC Young Boys",
+   "Young Boys Bern"
+  ]
+ },
+ "basel": {
+  "id": "basel",
+  "name": "Basel",
+  "short": "BAS",
+  "primary": "#D2001F",
+  "secondary": "#0B2A6B",
+  "aliases": [
+   "Basel 1893",
+   "FC Basel",
+   "FC Basel 1893"
+  ]
+ },
+ "servette": {
+  "id": "servette",
+  "name": "Servette",
+  "short": "SRV",
+  "primary": "#8B1A1A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Servette FC"
+  ]
+ },
+ "lugano": {
+  "id": "lugano",
+  "name": "Lugano",
+  "short": "LUG",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FC Lugano"
+  ]
+ },
+ "shakhtar-donetsk": {
+  "id": "shakhtar-donetsk",
+  "name": "Shakhtar Donetsk",
+  "short": "SHA",
+  "primary": "#F47B20",
+  "secondary": "#000000",
+  "aliases": [
+   "FK Shakhtar Donetsk",
+   "Shakhtar Donezk"
+  ]
+ },
+ "dynamo-kyiv": {
+  "id": "dynamo-kyiv",
+  "name": "Dynamo Kyiv",
+  "short": "DYK",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Dinamo Kiev",
+   "Dynamo Kiev",
+   "Dynamo Kyjiw",
+   "FC Dynamo Kyiv"
+  ]
+ },
+ "crvena-zvezda": {
+  "id": "crvena-zvezda",
+  "name": "Crvena Zvezda",
+  "short": "CRZ",
+  "primary": "#D8232A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FK Crvena Zvezda",
+   "Red Star Belgrade",
+   "Roter Stern Belgrad"
+  ]
+ },
+ "partizan": {
+  "id": "partizan",
+  "name": "Partizan",
+  "short": "PTZ",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FK Partizan",
+   "Partizan Belgrade"
+  ]
+ },
+ "dinamo-zagreb": {
+  "id": "dinamo-zagreb",
+  "name": "Dinamo Zagreb",
+  "short": "DZG",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "GNK Dinamo Zagreb",
+   "NK Dinamo Zagreb"
+  ]
+ },
+ "hajduk-split": {
+  "id": "hajduk-split",
+  "name": "Hajduk Split",
+  "short": "HAJ",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "HNK Hajduk Split"
+  ]
+ },
+ "rijeka": {
+  "id": "rijeka",
+  "name": "Rijeka",
+  "short": "RIJ",
+  "primary": "#0B2A6B",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "HNK Rijeka",
+   "NK Rijeka"
+  ]
+ },
+ "celje": {
+  "id": "celje",
+  "name": "Celje",
+  "short": "CEJ",
+  "primary": "#F5C400",
+  "secondary": "#003DA5",
+  "aliases": [
+   "NK Celje"
+  ]
+ },
+ "olimpija-ljubljana": {
+  "id": "olimpija-ljubljana",
+  "name": "Olimpija Ljubljana",
+  "short": "OLL",
+  "primary": "#00A651",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "NK Olimpija Ljubljana"
+  ]
+ },
+ "borac-banja-luka": {
+  "id": "borac-banja-luka",
+  "name": "Borac Banja Luka",
+  "short": "BBL",
+  "primary": "#D0021B",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FK Borac Banja Luka"
+  ]
+ },
+ "ferencvaros": {
+  "id": "ferencvaros",
+  "name": "Ferencvaros",
+  "short": "FTC",
+  "primary": "#008751",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Ferencvaros TC",
+   "Ferencvarosi TC Budapest",
+   "Ferencvárosi TC"
+  ]
+ },
+ "legia-warszawa": {
+  "id": "legia-warszawa",
+  "name": "Legia Warszawa",
+  "short": "LEG",
+  "primary": "#004A32",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Legia Warsaw"
+  ]
+ },
+ "lech-poznan": {
+  "id": "lech-poznan",
+  "name": "Lech Poznan",
+  "short": "LEC",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "KKS Lech Poznan",
+   "Lech Poznań"
+  ]
+ },
+ "fcsb": {
+  "id": "fcsb",
+  "name": "FCSB",
+  "short": "FCS",
+  "primary": "#D0021B",
+  "secondary": "#0B2A6B",
+  "aliases": [
+   "FC Steaua Bucuresti",
+   "Steaua Bucuresti"
+  ]
+ },
+ "cluj": {
+  "id": "cluj",
+  "name": "CFR Cluj",
+  "short": "CFR",
+  "primary": "#8B1A1A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "CFR 1907 Cluj"
+  ]
+ },
+ "ludogorets": {
+  "id": "ludogorets",
+  "name": "Ludogorets Razgrad",
+  "short": "LUD",
+  "primary": "#00713C",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Ludogorets",
+   "PFC Ludogorets Razgrad"
+  ]
+ },
+ "levski-sofia": {
+  "id": "levski-sofia",
+  "name": "Levski Sofia",
+  "short": "LEV",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "PFC Levski Sofia"
+  ]
+ },
+ "bodo-glimt": {
+  "id": "bodo-glimt",
+  "name": "Bodo/Glimt",
+  "short": "BOD",
+  "primary": "#FFD400",
+  "secondary": "#000000",
+  "aliases": [
+   "Bodo/Glimt",
+   "Bodø/Glimt",
+   "FK Bodo/Glimt",
+   "FK Bodø/Glimt"
+  ]
+ },
+ "molde": {
+  "id": "molde",
+  "name": "Molde",
+  "short": "MOL",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Molde FK"
+  ]
+ },
+ "brann": {
+  "id": "brann",
+  "name": "Brann",
+  "short": "BRN",
+  "primary": "#D0021B",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Brann Bergen",
+   "SK Brann"
+  ]
+ },
+ "rosenborg": {
+  "id": "rosenborg",
+  "name": "Rosenborg",
+  "short": "ROS",
+  "primary": "#FFFFFF",
+  "secondary": "#000000",
+  "aliases": [
+   "Rosenborg BK",
+   "Rosenborg Trondheim"
+  ]
+ },
+ "malmo": {
+  "id": "malmo",
+  "name": "Malmo FF",
+  "short": "MFF",
+  "primary": "#54B3E4",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Malmoe FF",
+   "Malmö FF"
+  ]
+ },
+ "djurgarden": {
+  "id": "djurgarden",
+  "name": "Djurgarden",
+  "short": "DJU",
+  "primary": "#003DA5",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Djurgardens IF",
+   "Djurgårdens IF"
+  ]
+ },
+ "kobenhavn": {
+  "id": "kobenhavn",
+  "name": "FC Kobenhavn",
+  "short": "FCK",
+  "primary": "#122E5A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Copenhagen",
+   "FC Copenhagen",
+   "FC Kopenhagen",
+   "FC København"
+  ]
+ },
+ "midtjylland": {
+  "id": "midtjylland",
+  "name": "Midtjylland",
+  "short": "MID",
+  "primary": "#000000",
+  "secondary": "#D0021B",
+  "aliases": [
+   "FC Midtjylland"
+  ]
+ },
+ "shamrock-rovers": {
+  "id": "shamrock-rovers",
+  "name": "Shamrock Rovers",
+  "short": "SHR",
+  "primary": "#008751",
+  "secondary": "#FFFFFF",
+  "aliases": []
+ },
+ "qarabag": {
+  "id": "qarabag",
+  "name": "Qarabag",
+  "short": "QAR",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Qarabag Agdam FK",
+   "Qarabag FK",
+   "Qarabağ Ağdam FK",
+   "Qarabağ FK"
+  ]
+ },
+ "sabah": {
+  "id": "sabah",
+  "name": "Sabah",
+  "short": "SAB",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Sabah Baku",
+   "Sabah FK"
+  ]
+ },
+ "kairat": {
+  "id": "kairat",
+  "name": "Kairat Almaty",
+  "short": "KAI",
+  "primary": "#FFD400",
+  "secondary": "#000000",
+  "aliases": [
+   "FK Kairat",
+   "Kairat"
+  ]
+ },
+ "paphos": {
+  "id": "paphos",
+  "name": "Paphos",
+  "short": "PAF",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Pafos",
+   "Pafos FC",
+   "Paphos FC"
+  ]
+ },
+ "apoel": {
+  "id": "apoel",
+  "name": "APOEL",
+  "short": "APO",
+  "primary": "#F5C400",
+  "secondary": "#003DA5",
+  "aliases": [
+   "APOEL Nicosia",
+   "APOEL Nikosia"
+  ]
+ },
+ "omonia": {
+  "id": "omonia",
+  "name": "Omonia Nicosia",
+  "short": "OMO",
+  "primary": "#00A651",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "AC Omonia",
+   "Omonia Nicosia",
+   "Omonia Nikosia"
+  ]
+ },
+ "maccabi-tel-aviv": {
+  "id": "maccabi-tel-aviv",
+  "name": "Maccabi Tel Aviv",
+  "short": "MTA",
+  "primary": "#FFD400",
+  "secondary": "#003DA5",
+  "aliases": [
+   "Maccabi Tel Aviv FC"
+  ]
+ },
+ "hapoel-beer-sheva": {
+  "id": "hapoel-beer-sheva",
+  "name": "Hapoel Be'er Sheva",
+  "short": "HBS",
+  "primary": "#D0021B",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Hapoel Be'er Sheva FC",
+   "Hapoel Beer Sheva"
   ]
  }
 }

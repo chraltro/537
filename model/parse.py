@@ -90,6 +90,26 @@ class Match:
     played: bool = False
     extra: dict = field(default_factory=dict)
 
+    # -- European competition metadata --------------------------------------
+    # Only populated by the openfootball reader when the source says so, so a
+    # domestic Match is byte-identical to what it was before these existed.
+    #: normalised stage: 'league' | 'playoff' | 'r16' | 'qf' | 'sf' | 'final'
+    #: | 'q1'..'q4' | None
+    stage: str | None = None
+    #: leg number inside a two-legged tie (1 or 2), when the source states it
+    leg: int | None = None
+    #: three-letter association codes carried by European club names, kept
+    #: because the draw constraints in the plan's 3.5 need them. The club id
+    #: itself is resolved WITHOUT the suffix so 'Arsenal FC (ENG)' and
+    #: 'Arsenal' are one club.
+    home_assoc: str | None = None
+    away_assoc: str | None = None
+    #: 'cl' | 'el' | 'conf' | 'clq' | ... for European files, '' for domestic
+    comp: str = ""
+    #: True when the ingested score is the 90-minute score of a tie that went
+    #: to extra time (the a.e.t./penalty result is deliberately discarded).
+    aet: bool = False
+
 
 def _to_int(v):
     try:
@@ -127,9 +147,6 @@ def parse_football_data_csv(text: str, season: str, reg: TeamRegistry) -> list[M
 _MD_RE = re.compile(r"^\s*(?:▪)?\s*(?:Matchday|Regular Season -|Round)\s*(\d+)", re.I)
 _DATE_RE = re.compile(
     r"^\s*(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+([A-Za-z]{3})\w*\s+(\d{1,2})(?:\s+(\d{4}))?\s*$")
-# A trailing '2-1 (1-0)' / '2-1' result, however the rest of the line is laid out.
-_EXTRA = r"(?:\s*(?:a\.?e\.?t\.?|pen\.?s?\.?|aet))?"
-_TRAIL_SCORE = re.compile(r"\s{2,}(\d+)\s*-\s*(\d+)" + _EXTRA + r"\s*(?:\([^)]*\))?" + _EXTRA + r"\s*$", re.I)
 _TIME = re.compile(r"^\s*(\d{1,2}:\d{2})\s+")
 _NOTE = re.compile(r"\s*\[[^\]]*\]\s*")
 # Club names outside England are full of digits -- 'Como 1907', '1. FC Köln',
@@ -137,28 +154,137 @@ _NOTE = re.compile(r"\s*\[[^\]]*\]\s*")
 # for containing a digit; it is rejected for not containing a word.
 _WORD = re.compile(r"[^\W\d_]{2,}", re.UNICODE)
 _NOT_A_CLUB = re.compile(r"\d\s*[-:]\s*\d")
+#: The three-letter association code European files append to every club name.
+#: Stripped before `resolve()` so 'Arsenal FC (ENG)' is the same club as the one
+#: the Premier League feed calls 'Arsenal', and kept on the Match because the
+#: draw constraints need to know who is Spanish.
+_ASSOC = re.compile(r"\s*\(([A-Z]{3})\)\s*$")
+
+# The result block at the end (or, in the old three-column layout, the middle)
+# of a fixture line. Five shapes appear in the corpus and all five are here:
+#     2-1                       full time, no half-time given
+#     2-1 (1-0)                 full time (half time)
+#     2-1 a.e.t. (1-1, 0-1)     after extra time (90 minutes, half time)
+#     2-0 a.e.t. (0-0)          after extra time (90 minutes)
+#     4-3 pen. 1-1 a.e.t. (1-1, 0-1)   shootout, a.e.t., (90 minutes, half time)
+# The model wants the 90-MINUTE score every time: a shootout is a coin flip and
+# extra time is a different game with a different scoring rate, so folding either
+# into a Dixon-Coles fit teaches it that knockout ties are high-scoring.
+_RESULT = r"""
+    (?:(?P<pen_h>\d+)\s*-\s*(?P<pen_a>\d+)\s*pen\.?s?\.?\s+)?
+    (?P<h>\d+)\s*-\s*(?P<a>\d+)
+    (?P<aet>\s*(?:a\.?e\.?t\.?|aet))?
+    (?:\s*\(\s*(?P<p1h>\d+)\s*-\s*(?P<p1a>\d+)
+       (?:\s*,\s*(?P<p2h>\d+)\s*-\s*(?P<p2a>\d+))?\s*\))?
+"""
+_TRAIL_SCORE = re.compile(r"\s{2,}" + _RESULT + r"\s*$", re.I | re.X)
+_MID_SCORE = re.compile(r"\s{2,}" + _RESULT + r"\s{2,}", re.I | re.X)
+
+
+def _score_from(m: "re.Match") -> tuple[int, int, bool]:
+    """The 90-minute score, and whether the tie went past it.
+
+    When `a.e.t.` is present the leading pair is the score after 120 minutes and
+    the FIRST pair inside the parentheses is the score after 90 -- verified
+    against the corpus, e.g. `Juventus v Galatasaray 3-2 a.e.t. (3-0, 1-0)`,
+    which was 3-0 at full time (levelling a 2-5 first leg) before extra time.
+    Without `a.e.t.` the leading pair is full time and the parenthesis is the
+    half-time score, which is the plain domestic layout.
+    """
+    aet = bool(m.group("aet"))
+    if aet and m.group("p1h") is not None:
+        return int(m.group("p1h")), int(m.group("p1a")), True
+    return int(m.group("h")), int(m.group("a")), aet
 
 
 def _is_club(s: str) -> bool:
     return bool(s) and bool(_WORD.search(s)) and not _NOT_A_CLUB.search(s)
 
 
-def parse_openfootball(text: str, season: str, reg: TeamRegistry) -> list[Match]:
+#: Stage headers, normalised. openfootball spells the same stage four ways
+#: across fifteen seasons -- '▪ Group A', '▪ League phase', '▪ League, Matchday 3'
+#: and '▪ Group, Matchday 3' are all the group/league phase -- so the reader maps
+#: them onto one vocabulary rather than making every consumer know the history.
+_STAGE_HEAD = re.compile(r"^\s*▪+\s*(.+?)\s*$")
+_MD_IN = re.compile(r"^Matchday\s+(\d+)$", re.I)
+_ROUND_IN = re.compile(r"^(?:Round\s+(\d+)|(\d+)\.\s*Round)$", re.I)
+_FINAL_STAGES = {
+    "round of 32": "r32", "round of 16": "r16",
+    "quarterfinals": "qf", "quarter-finals": "qf",
+    "semifinals": "sf", "semi-finals": "sf", "final": "final",
+    # 2020-21 el.txt switches to German mid-file, as does '▪ Gruppe H'.
+    "sechzehntelfinale": "r32", "achtelfinale": "r16", "viertelfinale": "qf",
+    "halbfinale": "sf", "finale": "final",
+}
+
+
+def _stage_header(head: str) -> tuple[str | None, int | None]:
+    """Map one '▪ ...' header onto (stage, number).
+
+    `number` is a matchday for the league phase and a leg for a two-legged
+    round; None where the file does not say.
+    """
+    parts = [p.strip() for p in head.split(",")]
+    first = parts[0]
+    rest = parts[1] if len(parts) > 1 else ""
+    num = None
+    for p in parts:
+        mm = _MD_IN.match(p)
+        if mm:
+            num = int(mm.group(1))
+    low = first.lower()
+
+    if low in _FINAL_STAGES:
+        return _FINAL_STAGES[low], num
+    if low in ("finals", "knockout"):
+        return _FINAL_STAGES.get(rest.lower(), "final"), num
+    if (low in ("league", "group", "regular", "league phase", "group phase")
+            or low.startswith(("group ", "gruppe", "regular season",
+                               "championship round", "relegation round"))):
+        return "league", num
+    if low.startswith(("playoff", "play-off", "playout", "qualifying")):
+        return "playoff", num
+    rm = _ROUND_IN.match(first)
+    if rm:
+        return "q" + (rm.group(1) or rm.group(2)), num
+    return None, num
+
+
+def parse_openfootball(text: str, season: str, reg: TeamRegistry,
+                       *, comp: str = "", euro: bool = False) -> list[Match]:
     """openfootball plain-text league files.
 
     Dates are section headers that carry forward, the year is stated only when it
     changes, and the repository uses three different line layouts across seasons:
     'Home v Away', 'Home v Away  2-1 (1-0)', and 'Home  2-1 (1-0)  Away'. All
     three appear in files this pipeline reads, so all three are handled here.
+
+    `euro=True` additionally reads the stage headers and the '(ENG)' association
+    suffixes that only European competition files carry. It is a flag rather
+    than a separate reader because the line layout is identical; what differs is
+    which extra columns exist.
     """
     start_year = int(season.split("-")[0])
     out: list[Match] = []
     cur_date: date | None = None
     matchday: int | None = None
+    stage: str | None = None
+    leg: int | None = None
     for raw_line in text.splitlines():
         line = _NOTE.sub("  ", raw_line.rstrip())
         if not line.strip() or line.lstrip().startswith("#") or line.startswith("="):
             continue
+        if euro:
+            hm = _STAGE_HEAD.match(line)
+            if hm:
+                stage, num = _stage_header(hm.group(1))
+                # A matchday only means something in the league phase; the
+                # '▪ Playoffs, Matchday 2' of a two-legged tie is a leg, and
+                # letting it overwrite `matchday` is exactly what would make a
+                # knockout second leg look like league-phase matchday 2.
+                matchday = num if stage == "league" else None
+                leg = num if stage not in (None, "league") else None
+                continue
         m = _MD_RE.match(line)
         if m:
             matchday = int(m.group(1))
@@ -179,24 +305,41 @@ def parse_openfootball(text: str, season: str, reg: TeamRegistry) -> list[Match]
         body = line[tm.end():] if tm else line
 
         hg = ag = None
+        aet = False
         sm = _TRAIL_SCORE.search(body)
         if sm:
-            hg, ag = int(sm.group(1)), int(sm.group(2))
+            hg, ag, aet = _score_from(sm)
             body = body[:sm.start()]
 
         if " v " in body:
             home, _, away = body.partition(" v ")
         else:
-            sm2 = re.search(r"\s{2,}(\d+)\s*-\s*(\d+)" + _EXTRA + r"\s*(?:\([^)]*\))?" + _EXTRA + r"\s{2,}", body, re.I)
+            sm2 = _MID_SCORE.search(body)
             if not sm2:
                 continue
-            hg, ag = int(sm2.group(1)), int(sm2.group(2))
+            hg, ag, aet = _score_from(sm2)
             home, away = body[:sm2.start()], body[sm2.end():]
 
         home, away = home.strip(), away.strip()
+        h_assoc = a_assoc = None
+        if euro:
+            am = _ASSOC.search(home)
+            if am:
+                h_assoc, home = am.group(1), home[:am.start()].strip()
+            am = _ASSOC.search(away)
+            if am:
+                a_assoc, away = am.group(1), away[:am.start()].strip()
         if not _is_club(home) or not _is_club(away):
             continue
         out.append(Match(date=cur_date, home=reg.resolve(home), away=reg.resolve(away),
                          hg=hg, ag=ag, matchday=matchday, time=time, season=season,
-                         played=hg is not None and ag is not None))
+                         played=hg is not None and ag is not None,
+                         stage=stage, leg=leg, home_assoc=h_assoc, away_assoc=a_assoc,
+                         comp=comp, aet=aet))
     return out
+
+
+def parse_openfootball_euro(text: str, season: str, reg: TeamRegistry,
+                            comp: str = "cl") -> list[Match]:
+    """European competition file: stage headers and '(ENG)' suffixes included."""
+    return parse_openfootball(text, season, reg, comp=comp, euro=True)

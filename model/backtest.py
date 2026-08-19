@@ -14,7 +14,7 @@ from collections import defaultdict
 
 import numpy as np
 
-from . import config, ratings
+from . import config, europe, ratings
 from .data import Dataset
 from .parse import Match
 from .simulate import outcome_probs, score_matrix
@@ -256,6 +256,89 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
            "params": {"goals_weight": goals_weight, "decay": decay}}
     out["calibration"] = calibration(P, Y)
     return out
+
+
+# --------------------------------------------------------------------------
+# European walk-forward
+# --------------------------------------------------------------------------
+class LeagueAverage:
+    """The bar the pooled fit has to clear in Europe.
+
+    Every club is replaced by the average strength of its own domestic league,
+    so the forecast knows only 'a Dutch club is playing a Norwegian one' and
+    nothing whatever about which Dutch club. If a pooled fit over four thousand
+    European matches cannot beat that, its club-level ratings are decoration.
+
+    Strengths are attack/defence pairs fitted the same way as the real model but
+    with clubs collapsed into their leagues, so the comparison isolates the one
+    thing under test -- club resolution -- rather than the machinery around it.
+    """
+    name = "League-average strength"
+
+    def __init__(self, train: list[Match], club_league: dict[str, str],
+                 ref_date, decay: float = config.TIME_DECAY):
+        self.club_league = club_league
+        agg: list[Match] = []
+        for m in train:
+            lh = club_league.get(m.home, "other")
+            la = club_league.get(m.away, "other")
+            if lh == la:
+                continue          # a domestic match says nothing across leagues
+            agg.append(Match(date=m.date, home=lh, away=la, hg=m.hg, ag=m.ag,
+                             played=True))
+        pool = sorted({m.home for m in agg} | {m.away for m in agg})
+        self.fit = ratings.fit(agg, pool, ref_date, decay=decay) if agg else None
+
+    def predict(self, m):
+        if self.fit is None:
+            return np.array([0.44, 0.25, 0.31])
+        h = self.club_league.get(m.home, "other")
+        a = self.club_league.get(m.away, "other")
+        if h not in self.fit.index or a not in self.fit.index:
+            return np.array([0.44, 0.25, 0.31])
+        lh, la = self.fit.lambdas(h, a)
+        return np.array(outcome_probs(score_matrix(lh, la, self.fit.rho)))
+
+
+def run_european(corpus, seasons: list[str], *, comps=("cl",),
+                 history_years: int = 6, decay: float = config.TIME_DECAY,
+                 ridge: float = config.RIDGE, quiet: bool = False) -> dict:
+    """Walk forward through European seasons the fit has never seen.
+
+    Refits before every matchday on everything played before it -- domestic and
+    European alike -- then scores the matchday. The two Swiss seasons are the
+    honest holdout: they are the format actually being forecast.
+    """
+    club_league = corpus.club_leagues()
+    target = sorted([m for m in corpus.matches
+                     if m.season in seasons and m.comp in comps and m.played],
+                    key=lambda m: (m.date, m.home))
+    preds, base_preds, ys = [], [], []
+    for start, chunk in _rounds(target):
+        cutoff = min(m.date for m in chunk)
+        lo = dt.date(cutoff.year - history_years, 1, 1)
+        hist = [m for m in corpus.matches if lo <= m.date < cutoff]
+        pool = sorted({m.home for m in hist} | {m.away for m in hist})
+        need = {m.home for m in chunk} | {m.away for m in chunk}
+        if not need <= set(pool) or len(hist) < 2000:
+            continue
+        fit = ratings.fit_pooled(hist, pool, cutoff, group_of=corpus.group_of,
+                                 club_league=club_league, decay=decay,
+                                 ridge=ridge, default_group=europe.EUROPE)
+        base = LeagueAverage(hist, club_league, cutoff, decay=decay)
+        for m in chunk:
+            lh, la = fit.lambdas(m.home, m.away, group=europe.EUROPE)
+            preds.append(np.array(outcome_probs(score_matrix(lh, la, fit.rho))))
+            base_preds.append(base.predict(m))
+            ys.append(_result_index(m))
+        if not quiet:
+            print(f"  · {start}: {len(ys)} European matches scored")
+    P, B, Y = np.array(preds), np.array(base_preds), np.array(ys)
+    return {"model": score_all(P, Y),
+            "baselines": {"league_average": score_all(B, Y)},
+            "names": {"league_average": LeagueAverage.name},
+            "seasons": seasons, "comps": list(comps),
+            "calibration": calibration(P, Y)}
 
 
 def calibration(P: np.ndarray, Y: np.ndarray, bins: int = 10) -> list[dict]:

@@ -71,7 +71,10 @@ class Fit:
 
     def __init__(self, teams: list[str], att: np.ndarray, dfn: np.ndarray,
                  mu: float, home: float, rho: float,
-                 warm: dict | None = None) -> None:
+                 warm: dict | None = None,
+                 homes: dict[str, float] | None = None,
+                 default_group: str | None = None,
+                 club_league: dict[str, str] | None = None) -> None:
         self.teams = teams
         self.index = {t: i for i, t in enumerate(teams)}
         self.att = att
@@ -80,10 +83,29 @@ class Fit:
         self.home = home
         self.rho = rho
         self.warm = warm or {}
+        #: Home advantage per competition group. A single-league fit has one
+        #: entry and `home` is it; a pooled fit has one per domestic league plus
+        #: one for Europe, because European home advantage is measurably about
+        #: half again the Premier League's (plan 3.1) and averaging the two
+        #: makes both wrong.
+        self.homes: dict[str, float] = dict(homes or {})
+        self.default_group = default_group
+        #: Which league each club's rating is shrunk toward, kept for callers
+        #: that want to report or re-centre it.
+        self.club_league: dict[str, str] = dict(club_league or {})
 
-    def lambdas(self, home: str, away: str, neutral: bool = False) -> tuple[float, float]:
+    def home_advantage(self, group: str | None = None) -> float:
+        """Log home advantage for one competition group."""
+        if group is None:
+            group = self.default_group
+        if group is not None and group in self.homes:
+            return self.homes[group]
+        return self.home
+
+    def lambdas(self, home: str, away: str, neutral: bool = False,
+                group: str | None = None) -> tuple[float, float]:
         i, j = self.index[home], self.index[away]
-        adv = 0.0 if neutral else self.home
+        adv = 0.0 if neutral else self.home_advantage(group)
         return (float(np.exp(self.mu + self.att[i] - self.dfn[j] + adv)),
                 float(np.exp(self.mu + self.att[j] - self.dfn[i])))
 
@@ -169,6 +191,159 @@ def _fit_core(n, hi, ai, y_h, y_a, w, ridge, x0=None):
     att = att - att.mean()
     dfn = dfn - dfn.mean()
     return att, dfn, float(x[2 * n]), float(x[2 * n + 1])
+
+
+# --------------------------------------------------------------------------
+# Pooled fit: one model over several competitions at once
+# --------------------------------------------------------------------------
+def _pack_pooled(teams, matches, ref_date, decay, group_of, group_ids):
+    """As `_pack`, plus the competition group each match belongs to."""
+    idx = {t: i for i, t in enumerate(teams)}
+    gidx = {g: i for i, g in enumerate(group_ids)}
+    hi, ai, hg, ag, w, gi = [], [], [], [], [], []
+    for m in matches:
+        if m.home not in idx or m.away not in idx:
+            continue
+        hi.append(idx[m.home])
+        ai.append(idx[m.away])
+        hg.append(m.hg)
+        ag.append(m.ag)
+        w.append(np.exp(-decay * (ref_date - m.date).days))
+        gi.append(gidx[group_of(m)])
+    return (np.array(hi), np.array(ai), np.asarray(hg, float),
+            np.asarray(ag, float), np.asarray(w, float),
+            np.asarray(gi, np.int64))
+
+
+def _fit_pooled_core(n, hi, ai, y_h, y_a, w, gi, n_groups, li, n_leagues,
+                     ridge, x0=None):
+    """MLE over a pooled corpus, with two changes from `_fit_core`.
+
+    *A home coefficient per competition group.* `home` becomes a vector indexed
+    by the match's group instead of a scalar shared by every league on the
+    planet.
+
+    *A ridge toward the league mean rather than toward zero.* Each club's attack
+    is `league_mean[L(club)] + dev`, and only `dev` is penalised. This is the
+    change that makes a pooled fit safe: the old zero-centred penalty, applied
+    across a corpus that contains both the Premier League and the Gibraltar
+    league, would drag Real Madrid down and Lincoln Red Imps up in equal measure
+    and call the result a rating. The league means are free parameters, and what
+    identifies them is the European matches -- the only edges in the graph that
+    join one league to another.
+
+    Parameter layout: [dev_att(n) | dev_dfn(n) | mu | home(n_groups) |
+                       lmean_att(n_leagues) | lmean_dfn(n_leagues)].
+    """
+    n_par = 2 * n + 1 + n_groups + 2 * n_leagues
+    o_mu = 2 * n
+    o_home = o_mu + 1
+    o_la = o_home + n_groups
+    o_ld = o_la + n_leagues
+
+    def obj(x):
+        d_att, d_dfn = x[:n], x[n:2 * n]
+        mu = x[o_mu]
+        home = x[o_home:o_home + n_groups]
+        la_m, ld_m = x[o_la:o_la + n_leagues], x[o_ld:o_ld + n_leagues]
+        att = la_m[li] + d_att
+        dfn = ld_m[li] + d_dfn
+        lh = np.exp(mu + att[hi] - dfn[ai] + home[gi])
+        la = np.exp(mu + att[ai] - dfn[hi])
+        nll = float(np.sum(w * (lh - y_h * np.log(lh) + la - y_a * np.log(la))))
+        nll += ridge * float(np.sum(d_att ** 2) + np.sum(d_dfn ** 2))
+
+        rh = w * (y_h - lh)
+        ra = w * (y_a - la)
+        g_att = np.zeros(n)
+        g_dfn = np.zeros(n)
+        np.add.at(g_att, hi, -rh)
+        np.add.at(g_att, ai, -ra)
+        np.add.at(g_dfn, ai, rh)
+        np.add.at(g_dfn, hi, ra)
+        # The league mean moves every club in that league together, so its
+        # gradient is the sum of theirs -- which is also why a league with no
+        # European match is free to drift: nothing outside it constrains the sum.
+        g_la = np.bincount(li, weights=g_att, minlength=n_leagues)
+        g_ld = np.bincount(li, weights=g_dfn, minlength=n_leagues)
+        g_home = -np.bincount(gi, weights=rh, minlength=n_groups)
+        grad = np.concatenate([
+            g_att + 2 * ridge * d_att,
+            g_dfn + 2 * ridge * d_dfn,
+            [-np.sum(rh) - np.sum(ra)],
+            g_home, g_la, g_ld,
+        ])
+        return nll, grad
+
+    if x0 is None:
+        x0 = np.zeros(n_par)
+        x0[o_mu] = np.log(max(y_h.mean(), 0.1))
+        x0[o_home:o_home + n_groups] = 0.25
+    res = minimize(obj, x0, jac=True, method="L-BFGS-B",
+                   options={"maxiter": 800, "ftol": 1e-10})
+    x = res.x
+    li_att = x[o_la:o_la + n_leagues][li] + x[:n]
+    li_dfn = x[o_ld:o_ld + n_leagues][li] + x[n:2 * n]
+    # Attack and defence are only defined up to a shift; unlike the single-league
+    # fit, here the shift is genuinely non-zero (league means are free), so the
+    # intercept has to absorb it or the whole corpus changes scoring level.
+    a_bar, d_bar = float(li_att.mean()), float(li_dfn.mean())
+    mu = float(x[o_mu]) + a_bar - d_bar
+    return (li_att - a_bar, li_dfn - d_bar, mu,
+            np.asarray(x[o_home:o_home + n_groups], float))
+
+
+def fit_pooled(matches: list[Match], teams: list[str], ref_date, *,
+               group_of, club_league: dict[str, str],
+               default_group: str | None = None,
+               decay: float = config.TIME_DECAY,
+               ridge: float = config.RIDGE) -> Fit:
+    """One Dixon-Coles fit over several competitions at once.
+
+    Goals only: the pooled corpus has no shot columns outside the big five, and
+    blending a shot-fitted rating for one fifth of the clubs would put those
+    clubs on a different scale from the rest -- exactly the disease this fit is
+    meant to cure.
+    """
+    n = len(teams)
+    groups = sorted({group_of(m) for m in matches})
+    leagues_ = sorted({club_league.get(t, "other") for t in teams})
+    lidx = {g: i for i, g in enumerate(leagues_)}
+    li = np.array([lidx[club_league.get(t, "other")] for t in teams], np.int64)
+
+    hi, ai, y_h, y_a, w, gi = _pack_pooled(teams, matches, ref_date, decay,
+                                           group_of, groups)
+    if len(hi) == 0:
+        return Fit(teams, np.zeros(n), np.zeros(n), np.log(1.35), 0.25, 0.0)
+
+    att, dfn, mu, home = _fit_pooled_core(
+        n, hi, ai, y_h, y_a, w, gi, len(groups), li, len(leagues_), ridge)
+    homes = dict(zip(groups, (float(h) for h in home)))
+    dflt = default_group if default_group in homes else groups[0]
+    rho = _fit_rho(hi, ai, y_h, y_a, w, att, dfn, mu, homes[dflt])
+    return Fit(teams, att, dfn, mu, homes[dflt], rho,
+               homes=homes, default_group=dflt, club_league=club_league)
+
+
+def staleness_sd(teams: list[str], last_seen: dict, ref_date, *,
+                 base: float = config.RATING_SD, cap: float = 2.0) -> np.ndarray:
+    """Per-club rating uncertainty, widened where the evidence is old.
+
+    Twenty-nine of the participating associations have no domestic result after
+    May 2025 (plan 1.5). A club rated on a squad that has since been rebuilt is
+    not wrongly rated, it is *uncertainly* rated, and the scenario resampling in
+    `simulate_season` is the honest place to say so: `base x (1 + months/12)`,
+    capped at twice base, per plan 3.3.
+    """
+    out = np.full(len(teams), float(base))
+    for i, t in enumerate(teams):
+        seen = last_seen.get(t)
+        if seen is None:
+            out[i] = base * cap
+            continue
+        months = max((ref_date - seen).days, 0) / 30.44
+        out[i] = base * min(1.0 + months / 12.0, cap)
+    return out
 
 
 def tau(hg, ag, lh, la, rho):

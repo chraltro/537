@@ -80,7 +80,14 @@ def test_openfootball_handles_all_three_layouts():
     assert [m.played for m in got] == [False, True, True, True]
     assert (got[1].hg, got[1].ag) == (2, 1)
     assert (got[2].home, got[2].hg, got[2].ag) == (reg.resolve("Liverpool"), 3, 0)
-    assert (got[3].hg, got[3].ag) == (1, 0), "a.e.t. must not swallow the score"
+    # '1-0 a.e.t. (0-0)' is 0-0 after ninety minutes and 1-0 after extra time.
+    # The model is fitted on ninety minutes -- extra time is a shorter, lower-
+    # scoring game, and folding its goals in would teach the fit that knockout
+    # ties are high-scoring. Verified against the corpus in
+    # docs/european-competitions-plan.md 1.4: e.g. 'Juventus v Galatasaray
+    # 3-2 a.e.t. (3-0, 1-0)', which really was 3-0 at full time.
+    assert (got[3].hg, got[3].ag) == (0, 0), "a.e.t. must yield the 90-minute score"
+    assert got[3].aet is True
     assert all(m.matchday == 1 for m in got)
 
 

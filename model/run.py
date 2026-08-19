@@ -1,8 +1,25 @@
 """Build every JSON file the site reads, for one league or for all five.
 
-    python -m model.run                     # all five leagues
+    python -m model.run                     # all five domestic leagues
     python -m model.run --league la-liga    # just one
     SKIP_BACKTEST=1 python -m model.run     # skip the walk-forward evaluation
+
+    python -m model.run --league champions-league
+        The live cup build. Reads data/europe/fixtures-2026-27.txt first and
+        openfootball only as a results override; while that file is empty it
+        reports 'awaiting draw', writes nothing and leaves the league not-ready.
+
+    python -m model.run --league champions-league --replay 2025-26
+        The same pipeline over a finished season's real league phase, forecast
+        from the day before its first matchday. Staging data for the site, stamped
+        `"replay"` in forecast.json so the manifest can never call it live.
+
+    python -m model.run --pooled            # or POOLED_FIT=1
+        Fit the domestic leagues on the pooled European corpus instead of on
+        their own history. Off by default and deliberately so -- see the Phase 2
+        gate: SPI is defined against a league-average opponent, and pooling
+        redefines 'average' as the average of nine hundred clubs in fifty-two
+        leagues, which moves every published number for no new evidence.
 
 Each league gets its own directory under site/data/<slug>/, and the manifest at
 site/data/leagues.json is regenerated from `model.leagues` every run so the
@@ -22,7 +39,8 @@ import time
 
 import numpy as np
 
-from . import backtest, config, insight, leagues, priors, ratings, simulate
+from . import (backtest, config, europe, insight, knockout, leagues, priors,
+               ratings, simulate)
 from .data import Dataset
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -82,10 +100,43 @@ def _rating_history(ds: Dataset, teams, shot_conv, adj: dict[str, float],
 # --------------------------------------------------------------------------
 # One league
 # --------------------------------------------------------------------------
-def build(league: leagues.League, *, skip_backtest: bool | None = None) -> None:
+#: Pooled-fit switch for the five domestic leagues. Off, deliberately: the
+#: pooled fit is the right rating for a competition whose clubs come from thirty
+#: leagues, and a needless change to five forecasts the site already publishes.
+#: See the Phase 2 gate in the build report -- turning it on moves Premier
+#: League SPI by up to several points, none of it from evidence the domestic
+#: fit lacked, so domestic builds stay on the path they were calibrated for.
+POOLED_DOMESTIC = os.environ.get("POOLED_FIT") == "1"
+
+
+def pooled_fit_for(ds: Dataset, ref: dt.date, *, league: leagues.League,
+                   quiet: bool = True) -> tuple[ratings.Fit, europe.Corpus]:
+    """One Dixon-Coles fit over this league plus the whole European corpus.
+
+    Shares the Dataset's registry, which is the only reason the bridge works:
+    'Arsenal FC (ENG)' in a UEFA file and 'Arsenal' in the Premier League mirror
+    have to be the same club id or the European matches connect nothing.
+    """
+    corpus = europe.Corpus(ds.reg).load(quiet=quiet)
+    corpus.add(ds.top, league.slug)
+    corpus.add(ds.second, f"{league.slug}-2")
+    hist = corpus.before(ref)
+    pool = sorted({m.home for m in hist} | {m.away for m in hist})
+    fit = ratings.fit_pooled(hist, pool, ref, group_of=corpus.group_of,
+                             club_league=corpus.club_leagues(),
+                             default_group=league.slug)
+    return fit, corpus
+
+
+def build(league: leagues.League, *, skip_backtest: bool | None = None,
+          pooled: bool | None = None) -> None:
     """Run the whole pipeline for one league and write its JSON directory."""
     if skip_backtest is None:
         skip_backtest = os.environ.get("SKIP_BACKTEST") == "1"
+    if pooled is None:
+        pooled = POOLED_DOMESTIC
+    if league.kind == "cup":
+        return build_cup(league)
     out = os.path.join(OUT, league.slug)
     os.makedirs(out, exist_ok=True)
 
@@ -101,7 +152,11 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None) -> None:
     ref = max(dt.date.today(), kickoff)
     hist = [m for m in ds.top if m.date < ref] + [m for m in ds.second if m.date < ref]
     pool = sorted({m.home for m in hist} | {m.away for m in hist})
-    fit = ratings.fit(hist, pool, ref, shot_conv=shot_conv)
+    if pooled:
+        print("  · pooled fit: adding the European corpus")
+        fit, _ = pooled_fit_for(ds, ref, league=league, quiet=False)
+    else:
+        fit = ratings.fit(hist, pool, ref, shot_conv=shot_conv)
 
     print("Calibrating priors against history…")
     cal = priors.calibrate(ds, shot_conv)
@@ -264,6 +319,354 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None) -> None:
 
 
 # --------------------------------------------------------------------------
+# European competitions
+# --------------------------------------------------------------------------
+#: Stage label -> the `md` value the site contract uses for it.
+KNOCKOUT_MD = {"playoff": "KPO", "r16": "R16", "qf": "QF", "sf": "SF",
+               "final": "F"}
+
+
+def _recentre(fit: ratings.Fit, teams: list[str]) -> ratings.Fit:
+    """Re-express a pooled fit relative to the average club in `teams`.
+
+    SPI means 'expected share of points against an average team', and in a
+    pooled fit the average team is the average of nine hundred clubs across
+    fifty-two leagues -- which would put every Champions League participant
+    above 95 and say nothing. Shifting attack and defence onto the competition's
+    own average, with the intercept absorbing the shift, leaves every match
+    probability identical and makes the number mean what it says.
+    """
+    idx = [fit.index[t] for t in teams]
+    a_bar = float(np.mean(fit.att[idx]))
+    d_bar = float(np.mean(fit.dfn[idx]))
+    out = ratings.Fit(fit.teams, fit.att - a_bar, fit.dfn - d_bar,
+                      fit.mu + a_bar - d_bar, fit.home, fit.rho,
+                      homes=fit.homes, default_group=fit.default_group,
+                      club_league=fit.club_league)
+    return out
+
+
+def build_cup(league: leagues.League, *, replay: str | None = None,
+              skip_backtest: bool | None = None,
+              n_sims: int = config.N_SIMS) -> None:
+    """Build one European competition's JSON directory.
+
+    Two modes. Live: the pairings come from `data/europe/fixtures-{season}.txt`
+    (ours, primary) with openfootball as a results override, and if that file is
+    still empty the build reports 'awaiting draw' and writes nothing, leaving the
+    league `ready: false`. Replay: a finished season's real league phase is
+    forecast from the day before its first matchday, which is exactly the state
+    the live build will be in on 1 September, and every file is stamped with the
+    season it replays.
+    """
+    if skip_backtest is None:
+        skip_backtest = os.environ.get("SKIP_BACKTEST") == "1"
+    out = os.path.join(OUT, league.slug)
+    season = replay or config.SEASON
+    print(f"\n=== {league.name} — {league.n_teams} clubs, "
+          f"{league.n_matches} league-phase matches "
+          f"({'REPLAY ' + replay if replay else season}) ===")
+
+    from .parse import TeamRegistry
+    reg = TeamRegistry()
+    knockouts: list = []
+    if replay:
+        fixtures, src = europe.load_replay_fixtures(reg, replay)
+        text = europe.fetch.get(europe.euro_url(replay, "cl"), required=True)
+        from .parse import parse_openfootball_euro
+        knockouts = [m for m in parse_openfootball_euro(text, replay, reg, "cl")
+                     if m.stage in KNOCKOUT_MD]
+    else:
+        try:
+            fixtures, src = europe.load_cup_fixtures(reg, season)
+        except europe.AwaitingDraw as exc:
+            print(f"  · awaiting draw: {exc}")
+            print(f"  · {league.slug} stays not-ready; nothing written.")
+            return
+    print(f"  · {len(fixtures)} league-phase fixtures from {src['source']} "
+          f"({src['ours_played']} played in ours, "
+          f"{src['openfootball_played']} upstream)")
+
+    teams = sorted({m.home for m in fixtures} | {m.away for m in fixtures})
+    validate_cup_fixtures(league, fixtures, teams, reg)
+
+    kickoff = min(f.date for f in fixtures)
+    ref = kickoff - dt.timedelta(days=1) if replay else max(dt.date.today(), kickoff)
+    if replay:
+        # A replay is a forecast, not a recital: everything from the season being
+        # replayed is removed from the fit, and the fixtures go in unplayed.
+        for f in fixtures:
+            f.hg = f.ag = None
+            f.played = False
+
+    print("Fitting the pooled rating over the European corpus…")
+    corpus = europe.Corpus(reg).load(quiet=False)
+    hist = corpus.before(ref)
+    pool = sorted({m.home for m in hist} | {m.away for m in hist})
+    missing = [t for t in teams if t not in set(pool)]
+    if missing:
+        raise ValueError(f"{league.slug}: no history at all for {missing}")
+    fit = ratings.fit_pooled(hist, pool, ref, group_of=corpus.group_of,
+                             club_league=corpus.club_leagues(),
+                             default_group=europe.EUROPE)
+    fit = _recentre(fit, teams)
+    print(f"  · {len(hist):,} matches, {len(pool)} clubs, "
+          f"European home advantage x{np.exp(fit.home_advantage(europe.EUROPE)):.3f}")
+
+    # Staleness: a club whose freshest result is fifteen months old is not badly
+    # rated, it is uncertainly rated (plan 3.3).
+    seen = corpus.last_seen()
+    rating_sd = ratings.staleness_sd(teams, seen, ref)
+    stale = [(t, round((ref - seen[t]).days / 30.44, 1)) for t in teams
+             if (ref - seen[t]).days > 200]
+    if stale:
+        print(f"  · widened intervals for {len(stale)} stale clubs: "
+              + ", ".join(f"{t} ({m}mo)" for t, m in sorted(stale, key=lambda r: -r[1])[:6]))
+
+    # The preseason anchor. Plan 3.2 is explicit that this mechanism already
+    # exists and must not be rebuilt: it is where the lead hand-corrects the
+    # handful of participants whose domestic feed is fifteen months stale, and
+    # it decays to nothing over the first ten matchdays as real results arrive.
+    # A cup's league phase has no title market to solve against, so what the
+    # file carries here is a direct per-club net-rating nudge, not odds.
+    adj = None
+    market = priors.load_market(priors.market_path(league))
+    played_now = sum(1 for f in fixtures if f.played)
+    w = priors.market_weight(played_now, league)
+    if market.get("net") and w > 0:
+        adj = {t: w * float(market["net"].get(t, 0.0)) for t in teams}
+        moved = {t: round(v, 3) for t, v in adj.items() if abs(v) > 1e-9}
+        print(f"  · preseason anchor (weight {w:.2f}) moves {len(moved)} clubs: "
+              f"{moved}")
+    else:
+        w = 0.0
+
+    print(f"Simulating the league phase {n_sims:,} times…")
+    sim = simulate.simulate_season(fit, fixtures, teams, league=league,
+                                   adj=adj, n_sims=n_sims, rating_sd=rating_sd,
+                                   leverage=True, events=simulate.CUP_EVENTS,
+                                   keep_orders=True)
+    print("Drawing and playing the knockout…")
+    br = knockout.simulate_bracket(fit, teams, sim["orders"],
+                                   group=europe.EUROPE, adj=adj)
+
+    os.makedirs(out, exist_ok=True)
+    meta = reg.meta
+    parts = load_participants(season if not replay else None)
+    pos = sim["position"]
+    direct, playoff = league.advance_direct, league.advance_playoff
+    idx = {t: i for i, t in enumerate(teams)}
+    rows = []
+    for t in teams:
+        i = idx[t]
+        m = meta[t]
+        p = parts.get(t, {})
+        rows.append({
+            "id": t, "name": m["name"], "short": m["short"],
+            "primary": m["primary"], "secondary": m["secondary"],
+            "spi": round(spi(fit, t, (adj or {}).get(t, 0.0)), 1),
+            "off": round(fit.offence(t) * np.exp((adj or {}).get(t, 0.0) / 2), 2),
+            "def": round(fit.defence(t) * np.exp(-(adj or {}).get(t, 0.0) / 2), 2),
+            "pot": p.get("pot"), "assoc": p.get("assoc"),
+            "pts": round(float(sim["points_mean"][i]), 1),
+            "pts_lo": round(float(sim["points_p10"][i])),
+            "pts_hi": round(float(sim["points_p90"][i])),
+            "pts_min": int(sim["points_min"][i]), "pts_max": int(sim["points_max"][i]),
+            "gd": round(float(sim["gd_mean"][i])),
+            "p_top8": float(pos[i, :direct].sum()),
+            "p_playoff": float(pos[i, direct:direct + playoff].sum()),
+            "p_out": float(pos[i, direct + playoff:].sum()),
+            "p_r16": float(br["r16"][i]), "p_qf": float(br["qf"][i]),
+            "p_sf": float(br["sf"][i]), "p_final": float(br["final"][i]),
+            "p_win": float(br["win"][i]),
+            # The three history/recap metric names are shared across every
+            # competition so `insight.append_history` and `recap` need no cup
+            # branch. For a cup they mean: won the trophy / finished top 8 /
+            # eliminated in the league phase. The site labels them from the
+            # manifest, exactly as it does the domestic ones.
+            "title": float(br["win"][i]),
+            "ucl": float(pos[i, :direct].sum()),
+            "releg": float(pos[i, direct + playoff:].sum()),
+            "pos": [round(float(x), 5) for x in pos[i]],
+            "played": 0, "w": 0, "d": 0, "l": 0, "gf": 0, "ga": 0, "cur_pts": 0,
+            "history": [], "promoted": False,
+        })
+    rows.sort(key=lambda r: (-r["pts"], -r["gd"]))
+
+    lev_by_match = {}
+    for f, lv in zip([x for x in fixtures if not x.played], sim["leverage"] or []):
+        lev_by_match[(f.home, f.away)] = lv
+    ms = []
+    for f in sorted(fixtures, key=lambda x: (x.matchday or 0, x.date, x.home)):
+        ms.append(_match_row(fit, f, f.matchday,
+                             lev_by_match.get((f.home, f.away)), adj))
+    for f in sorted(knockouts, key=lambda x: (x.date, x.home)):
+        ms.append(_match_row(fit, f, KNOCKOUT_MD[f.stage], None, adj))
+    json.dump({"matches": ms}, open(os.path.join(out, "matches.json"), "w"),
+              separators=(",", ":"))
+    print(f"  → matches.json ({len(ms)} rows, "
+          f"{len(ms) - len(fixtures)} knockout)")
+
+    spi_by_team = {r["id"]: r["spi"] for r in rows}
+    sos = insight.strength_of_schedule(fixtures, teams, spi_by_team,
+                                       fit.home_advantage(europe.EUROPE))
+    for r in rows:
+        s_ = sos[r["id"]]
+        r["sos"], r["sos_rank"] = s_["remaining"], s_.get("rank")
+        r["sos_played"], r["next"] = s_["played"], s_["next"]
+    json.dump({"schedule": {t: {"remaining": sos[t]["remaining"],
+                                "played": sos[t]["played"],
+                                "rank": sos[t].get("rank"),
+                                "fixtures": sos[t]["fixtures"]} for t in teams}},
+              open(os.path.join(out, "schedule.json"), "w"), separators=(",", ":"))
+
+    from . import siminput
+    siminput.write_sim_input(fit, fixtures, teams, adj, meta,
+                             os.path.join(out, "sim_input.json"), league=league)
+    frozen = insight.freeze_predictions(ms, out)
+    report = insight.season_report(ms, frozen, {t: meta[t]["name"] for t in teams})
+    json.dump(report, open(os.path.join(out, "season_report.json"), "w"),
+              separators=(",", ":"))
+    snaps = insight.append_history(rows, 0, out)
+    from . import recap
+    recap.write_recap(os.path.join(out, "recap.json"), rows, 0)
+
+    payload = {
+        "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+        "season": season.replace("-", "/"),
+        "league": league.public(),
+        "matches_played": sum(1 for f in fixtures if f.played),
+        "matches_total": league.n_matches,
+        "market_weight": round(w, 3),
+        "home_advantage": round(float(np.exp(fit.home_advantage(europe.EUROPE))), 3),
+        "ucl_places": league.ucl_places,
+        "advance_direct": direct, "advance_playoff": playoff,
+        "n_sims": int(sim["n_sims"]),
+        "bracket_sims": int(br["n_sims"]),
+        "lines": sim.get("lines"),
+        "source": src,
+        "participants_status": parts.get("__status__"),
+        "teams": rows,
+    }
+    if replay:
+        payload["replay"] = replay
+        payload["replay_note"] = (
+            f"Staging data. The {replay} league phase, forecast from the day "
+            "before its first matchday; knockout rows are that season's real "
+            "ties. Not a live forecast — the 2026-27 draw is 27 August 2026.")
+    json.dump(payload, open(os.path.join(out, "forecast.json"), "w"),
+              separators=(",", ":"))
+    print(f"  → forecast.json ({len(rows)} clubs), schedule.json, sim_input.json, "
+          f"season_report.json, history.json ({len(snaps)} snapshots)")
+
+    if not skip_backtest:
+        print("Running the European walk-forward (the two Swiss seasons)…")
+        bt = backtest.run_european(corpus, ["2024-25", "2025-26"], quiet=True)
+        bt["league"] = league.slug
+        json.dump(bt, open(os.path.join(out, "backtest.json"), "w"), indent=1)
+        m, base = bt["model"], bt["baselines"]["league_average"]
+        print(f"  → backtest.json  log-loss {m['log_loss']:.4f} vs "
+              f"{base['log_loss']:.4f} for the league-average baseline, "
+              f"rps {m['rps']:.4f} vs {base['rps']:.4f}, over {m['n']} matches")
+    validate_cup(league)
+
+
+def _match_row(fit, f, md, lv, adj=None) -> dict:
+    rep = simulate.match_report(fit, f.home, f.away, adj)
+    best = rep["top_scores"][0]
+    return {
+        "md": md, "date": f.date.isoformat(), "time": f.time,
+        "h": f.home, "a": f.away,
+        "ph": round(rep["home_win"], 4), "pd": round(rep["draw"], 4),
+        "pa": round(rep["away_win"], 4),
+        "xgh": round(rep["xg_home"], 2), "xga": round(rep["xg_away"], 2),
+        "sc": [best["h"], best["a"]], "scp": round(best["p"], 4),
+        "alt": [[s["h"], s["a"], round(s["p"], 4)] for s in rep["top_scores"][1:4]],
+        "o25": round(rep["over25"], 3), "btts": round(rep["btts"], 3),
+        "grid": [[round(float(v), 5) for v in row[:7]] for row in rep["grid"][:7]],
+        "lev": round(lv["score"], 4) if lv else 0.0,
+        "swings": lv["swings"] if lv else [],
+        "played": f.played, "hg": f.hg, "ag": f.ag,
+    }
+
+
+def load_participants(season: str | None) -> dict:
+    """The committed participant list, keyed by club id. Empty when absent."""
+    if season is None:
+        return {}
+    path = europe.participants_path(season)
+    if not os.path.exists(path):
+        return {}
+    doc = json.load(open(path))
+    out = {c["id"]: c for c in doc.get("clubs", []) if c.get("id")}
+    out["__status__"] = doc.get("status")
+    return out
+
+
+def validate_cup_fixtures(league, fixtures, teams, reg) -> None:
+    """The five things a league-phase fixture list has to be.
+
+    Plan Phase 4's gate, asserted here so a hand-transcribed file cannot ship
+    with a club playing five home games or two clubs from one association drawn
+    against each other.
+    """
+    if len(fixtures) != league.n_matches:
+        raise ValueError(f"{league.slug}: expected {league.n_matches} "
+                         f"league-phase fixtures, got {len(fixtures)}")
+    if len(teams) != league.n_teams:
+        raise ValueError(f"{league.slug}: expected {league.n_teams} clubs, "
+                         f"got {len(teams)}")
+    per = league.n_matches * 2 // league.n_teams // 2
+    for t in teams:
+        h = sum(1 for m in fixtures if m.home == t)
+        a = sum(1 for m in fixtures if m.away == t)
+        if h != per or a != per:
+            raise ValueError(f"{league.slug}: {t} has {h} home / {a} away")
+    auto = [t for t in teams if reg.meta.get(t, {}).get("auto")]
+    if auto:
+        raise ValueError(f"{league.slug}: unmapped club names: {auto}")
+    same = [(m.home, m.away) for m in fixtures
+            if m.home_assoc and m.home_assoc == m.away_assoc]
+    if same:
+        raise ValueError(f"{league.slug}: same-association pairings: {same[:4]}")
+    if any(m.home_assoc for m in fixtures):
+        for t in teams:
+            seen: dict[str, int] = {}
+            for m in fixtures:
+                if m.home == t:
+                    seen[m.away_assoc] = seen.get(m.away_assoc, 0) + 1
+                elif m.away == t:
+                    seen[m.home_assoc] = seen.get(m.home_assoc, 0) + 1
+            over = {k: v for k, v in seen.items() if v > 2}
+            if over:
+                raise ValueError(f"{league.slug}: {t} faces {over}, max 2 per "
+                                 "association")
+
+
+def validate_cup(league: leagues.League) -> None:
+    """Refuse to ship an incoherent cup forecast."""
+    out = os.path.join(OUT, league.slug)
+    fc = json.load(open(os.path.join(out, "forecast.json")))
+    rows = fc["teams"]
+    assert len(rows) == league.n_teams, "wrong club count"
+    for t in rows:
+        s = sum(t["pos"])
+        assert abs(s - 1) < 1e-3, f"{t['id']} position distribution sums to {s}"
+        s = t["p_top8"] + t["p_playoff"] + t["p_out"]
+        assert abs(s - 1) < 1e-3, f"{t['id']} advancement splits sum to {s}"
+        assert t["p_win"] <= t["p_final"] <= t["p_sf"] <= t["p_qf"] <= t["p_r16"] + 1e-9
+    for key, want in (("p_top8", league.advance_direct),
+                      ("p_playoff", league.advance_playoff),
+                      ("p_out", league.n_teams - league.advance_direct
+                       - league.advance_playoff),
+                      ("p_r16", 16), ("p_qf", 8), ("p_sf", 4),
+                      ("p_final", 2), ("p_win", 1)):
+        s = sum(t[key] for t in rows)
+        assert abs(s - want) < 0.03, f"{key} sums to {s:.3f}, expected {want}"
+    print(f"Validation passed. ({league.slug})")
+
+
+# --------------------------------------------------------------------------
 # Integrity and manifest
 # --------------------------------------------------------------------------
 def validate(league: leagues.League) -> None:
@@ -299,6 +702,8 @@ def write_manifest(ready: set[str]) -> dict:
         "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "leagues": [lg.manifest_entry(lg.slug in ready)
                     for lg in leagues.LEAGUES + leagues.EUROPEAN],
+        "note": "ready=false means no live forecast; the directory may still "
+                "hold replay staging data, stamped with a 'replay' key.",
     }
     os.makedirs(OUT, exist_ok=True)
     json.dump(payload, open(os.path.join(OUT, "leagues.json"), "w"), indent=1)
@@ -306,7 +711,18 @@ def write_manifest(ready: set[str]) -> dict:
 
 
 def has_forecast(league: leagues.League) -> bool:
-    return os.path.exists(os.path.join(OUT, league.slug, "forecast.json"))
+    """A forecast on disk that is actually a forecast of the season ahead.
+
+    Replay staging data lives in the same directory and has the same shape, so
+    the manifest asks the file itself: anything stamped `replay` is development
+    material and must never make the switcher entry live."""
+    path = os.path.join(OUT, league.slug, "forecast.json")
+    if not os.path.exists(path):
+        return False
+    try:
+        return json.load(open(path)).get("replay") is None
+    except (ValueError, OSError):
+        return False
 
 
 def copy_legacy(league: leagues.League) -> None:
@@ -328,6 +744,12 @@ def main(argv: list[str] | None = None) -> None:
                     help="build only this league (repeatable); default is all five")
     ap.add_argument("--skip-backtest", action="store_true",
                     help="same as SKIP_BACKTEST=1")
+    ap.add_argument("--replay", metavar="SEASON",
+                    help="build a cup league from a finished season's real "
+                         "league phase, as staging data (e.g. --replay 2025-26)")
+    ap.add_argument("--pooled", action="store_true",
+                    help="fit domestic leagues on the pooled European corpus "
+                         "(off by default; see the Phase 2 gate)")
     args = ap.parse_args(argv)
 
     try:
@@ -336,6 +758,9 @@ def main(argv: list[str] | None = None) -> None:
     except KeyError as exc:
         raise SystemExit(str(exc).strip('"')) from None
     skip = args.skip_backtest or os.environ.get("SKIP_BACKTEST") == "1"
+    if args.replay and not any(lg.kind == "cup" for lg in todo):
+        raise SystemExit("--replay only applies to a cup; pass "
+                         "--league champions-league")
 
     t0 = time.perf_counter()
     timings: list[tuple[str, float]] = []
@@ -343,7 +768,10 @@ def main(argv: list[str] | None = None) -> None:
     for lg in todo:
         t1 = time.perf_counter()
         try:
-            build(lg, skip_backtest=skip)
+            if lg.kind == "cup":
+                build_cup(lg, replay=args.replay, skip_backtest=skip)
+            else:
+                build(lg, skip_backtest=skip, pooled=args.pooled or None)
         except Exception as exc:                      # noqa: BLE001
             # One league's source going missing must not take the other four
             # down: the manifest marks it not-ready and the run exits non-zero.
@@ -354,7 +782,8 @@ def main(argv: list[str] | None = None) -> None:
     if leagues.DEFAULT in todo and has_forecast(leagues.DEFAULT):
         copy_legacy(leagues.DEFAULT)
 
-    ready = {lg.slug for lg in leagues.LEAGUES if has_forecast(lg)}
+    ready = {lg.slug for lg in leagues.LEAGUES + leagues.EUROPEAN
+             if has_forecast(lg)}
     write_manifest(ready)
     total = time.perf_counter() - t0
     print("\n--- timings ---")

@@ -1,6 +1,6 @@
 {
  "default": "premier-league",
- "generated": "2026-08-19T11:07:48+00:00",
+ "generated": "2026-08-19T12:04:28+00:00",
  "leagues": [
   {
    "slug": "premier-league",
@@ -70,5 +70,6 @@
    "advance_direct": 8,
    "advance_playoff": 16
   }
- ]
+ ],
+ "note": "ready=false means no live forecast; the directory may still hold replay staging data, stamped with a 'replay' key."
 }

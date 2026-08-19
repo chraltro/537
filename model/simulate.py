@@ -85,18 +85,40 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
                     league: leagues.League | None = None,
                     adj: dict[str, float] | None = None,
                     n_sims: int = config.N_SIMS,
-                    rating_sd: float = config.RATING_SD,
+                    rating_sd=config.RATING_SD,
                     seed: int = config.SEED,
                     scenarios: int = 200,
-                    leverage: bool = False) -> dict:
+                    leverage: bool = False,
+                    events: tuple[str, ...] | None = None,
+                    keep_orders: bool = False) -> dict:
     """Play the rest of the season `n_sims` times.
 
     Results already on the board are carried in as fact; only the remaining
     fixtures are simulated. `league` decides where the European and relegation
     lines fall; it defaults to the Premier League for callers with none in hand.
+
+    `rating_sd` may be a scalar or one value per club, which is how a club whose
+    freshest result is fifteen months old gets a wider interval than one playing
+    every week. `events` names the three leverage events; a cup's league phase
+    swings qualification rather than the title, so it passes `CUP_EVENTS`.
     """
     lg = league or leagues.DEFAULT
     ucl, europa, releg = lg.ucl_places, lg.europa_places, lg.releg_places
+    events = events or EVENTS
+    # `rating_sd` stays exactly as the caller passed it into `rng.normal`: a
+    # scalar and a constant vector do NOT draw the same numbers from numpy's
+    # generator, and switching one for the other would move every published
+    # forecast for no reason.
+    any_sd = bool(np.any(np.asarray(rating_sd, float) > 0))
+    # The three leverage lines, as finishing positions. A domestic league swings
+    # the title, the European places and relegation; a cup league phase swings
+    # direct qualification, qualification at all, and elimination.
+    if lg.kind == "cup" and lg.advance_direct and lg.advance_playoff:
+        lev_top = lg.advance_direct
+        lev_qual = lg.advance_direct + lg.advance_playoff
+        lev_out = lg.n_teams - lev_qual
+    else:
+        lev_top, lev_qual, lev_out = 1, ucl, releg
     rng = np.random.default_rng(seed)
     idx = {t: i for i, t in enumerate(teams)}
     n = len(teams)
@@ -127,6 +149,12 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
     # answers "how many points win the title" and "what keeps you up", which
     # no club-centric average can.
     pos_pts = np.empty((scenarios * per, n), dtype=np.float32)
+    # The finishing order of every simulated season, kept only when a caller
+    # needs to play something on top of the table -- a knockout bracket has to
+    # be redrawn per simulated season or a club's route is independent of where
+    # it finished, which is the opposite of the truth.
+    orders_out = (np.empty((scenarios * per, n), dtype=np.int16)
+                  if keep_orders else None)
     gd_sum = np.zeros(n)
     # Conditional tallies for match importance: for every remaining fixture and
     # every possible result, how often each club ends up champion / in the top
@@ -142,23 +170,31 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
 
     for _ in range(scenarios):
         # One draw of "how good is everyone really", held fixed for `per` seasons.
-        shock = rng.normal(0.0, rating_sd, n) if rating_sd > 0 else np.zeros(n)
+        shock = rng.normal(0.0, rating_sd, n) if any_sd else np.zeros(n)
         lh = lh0 * np.exp(shock[hi] / 2 - shock[ai] / 2)
         la = la0 * np.exp(shock[ai] / 2 - shock[hi] / 2)
 
-        ph = np.exp(-lh[:, None] + kk[None, :] * np.log(lh)[:, None] - lgam[None, :])
-        pa = np.exp(-la[:, None] + kk[None, :] * np.log(la)[:, None] - lgam[None, :])
-        grid = ph[:, :, None] * pa[:, None, :]
-        gi, gj = np.meshgrid(kk, kk, indexing="ij")
-        grid *= tau(gi, gj, lh[:, None, None], la[:, None, None], fit.rho)
-        flat = grid.reshape(len(remaining), -1)
-        flat /= flat.sum(axis=1, keepdims=True)
-        cdf = np.cumsum(flat, axis=1)
+        if len(remaining):
+            ph = np.exp(-lh[:, None] + kk[None, :] * np.log(lh)[:, None] - lgam[None, :])
+            pa = np.exp(-la[:, None] + kk[None, :] * np.log(la)[:, None] - lgam[None, :])
+            grid = ph[:, :, None] * pa[:, None, :]
+            gi, gj = np.meshgrid(kk, kk, indexing="ij")
+            grid *= tau(gi, gj, lh[:, None, None], la[:, None, None], fit.rho)
+            flat = grid.reshape(len(remaining), -1)
+            flat /= flat.sum(axis=1, keepdims=True)
+            cdf = np.cumsum(flat, axis=1)
 
-        u = rng.random((per, len(remaining)))
-        pick = np.array([np.searchsorted(cdf[m], u[:, m]) for m in range(len(remaining))]).T
-        hg = (pick // (MAXG + 1)).astype(np.int16)
-        ag = (pick % (MAXG + 1)).astype(np.int16)
+            u = rng.random((per, len(remaining)))
+            pick = np.array([np.searchsorted(cdf[m], u[:, m])
+                             for m in range(len(remaining))]).T
+            hg = (pick // (MAXG + 1)).astype(np.int16)
+            ag = (pick % (MAXG + 1)).astype(np.int16)
+        else:
+            # A finished league phase. The table is settled and only the
+            # tie-break below is still random -- which is the state the
+            # Champions League is in from the end of matchday 8 until the final,
+            # and the state every domestic league reaches in May.
+            hg = ag = np.zeros((per, 0), dtype=np.int16)
 
         pts = np.tile(base_pts, (per, 1))
         gf = np.tile(base_gf, (per, 1))
@@ -187,15 +223,17 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
         pos_counts += np.bincount(flat_idx, minlength=n * n).reshape(n, n)
         pts_team[cursor:cursor + per] = pts
         pos_pts[cursor:cursor + per] = np.take_along_axis(pts, order, axis=1)
+        if orders_out is not None:
+            orders_out[cursor:cursor + per] = order
         gd_sum += gd.sum(axis=0)
         cursor += per
 
         if leverage and len(remaining):
             rank = np.argsort(order, axis=1)            # rank[s, t] = finish (0-based)
             ev = np.empty((per, n, n_ev), dtype=np.float32)
-            ev[:, :, 0] = rank == 0
-            ev[:, :, 1] = rank < ucl
-            ev[:, :, 2] = rank >= n - releg
+            ev[:, :, 0] = rank < lev_top
+            ev[:, :, 1] = rank < lev_qual
+            ev[:, :, 2] = rank >= n - lev_out
             ev_flat = ev.reshape(per, n * n_ev)
             res = np.where(hg > ag, 0, np.where(hg == ag, 1, 2))     # (per, n_rem)
             for k in range(3):
@@ -220,7 +258,9 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
         "relegation": p[:, -releg:].sum(axis=1),
         "n_sims": total,
         "lines": _lines(pos_pts[:total], lg),
-        "leverage": _leverage(lev_hits, lev_n, remaining, teams) if leverage else None,
+        "orders": orders_out[:total] if orders_out is not None else None,
+        "leverage": (_leverage(lev_hits, lev_n, remaining, teams, events)
+                     if leverage else None),
     }
 
 
@@ -257,7 +297,8 @@ EVENTS = ("title", "ucl", "releg")
 CUP_EVENTS = ("top8", "qualify", "out")
 
 
-def _leverage(hits, counts, remaining, teams) -> list[dict]:
+def _leverage(hits, counts, remaining, teams,
+              events: tuple[str, ...] = EVENTS) -> list[dict]:
     """Turn conditional tallies into a per-match importance score.
 
     A match matters to the degree that its result moves someone's season. The
@@ -272,7 +313,7 @@ def _leverage(hits, counts, remaining, teams) -> list[dict]:
     out = []
     with np.errstate(invalid="ignore", divide="ignore"):
         probs = hits / np.maximum(counts, 1)[:, :, None]          # (3, n_rem, n*3)
-    probs = probs.reshape(3, len(remaining), n, len(EVENTS))
+    probs = probs.reshape(3, len(remaining), n, len(events))
     for m in range(len(remaining)):
         swing = probs[0, m] - probs[2, m]                          # home win - away win
         seen = np.abs(swing)
@@ -288,8 +329,8 @@ def _leverage(hits, counts, remaining, teams) -> list[dict]:
         for f in order_idx:
             if flat[f] <= 0:
                 break
-            t_i, e_i = divmod(int(f), len(EVENTS))
-            swings.append({"team": teams[t_i], "event": EVENTS[e_i],
+            t_i, e_i = divmod(int(f), len(events))
+            swings.append({"team": teams[t_i], "event": events[e_i],
                            "home": round(float(probs[0, m, t_i, e_i]), 4),
                            "away": round(float(probs[2, m, t_i, e_i]), 4),
                            "swing": round(float(swing[t_i, e_i]), 4)})

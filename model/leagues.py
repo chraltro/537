@@ -108,9 +108,16 @@ class League:
 
     def public(self) -> dict:
         """The 'league' block embedded in forecast.json."""
-        return {"slug": self.slug, "name": self.name, "country": self.country,
-                "ucl_places": self.ucl_places, "releg_places": self.releg_places,
-                "releg_note": self.releg_note, "n_teams": self.n_teams}
+        row = {"slug": self.slug, "name": self.name, "country": self.country,
+               "ucl_places": self.ucl_places, "releg_places": self.releg_places,
+               "releg_note": self.releg_note, "n_teams": self.n_teams}
+        if self.kind == "cup":
+            # A cup's table is read against advancement lines, not against a
+            # European place and a drop; the site takes its wording from here.
+            row["kind"] = self.kind
+            row["advance_direct"] = self.advance_direct
+            row["advance_playoff"] = self.advance_playoff
+        return row
 
 
 # --------------------------------------------------------------------------
@@ -210,7 +217,9 @@ CHAMPIONS_LEAGUE = League(
     # UCL/relegation lines are meaningless for a cup; kept harmless.
     ucl_places=8, releg_places=12,
     releg_note="9th-24th enter a two-legged knockout play-off",
-    of_top="champions-league/master/{season}/cl.txt",
+    # Kept for completeness; the cup pipeline reads its fixtures through
+    # `model.europe`, which puts OUR committed file first (Risk 1).
+    of_top="champions-league/master/{season}/cl",
     of_second="",
     backtest_from="2024-25",     # the two Swiss-format seasons are the honest holdout
 )

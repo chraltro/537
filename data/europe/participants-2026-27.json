@@ -1,6 +1,54 @@
 {
-  "status": "provisional",
-  "asof": null,
-  "note": "Populated by the model pipeline agent: big-five qualifiers from our own final tables, the rest researched. Pots ordered by UEFA club coefficient; title holder in pot 1.",
-  "clubs": []
+ "status": "provisional",
+ "asof": "2026-08-19",
+ "note": "Populated by the model pipeline agent. The 21 big-five qualifiers are read off OUR OWN final 2025-26 tables (model.data, football-data mirror) at each league's ucl_places line, and every one of them matches the published qualified lists. The non-big-five entrants and all pot allocations are from press reporting of the confirmed pots (see sources); UEFA confirms the pots on 26 Aug 2026 and draws the pairings on 27 Aug, so this file stays 'provisional' until the lead replaces it. Eight of the 36 places are still open: the play-off ties below decide four of them and the remaining places follow the qualifying rounds.",
+ "sources": [
+  "big-five qualifiers: this repository's own 2025-26 final tables, cross-checked against the qualified lists reported in August 2026",
+  "pots 1-4 and non-big-five entrants: si.com 2026-27 Champions League projected pots; futbolmundial.com pots 1 and 2 sorted for the 2026/27 UCL league phase; sports.yahoo.com Champions League has 29 of 36 teams set",
+  "format and draw date: docs/european-competitions-plan.md section 2"
+ ],
+ "pot_basis": "UEFA club coefficient, title holder placed in pot 1",
+ "clubs": [
+  {"id": "psg", "name": "Paris Saint-Germain", "assoc": "FRA", "pot": 1, "how": "title holder + Ligue 1 1st"},
+  {"id": "arsenal", "name": "Arsenal", "assoc": "ENG", "pot": 1, "how": "Premier League 1st"},
+  {"id": "man-city", "name": "Manchester City", "assoc": "ENG", "pot": 1, "how": "Premier League 2nd"},
+  {"id": "liverpool", "name": "Liverpool", "assoc": "ENG", "pot": 1, "how": "Premier League 5th"},
+  {"id": "real-madrid", "name": "Real Madrid", "assoc": "ESP", "pot": 1, "how": "La Liga 2nd"},
+  {"id": "barcelona", "name": "Barcelona", "assoc": "ESP", "pot": 1, "how": "La Liga 1st"},
+  {"id": "atletico-madrid", "name": "Atletico Madrid", "assoc": "ESP", "pot": 1, "how": "La Liga 4th"},
+  {"id": "bayern", "name": "Bayern Munich", "assoc": "GER", "pot": 1, "how": "Bundesliga 1st"},
+  {"id": "inter", "name": "Inter", "assoc": "ITA", "pot": 1, "how": "Serie A 1st"},
+
+  {"id": "dortmund", "name": "Borussia Dortmund", "assoc": "GER", "pot": 2, "how": "Bundesliga 2nd"},
+  {"id": "roma", "name": "Roma", "assoc": "ITA", "pot": 2, "how": "Serie A 3rd"},
+  {"id": "sporting-cp", "name": "Sporting CP", "assoc": "POR", "pot": 2, "how": "Primeira Liga 2nd"},
+  {"id": "aston-villa", "name": "Aston Villa", "assoc": "ENG", "pot": 2, "how": "Premier League 4th"},
+  {"id": "porto", "name": "Porto", "assoc": "POR", "pot": 2, "how": "Primeira Liga champions"},
+  {"id": "man-united", "name": "Manchester United", "assoc": "ENG", "pot": 2, "how": "Premier League 3rd"},
+  {"id": "club-brugge", "name": "Club Brugge", "assoc": "BEL", "pot": 2, "how": "Belgian Pro League champions"},
+  {"id": "betis", "name": "Real Betis", "assoc": "ESP", "pot": 2, "how": "La Liga 5th"},
+  {"id": "psv", "name": "PSV", "assoc": "NED", "pot": 2, "how": "Eredivisie champions"},
+
+  {"id": "feyenoord", "name": "Feyenoord", "assoc": "NED", "pot": 3, "how": "Eredivisie 2nd"},
+  {"id": "lille", "name": "Lille", "assoc": "FRA", "pot": 3, "how": "Ligue 1 3rd"},
+  {"id": "napoli", "name": "Napoli", "assoc": "ITA", "pot": 3, "how": "Serie A 2nd"},
+  {"id": "rb-leipzig", "name": "RB Leipzig", "assoc": "GER", "pot": 3, "how": "Bundesliga 3rd"},
+  {"id": "villarreal", "name": "Villarreal", "assoc": "ESP", "pot": 3, "how": "La Liga 3rd"},
+  {"id": "shakhtar-donetsk", "name": "Shakhtar Donetsk", "assoc": "UKR", "pot": 3, "how": "Ukrainian Premier League champions"},
+  {"id": "galatasaray", "name": "Galatasaray", "assoc": "TUR", "pot": 3, "how": "Super Lig champions"},
+
+  {"id": "stuttgart", "name": "VfB Stuttgart", "assoc": "GER", "pot": 4, "how": "Bundesliga 4th"},
+  {"id": "como", "name": "Como", "assoc": "ITA", "pot": 4, "how": "Serie A 4th"},
+  {"id": "lens", "name": "Lens", "assoc": "FRA", "pot": 4, "how": "Ligue 1 2nd"}
+ ],
+ "playoff": {
+  "note": "Second legs 25-26 August 2026; winners take four of the eight remaining places and are seeded into pots 3 and 4.",
+  "ties": [
+   [{"id": "levski-sofia", "assoc": "BUL"}, {"id": "aek-athens", "assoc": "GRE"}],
+   [{"id": "celtic", "assoc": "SCO"}, {"id": "lask", "assoc": "AUT"}],
+   [{"id": "slovan-bratislava", "assoc": "SVK"}, {"id": "celje", "assoc": "SVN"}],
+   [{"id": "hapoel-beer-sheva", "assoc": "ISR"}, {"id": "sabah", "assoc": "AZE"}]
+  ]
+ },
+ "unfilled": 8
 }

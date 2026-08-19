@@ -359,7 +359,8 @@ def test_built_output_matches_the_manifest():
         pytest.skip("pipeline has not been run in this checkout")
     man = json.load(open(path))
     assert man["default"] == leagues.DEFAULT.slug
-    assert [e["slug"] for e in man["leagues"]] == SLUGS
+    assert [e["slug"] for e in man["leagues"]] == \
+        [lg.slug for lg in leagues.LEAGUES + leagues.EUROPEAN]
     for entry in man["leagues"]:
         lg = leagues.get(entry["slug"])
         assert entry["n_teams"] == lg.n_teams
@@ -367,7 +368,13 @@ def test_built_output_matches_the_manifest():
         assert entry["releg_places"] == lg.releg_places
         assert entry["releg_note"] == lg.releg_note
         fc_path = os.path.join(HERE, "site", "data", lg.slug, "forecast.json")
-        assert entry["ready"] == os.path.exists(fc_path)
+        # A forecast on disk is not the same thing as a ready league: the
+        # Champions League directory holds a REPLAY of a finished season, built
+        # so the site has something to develop against before the 27 August
+        # draw exists. It is stamped as a replay and must never read as live.
+        replay = (os.path.exists(fc_path)
+                  and json.load(open(fc_path)).get("replay") is not None)
+        assert entry["ready"] == (os.path.exists(fc_path) and not replay)
         if not entry["ready"]:
             continue
         fc = json.load(open(fc_path))
