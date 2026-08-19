@@ -331,6 +331,40 @@ export function esc(s) {
 
 /* ---------------- chrome ---------------- */
 
+/* ================= where you can go =================
+   One registry, read by the masthead, the overflow menu and the command
+   palette. Before this the three of them each kept their own list and had
+   already drifted: the palette knew about the season review and the masthead
+   did not.
+
+   `group` is the honest division, and the reason the header stopped feeling
+   crowded. Four of these pages are one competition seen four ways; two are not
+   scoped to a competition at all, and putting them in one undifferentiated row
+   of eight implied that switching league would change them, which it never
+   did. */
+export const PAGES = [
+  { id: 'table',    label: 'Table',           long: 'Projected table',      file: 'index.html',     group: 'league', primary: true },
+  { id: 'matches',  label: 'Matches',         long: 'Every match',          file: 'matches.html',   group: 'league', primary: true },
+  { id: 'team',     label: 'Clubs',           long: 'Club pages',           file: 'team.html',      group: 'league', primary: true },
+  { id: 'races',    label: 'Races',           long: 'The races',            file: 'races.html',     group: 'league', primary: true },
+  { id: 'sim',      label: 'What if',         long: 'What if? simulator',   file: 'simulator.html', group: 'league' },
+  { id: 'review',   label: 'Season review',   long: 'How wrong were we?',   file: 'review.html',    group: 'league' },
+  { id: 'rankings', label: 'Global rankings', long: 'Global club rankings', file: 'rankings.html',  group: 'europe', site: true },
+  { id: 'compare',  label: 'Compare clubs',   long: 'Compare two clubs',    file: 'compare.html',   group: 'europe', site: true },
+  { id: 'method',   label: 'Method',          long: 'Method and accuracy',  file: 'method.html',    group: 'about' },
+];
+
+const GROUPS = [
+  ['league', 'This competition'],
+  ['europe', 'Across Europe'],
+  ['about', 'About'],
+];
+
+//: Pages not scoped to a competition, where `?lg=` would mean nothing.
+const SITE_ONLY = new Set(PAGES.filter((p) => p.site).map((p) => p.file));
+
+export const pageHref = (p) => (p.site ? `${ROOT}${p.file}` : url(p.file));
+
 /* Links written into the HTML by hand still have to carry the league. Rewriting
    them here means a new page cannot forget to, and same-page anchors and
    outbound links are left alone. */
@@ -341,6 +375,10 @@ function lgifyLinks(root) {
     if (!raw || raw.startsWith('#') || /^[a-z]+:/i.test(raw)) return;
     const u = new URL(raw, location.href);
     if (u.origin !== location.origin) return;
+    /* The cross-league pages take no league. Stamping one on them put
+       `?lg=serie-a` in the address bar of a page showing every club in Europe,
+       which is a promise that page does not keep. */
+    if (SITE_ONLY.has(u.pathname.split('/').pop())) return;
     u.searchParams.set('lg', LG.slug);
     a.setAttribute('href', u.pathname + u.search + u.hash);
   });
@@ -355,6 +393,13 @@ export function initChrome(page) {
      except when it is the one being looked at, since a direct link to staging
      data has to leave the switcher showing where you are. What it is waiting
      for is the manifest's line to write, not this file's. */
+  /* When the page you are on lives inside the overflow menu, the button wears
+     its name. Otherwise the header would say "More" while you stood on Method,
+     and you would have to open it to find out where you were. */
+  const current = PAGES.find((p) => p.id === page);
+  const here = current && !current.primary;
+  const hereLabel = here ? current.label : 'More';
+
   const opts = LEAGUES.map((l) => {
     const here = l.slug === LG.slug;
     const wait = l.ready_note || 'Coming soon';
@@ -368,21 +413,36 @@ export function initChrome(page) {
     <header class="masthead"><div class="wrap">
       <a class="brand" href="${url('index.html')}">
         <span class="mark"></span>
-        <b>Ninety</b><span>${esc(W.name)} forecast</span>
+        <b>Ninety</b>
       </a>
       <label class="lgswitch">
         <span class="vh">League</span>
         <select id="lgsel" aria-label="Choose a league">${opts}</select>
       </label>
-      <nav class="top">
-        <a href="${url('index.html')}"${page === 'table' ? ' aria-current="page"' : ''}>Table</a>
-        <a href="${url('matches.html')}"${page === 'matches' ? ' aria-current="page"' : ''}>Matches</a>
-        <a href="${url('team.html')}"${page === 'team' ? ' aria-current="page"' : ''}>Clubs</a>
-        <a href="${url('races.html')}"${page === 'races' ? ' aria-current="page"' : ''}>Races</a>
-        <a href="${ROOT}rankings.html"${page === 'rankings' ? ' aria-current="page"' : ''}>Rankings</a>
-        <a href="${ROOT}compare.html"${page === 'compare' ? ' aria-current="page"' : ''}>Compare</a>
-        <a href="${url('simulator.html')}"${page === 'sim' ? ' aria-current="page"' : ''}>What&nbsp;if</a>
-        <a href="${url('method.html')}"${page === 'method' ? ' aria-current="page"' : ''}>Method</a>
+      <nav class="top" aria-label="Sections">
+        ${PAGES.filter((p) => p.primary).map((p) => `
+          <a class="np" href="${pageHref(p)}"${
+            page === p.id ? ' aria-current="page"' : ''}>${esc(p.label)}</a>`).join('')}
+        <div class="navmenu">
+          <button class="morebtn" id="moretog" aria-expanded="false" aria-haspopup="true"
+                  aria-controls="morepop"${here ? ' data-here="1"' : ''}>
+            <span>${esc(hereLabel)}</span>
+            <svg width="10" height="10" viewBox="0 0 16 16" aria-hidden="true" class="chev">
+              <path d="M3 6l5 5 5-5" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="menu-pop" id="morepop" hidden>
+            ${GROUPS.map(([g, heading]) => {
+              const items = PAGES.filter((p) => p.group === g);
+              if (!items.length) return '';
+              return `<p class="menu-h">${esc(heading === 'This competition' ? W.name : heading)}</p>`
+                + items.map((p) => `
+                  <a class="${p.primary ? 'm-primary' : ''}" href="${pageHref(p)}"${
+                    page === p.id ? ' aria-current="page"' : ''}>${esc(p.label)}</a>`).join('');
+            }).join('')}
+          </div>
+        </div>
         <button class="searchbtn" data-open-palette aria-label="Search (press slash)">
           <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
             <circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
@@ -433,8 +493,77 @@ export function initChrome(page) {
     </div></footer>`);
   document.body.insertAdjacentHTML('beforeend', '<div id="tip" role="tooltip"></div>');
 
+  initNavMenu();
   lgifyLinks(document);
   registerWorker();
+}
+
+/* ================= the overflow menu =================
+   Everything the masthead used to shout is in here instead, grouped by whether
+   it belongs to the competition you are looking at or to the whole site. Small
+   enough to write by hand: a button, a popup, and the four keys a menu owes you.
+
+   The primary links appear twice in the markup, once inline and once here.
+   Only ever one of the two is displayed — CSS hides the other outright, which
+   takes it out of the accessibility tree as well — so nothing is announced or
+   tabbed to twice. */
+function initNavMenu() {
+  const btn = document.getElementById('moretog');
+  const pop = document.getElementById('morepop');
+  if (!btn || !pop) return;
+  const menu = btn.closest('.navmenu');
+  const shown = () => [...pop.querySelectorAll('a')].filter((a) => a.offsetParent !== null);
+
+  const open = (focusFirst) => {
+    pop.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    if (focusFirst) shown()[0]?.focus();
+  };
+  const close = (refocus) => {
+    if (pop.hidden) return;
+    pop.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+    if (refocus) btn.focus();
+  };
+
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (pop.hidden) open(false); else close(false);
+  });
+  /* One listener on the wrapper rather than one on each of the button and the
+     popup. Escape has to work while focus is still on the button — which is
+     where it is immediately after a click opens the menu — and a listener bound
+     to the popup never sees that keystroke.
+
+     Enter and Space are deliberately left alone: a <button> already turns them
+     into a click, and intercepting them here as well would open the menu and
+     then let the click close it again. */
+  menu.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (!pop.hidden) close(true);
+      return;
+    }
+    if (document.activeElement === btn) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); open(true); }
+      return;
+    }
+    const items = shown();
+    const i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); items[Math.min(i + 1, items.length - 1)]?.focus(); }
+    else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (i <= 0) close(true); else items[i - 1].focus();
+    }
+  });
+  /* Anything outside the menu closes it, including a click on the page behind
+     the sticky header. `focusin` covers tabbing out, which a click listener
+     alone would miss. */
+  document.addEventListener('click', (e) => {
+    if (!pop.hidden && !e.target.closest('.navmenu')) close(false);
+  });
+  document.addEventListener('focusin', (e) => {
+    if (!pop.hidden && !e.target.closest('.navmenu')) close(false);
+  });
 }
 
 /* Offline. Network-first with a cache fallback, never the other way round: the
@@ -621,18 +750,16 @@ export function initPalette(teams) {
     return u.pathname + u.search;
   };
 
+  /* Pages come from the same registry the masthead reads, so a page added to
+     one is never missing from the other. Only the matches label is special: a
+     cup's fixture list includes the knockout rounds that its forecast total
+     does not count, so the number is left unsaid there. */
   const items = [
-    { label: 'Projected table', kind: 'Page', href: url('index.html') },
-    /* A cup's fixture count on the matches page includes the knockout rounds,
-       which the forecast's own total does not — so it is left unsaid here. */
-    { label: W.isCup ? 'All matches' : `All ${W.nMatches} matches`,
-      kind: 'Page', href: url('matches.html') },
-    { label: 'The races', kind: 'Page', href: url('races.html') },
-    { label: 'What if? simulator', kind: 'Page', href: url('simulator.html') },
-    { label: 'How wrong were we?', kind: 'Page', href: url('review.html') },
-    { label: 'Global club rankings', kind: 'Page', href: `${ROOT}rankings.html` },
-    { label: 'Compare two clubs', kind: 'Page', href: `${ROOT}compare.html` },
-    { label: 'Method and accuracy', kind: 'Page', href: url('method.html') },
+    ...PAGES.map((p) => ({
+      label: (p.id === 'matches' && !W.isCup) ? `All ${W.nMatches} matches` : p.long,
+      kind: p.site ? 'Europe' : 'Page',
+      href: pageHref(p),
+    })),
     ...teams.map((t) => ({ label: t.name, kind: 'Club', href: url(`team.html?t=${t.id}`), hint: t.short })),
     ...Array.from({ length: W.nWeeks }, (_, i) => ({
       label: `${W.roundWord} ${i + 1}`, kind: W.roundWord,

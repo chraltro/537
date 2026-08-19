@@ -82,7 +82,6 @@ a:hover { text-decoration: underline; }
   background: linear-gradient(var(--accent), var(--ramp-2));
 }
 .brand b { font-size: 16px; }
-.brand span { color: var(--muted); font-size: 12px; font-weight: 500; }
 nav.top { display: flex; gap: 4px; margin-left: auto; align-items: center; }
 nav.top a {
   color: var(--ink2); padding: 7px 12px; border-radius: 7px;
@@ -90,6 +89,48 @@ nav.top a {
 }
 nav.top a:hover { background: var(--raised); color: var(--ink); }
 nav.top a[aria-current="page"] { background: var(--raised); color: var(--ink); }
+/* ================= the overflow menu =================
+   The header used to carry eight peer links, two icon buttons, a select and a
+   brand that repeated the league name the select was already showing. Four
+   links stay; the rest live behind one button, grouped by whether they belong
+   to this competition or to the whole site. */
+.navmenu { position: relative; }
+.morebtn {
+  display: flex; align-items: center; gap: 5px; background: none; cursor: pointer;
+  border: none; color: var(--ink2); border-radius: 7px; padding: 7px 10px;
+  font: inherit; font-size: 13.5px; font-weight: 550;
+}
+.morebtn:hover { background: var(--raised); color: var(--ink); }
+/* Standing on a page that lives in here: the button shows its name, and shows
+   it the way the inline links show theirs. */
+.morebtn[data-here] { background: var(--raised); color: var(--ink); }
+.morebtn[aria-expanded="true"] { background: var(--raised); color: var(--ink); }
+.morebtn .chev { transition: transform .12s ease; flex: none; }
+.morebtn[aria-expanded="true"] .chev { transform: rotate(180deg); }
+
+.menu-pop {
+  position: absolute; right: 0; top: calc(100% + 8px); min-width: 216px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: var(--shadow); padding: 7px; z-index: 60;
+}
+.menu-pop a {
+  display: block; padding: 8px 11px; border-radius: 7px; font-size: 13.5px;
+  font-weight: 550; color: var(--ink2); text-decoration: none; white-space: nowrap;
+}
+.menu-pop a:hover, .menu-pop a:focus-visible { background: var(--raised); color: var(--ink); }
+.menu-pop a[aria-current="page"] { background: var(--raised); color: var(--ink); }
+.menu-h {
+  margin: 8px 11px 4px; color: var(--muted); font-size: 10.5px; font-weight: 650;
+  letter-spacing: .07em; text-transform: uppercase;
+}
+.menu-pop > .menu-h:first-child { margin-top: 3px; }
+/* Wide enough for the primary links to sit in the bar: the menu's copies of
+   them go away entirely, which takes them out of the accessibility tree too. */
+@media (min-width: 701px) { .menu-pop a.m-primary { display: none; } }
+/* Too narrow for four links plus a switcher: the bar keeps the button and the
+   menu carries everything, rather than a row of eight that scrolls sideways. */
+@media (max-width: 700px) { nav.top a.np { display: none; } }
+
 .themetoggle {
   background: none; border: 1px solid var(--border); color: var(--ink2);
   width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 14px;
@@ -314,9 +355,8 @@ footer a { color: var(--ink2); }
 @media (max-width: 900px) {
   .wrap { padding: 0 14px; }
   .masthead .wrap { gap: 12px; }
-  .brand span { display: none; }
   .lgswitch select { max-width: 132px; font-size: 12px; padding: 5px 6px; }
-  nav.top a { padding: 7px 9px; font-size: 13px; }
+  nav.top a, .morebtn { padding: 7px 9px; font-size: 13px; }
   .strip-head, .strip-row { grid-template-columns: 92px 1fr; gap: 8px; }
   .strip-row .club span:last-child { display: none; }   /* keep the code, drop the name */
   .cell { height: 16px; }
@@ -330,11 +370,6 @@ footer a { color: var(--ink2); }
   .tile .v { font-size: 22px; }
 }
 
-@media (max-width: 760px) {
-  /* The palette is keyboard-driven, so its button earns no space on a phone. */
-  .searchbtn { display: none; }
-}
-
 @media (max-width: 620px) {
   /* The club column claims 187px of a 362px card by default, which pushes the
      probability columns off the edge. Let it shrink and drop the promoted tag,
@@ -344,13 +379,6 @@ footer a { color: var(--ink2); }
   tbody td, thead th { padding-left: 5px; padding-right: 5px; }
   tbody td { font-size: 13px; }
   .masthead .wrap { height: 52px; gap: 6px; }
-  /* Six sections no longer fit a phone header; the nav becomes a swipeable
-     tab bar, which every phone user already knows how to drive. */
-  nav.top { gap: 0; overflow-x: auto; scrollbar-width: none; flex: 1;
-            justify-content: flex-start; }
-  nav.top::-webkit-scrollbar { display: none; }
-  nav.top a { padding: 5px 6px; font-size: 12px; white-space: nowrap; flex: none; }
-  .brand span { display: none; }
   .themetoggle { width: 26px; height: 26px; margin-left: 0; }
   /* The switcher keeps its place on a phone — it is how you get to the other
      four leagues — but gives up everything it can spare. */
@@ -417,6 +445,11 @@ kbd {
   padding: 6px 10px; font: inherit; font-size: 12.5px;
 }
 .searchbtn:hover { background: var(--raised); color: var(--ink); }
+/* Tapping is the only way into the palette without a keyboard, so the button
+   stays on a phone — but the shortcut it advertises does not exist there, so
+   the key chip goes. (This used to be a `display: none` on the button placed
+   above the rule that gives it `display: flex`, and so never applied at all.) */
+@media (max-width: 760px) { .searchbtn kbd { display: none; } }
 
 /* ================= modal ================= */
 .modal-box {
