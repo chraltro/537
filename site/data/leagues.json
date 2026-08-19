@@ -1,12 +1,13 @@
 {
  "default": "premier-league",
- "generated": "2026-08-19T07:55:56+00:00",
+ "generated": "2026-08-19T11:07:48+00:00",
  "leagues": [
   {
    "slug": "premier-league",
    "name": "Premier League",
    "country": "England",
    "ready": true,
+   "kind": "league",
    "n_teams": 20,
    "ucl_places": 5,
    "releg_places": 3,
@@ -17,6 +18,7 @@
    "name": "La Liga",
    "country": "Spain",
    "ready": true,
+   "kind": "league",
    "n_teams": 20,
    "ucl_places": 5,
    "releg_places": 3,
@@ -27,6 +29,7 @@
    "name": "Serie A",
    "country": "Italy",
    "ready": true,
+   "kind": "league",
    "n_teams": 20,
    "ucl_places": 4,
    "releg_places": 3,
@@ -37,6 +40,7 @@
    "name": "Bundesliga",
    "country": "Germany",
    "ready": true,
+   "kind": "league",
    "n_teams": 18,
    "ucl_places": 4,
    "releg_places": 2,
@@ -47,10 +51,24 @@
    "name": "Ligue 1",
    "country": "France",
    "ready": true,
+   "kind": "league",
    "n_teams": 18,
    "ucl_places": 3,
    "releg_places": 2,
    "releg_note": "16th plays a two-legged relegation play-off against a Ligue 2 club; 4th enters Champions League qualifying"
+  },
+  {
+   "slug": "champions-league",
+   "name": "Champions League",
+   "country": "Europe",
+   "ready": false,
+   "kind": "cup",
+   "n_teams": 36,
+   "ucl_places": 8,
+   "releg_places": 12,
+   "releg_note": "9th-24th enter a two-legged knockout play-off",
+   "advance_direct": 8,
+   "advance_playoff": 16
   }
  ]
 }

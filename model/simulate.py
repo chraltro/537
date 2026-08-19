@@ -250,9 +250,11 @@ def _lines(pos_pts: np.ndarray, league: leagues.League | None = None) -> dict:
     return out
 
 
+#: Leverage events. Domestic leagues swing title/UCL/relegation; a cup's
+#: league phase swings direct qualification / the play-off cut / elimination.
+#: The keys are part of the site contract -- the front end maps them to words.
 EVENTS = ("title", "ucl", "releg")
-EVENT_LABEL = {"title": "the title", "ucl": "a Champions League place",
-               "releg": "relegation"}
+CUP_EVENTS = ("top8", "qualify", "out")
 
 
 def _leverage(hits, counts, remaining, teams) -> list[dict]:

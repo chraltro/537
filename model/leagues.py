@@ -39,12 +39,20 @@ class League:
     n_teams: int
     n_matches: int
 
+
     # -- competition rules, 2026-27 -----------------------------------------
     ucl_places: int            # league positions that reach the UCL league phase
     releg_places: int          # DIRECT relegation spots only
     releg_note: str | None     # play-off wording shown alongside, or None
     europa_places: int = 2     # positions below the UCL line, approximate:
                                # domestic cup winners move this line every year
+
+    #: "league" = a domestic double round robin; "cup" = a UEFA-style
+    #: competition whose league phase feeds a knockout. Cups qualify by
+    #: advancement lines instead of UCL/relegation lines.
+    kind: str = "league"
+    advance_direct: int | None = None    # league-phase positions straight to the R16
+    advance_playoff: int | None = None   # further positions into the knockout play-off
 
     # -- sources -------------------------------------------------------------
     fd_dir: str = ""           # football-datasets mirror directory (history + shots)
@@ -89,10 +97,14 @@ class League:
 
     def manifest_entry(self, ready: bool = False) -> dict:
         """The row this league contributes to site/data/leagues.json."""
-        return {"slug": self.slug, "name": self.name, "country": self.country,
-                "ready": ready, "n_teams": self.n_teams,
-                "ucl_places": self.ucl_places, "releg_places": self.releg_places,
-                "releg_note": self.releg_note}
+        row = {"slug": self.slug, "name": self.name, "country": self.country,
+               "ready": ready, "kind": self.kind, "n_teams": self.n_teams,
+               "ucl_places": self.ucl_places, "releg_places": self.releg_places,
+               "releg_note": self.releg_note}
+        if self.kind == "cup":
+            row["advance_direct"] = self.advance_direct
+            row["advance_playoff"] = self.advance_playoff
+        return row
 
     def public(self) -> dict:
         """The 'league' block embedded in forecast.json."""
@@ -183,9 +195,32 @@ LIGUE_1 = League(
     backtest_from="2015-16",   # common window across leagues for comparability
 )
 
-#: Registry order is the order the site shows them in.
+# ---------------------------------------------------------------------------
+# European competitions. The league phase is literally a 36-team league whose
+# clubs each play 8 of the other 35, so the same machinery carries it; the
+# knockout stages live in model/knockout.py. Fixture source is OUR OWN
+# committed file (data/europe/fixtures-{season}.txt) with openfootball as a
+# results override only -- see docs/european-competitions-plan.md, Risk 1.
+CHAMPIONS_LEAGUE = League(
+    slug="champions-league",
+    name="Champions League",
+    country="Europe",
+    n_teams=36, n_matches=144,
+    kind="cup", advance_direct=8, advance_playoff=16,
+    # UCL/relegation lines are meaningless for a cup; kept harmless.
+    ucl_places=8, releg_places=12,
+    releg_note="9th-24th enter a two-legged knockout play-off",
+    of_top="champions-league/master/{season}/cl.txt",
+    of_second="",
+    backtest_from="2024-25",     # the two Swiss-format seasons are the honest holdout
+)
+
+#: Registry order is the order the site shows them in. Domestic leagues build
+#: today; the Champions League appears in the manifest (ready:false until its
+#: pipeline lands) so the site can already show the sixth entry.
 LEAGUES: tuple[League, ...] = (PREMIER_LEAGUE, LA_LIGA, SERIE_A, BUNDESLIGA, LIGUE_1)
-BY_SLUG: dict[str, League] = {lg.slug: lg for lg in LEAGUES}
+EUROPEAN: tuple[League, ...] = (CHAMPIONS_LEAGUE,)
+BY_SLUG: dict[str, League] = {lg.slug: lg for lg in LEAGUES + EUROPEAN}
 DEFAULT = PREMIER_LEAGUE
 
 

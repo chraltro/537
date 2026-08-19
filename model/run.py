@@ -297,7 +297,8 @@ def write_manifest(ready: set[str]) -> dict:
     payload = {
         "default": leagues.DEFAULT.slug,
         "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
-        "leagues": [lg.manifest_entry(lg.slug in ready) for lg in leagues.LEAGUES],
+        "leagues": [lg.manifest_entry(lg.slug in ready)
+                    for lg in leagues.LEAGUES + leagues.EUROPEAN],
     }
     os.makedirs(OUT, exist_ok=True)
     json.dump(payload, open(os.path.join(OUT, "leagues.json"), "w"), indent=1)
