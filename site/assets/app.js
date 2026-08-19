@@ -274,7 +274,7 @@ export function showReplayBanner() {
   if (!LG.replay || !LG.replay_note) return;
   if (document.getElementById('replaybanner')) return;
   const html = `<div class="banner" id="replaybanner" role="status">
-      <b>Staging — ${esc(LG.replay)} replay</b>
+      <b>Staging: ${esc(LG.replay)} replay</b>
       <span>${esc(LG.replay_note)}</span></div>`;
   const head = document.querySelector('header.masthead');
   if (head) head.insertAdjacentHTML('afterend', html);
@@ -360,7 +360,7 @@ export function initChrome(page) {
     const wait = l.ready_note || 'Coming soon';
     return `<option value="${esc(l.slug)}"${here ? ' selected' : ''}${
       (l.ready || here) ? '' : ` disabled title="${esc(wait)}"`}>${
-      esc(l.name)}${l.ready ? '' : ' — not live yet'}</option>`;
+      esc(l.name)}${l.ready ? '' : ' (not live yet)'}</option>`;
   }).join('');
 
   document.body.insertAdjacentHTML('afterbegin', `
@@ -419,7 +419,7 @@ export function initChrome(page) {
     <footer><div class="wrap">
       <p>An open forecast of ${esc(W.the)}, rebuilt in the spirit of FiveThirtyEight's
       Soccer Power Index. Ratings, match probabilities and season simulations are generated
-      from public match data — no private feeds, no hand-tuned opinions.
+      from public match data, with no private feeds and no hand-tuned opinions.
       <a href="${url('method.html')}">How it works and how accurate it is →</a></p>
       <p>Match data: <a href="https://github.com/datasets/football-datasets">football-datasets</a>
       (mirroring football-data.co.uk) and <a href="https://github.com/openfootball">openfootball</a>.
@@ -562,7 +562,7 @@ export function sparkline(values, { w = 260, h = 54, pad = 6 } = {}) {
 export function bracketStrip(t, opts = {}) {
   const W = lg();
   const cells = [
-    [W.topN, t.p_top8, `finishes in the ${W.topWord} — ${W.topMeans}`],
+    [W.topN, t.p_top8, `finishes in the ${W.topWord}, which means ${W.topMeans}`],
     ['Play-off', t.p_playoff, 'finishes in the knockout play-off places'],
     ['Last 16', t.p_r16, 'reaches the round of 16'],
     ['Quarter', t.p_qf, 'reaches the quarter-finals'],
@@ -991,7 +991,7 @@ export function matchModal(m, meta, opts = {}) {
     { weekday: 'short', day: 'numeric', month: 'short' });
   const swings = (m.swings || []).map((s) => `
     <div class="swing-row">
-      <span>${esc(meta[s.team].name)} — ${EVENT[s.event]}</span>
+      <span>${esc(meta[s.team].name)}: ${EVENT[s.event]}</span>
       ${swingBar(s.away, s.home, meta[s.team].name + ' ' + EVENT[s.event])}
       <b>${pct(s.away)} → ${pct(s.home)}</b>
     </div>`).join('');

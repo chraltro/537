@@ -157,7 +157,8 @@ document.getElementById('winhead').textContent = W.winN;
 document.getElementById('winhead').title = `Chance of winning ${W.winWord}`;
 document.getElementById('uclhead').textContent = W.topN;
 document.getElementById('uclhead').title = W.isCup
-  ? `Chance of finishing in the ${W.topWord} — ${W.topMeans}` : `Chance of ${W.topFinish}`;
+  ? `Chance of finishing in the ${W.topWord}, which means ${W.topMeans}`
+  : `Chance of ${W.topFinish}`;
 document.getElementById('pohead').title =
   `Chance of finishing in the places that go into ${W.playoffWord}`;
 document.getElementById('downhead').textContent = W.downN;
@@ -216,7 +217,7 @@ document.getElementById('tiles').innerHTML = [
   [W.isCup ? 'Projected phase leader' : 'Projected champion', `${rows[0].pts.toFixed(0)} pts`,
     `80% of seasons land ${rows[0].pts_lo}–${rows[0].pts_hi}`],
   [W.isCup ? 'Most likely out' : 'Most likely down', esc(drop.name),
-    `${pct(drop.releg)} — then ${esc(byReleg[1].name)} at ${pct(byReleg[1].releg)}`],
+    `${pct(drop.releg)}, then ${esc(byReleg[1].name)} at ${pct(byReleg[1].releg)}`],
 ].map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div>
     <div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
 
@@ -261,7 +262,7 @@ tbody.addEventListener('mousemove', (e) => {
     ['80% of seasons', `${t.pts_lo}–${t.pts_hi} pts`],
     ['Best / worst simulated', `${t.pts_max} / ${t.pts_min} pts`],
     [W.isCup ? 'Win the trophy' : 'Win the league', pct(t.title, 1)],
-    [W.isCup ? `${W.topN} — straight to the last 16` : `Champions League (${W.topWord})`,
+    [W.isCup ? `${W.topN}, straight to the last 16` : `Champions League (${W.topWord})`,
       pct(t.ucl, 1)],
     ...(W.isCup ? [['Knockout play-off', pct(t.p_playoff ?? 0, 1)],
                    ['Reach the final', pct(t.p_final ?? 0, 1)]] : []),
@@ -311,7 +312,7 @@ document.getElementById('strip').addEventListener('mousemove', (e) => {
   const c = e.target.closest('.cell');
   if (!c) return tip(null);
   const t = rows.find((r) => r.id === c.closest('.strip-row').dataset.id);
-  tip(tipRows(`${esc(t.name)} — ${ord(+c.dataset.pos)}`,
+  tip(tipRows(`${esc(t.name)}, ${ord(+c.dataset.pos)}`,
     [['Chance of finishing here', pct(+c.dataset.p, 1)],
      ['Projected finish', ord(t.rank)]]), e);
 });
@@ -319,7 +320,7 @@ document.getElementById('strip').addEventListener('mouseleave', () => tip(null))
 
 const VIEWSUB = {
   table: 'Average outcome across 50,000 simulated seasons. Click a column to sort, or a club for its own page.',
-  dist: 'Each row is one club’s full spread of finishing positions. A tight band means the model is confident; a smear across ten places means it is not.',
+  dist: "Each row is one club's full spread of finishing positions. A tight band means the model is confident; a smear across ten places means it is not.",
   luck: 'Points taken against points the pre-kick-off forecasts said those matches were worth. '
       + 'The expectation uses the probabilities frozen before each kick-off, never the ones computed today.',
 };
@@ -376,7 +377,7 @@ const mm = await mmPromise;
 const next = mm.matches.find((m) => !m.played);
 const round = next ? mm.matches.filter((m) => m.md === next.md) : [];
 document.getElementById('nexthead').textContent =
-  next ? `Next up — ${roundLabel(next.md).toLowerCase()}` : 'The season is complete';
+  next ? `Next up: ${roundLabel(next.md).toLowerCase()}` : 'The season is complete';
 /* A cup's forecast counts the league phase; the fixture list also carries the
    knockout rounds, so the link says how many matches are actually there. */
 if (mm.matches.length !== nMatches) {

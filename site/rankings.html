@@ -6,7 +6,7 @@
 <title>Global club rankings</title>
 <meta name="description" content="Every club in Europe on one rating scale, from one model fitted over fifteen seasons of continental football and fifty-two domestic leagues.">
 <meta property="og:title" content="Global club rankings">
-<meta property="og:description" content="Every club in Europe on one rating scale — the cross-league rating a single league table cannot give you.">
+<meta property="og:description" content="A single rating scale covering every club in Europe, so clubs from different leagues can be compared directly.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="og/premier-league.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -23,7 +23,7 @@
 <body>
 <main class="wrap" id="main">
   <div class="pagehead">
-    <h1>Every club, one scale</h1>
+    <h1>Global club rankings</h1>
     <p class="lede" id="lede">Loading the global rating…</p>
     <div class="stamp" id="stamp"></div>
   </div>
@@ -35,7 +35,7 @@
       <h2>The ranking</h2>
       <a class="morelink" href="compare.html">Compare two clubs →</a>
     </div>
-    <p class="sub">One Dixon–Coles fit over every match the pipeline can reach — fifteen
+    <p class="sub">One Dixon–Coles fit over every match the pipeline can reach: fifteen
       seasons of UEFA competition, the big five, and every non-big-five top flight with a
       feed. The continental matches are the only edges that join one league to another, and
       they are what put these clubs on a single scale. Click a column to sort.</p>
@@ -100,9 +100,9 @@ const fmtStamp = (iso) => new Date(iso).toLocaleDateString('en-GB',
 document.getElementById('lede').innerHTML =
   `One rating for <b>${g.n_clubs}</b> clubs across <b>${g.n_leagues}</b> leagues, fitted in a `
   + `single model over <b>${g.n_matches.toLocaleString()}</b> matches. `
-  + `${esc(g.note)} The five league forecasts keep their own scale and are not touched by this — `
-  + 'a rating quoted against nine hundred clubs would say something different, and the '
-  + 'projected tables would move for no new evidence.';
+  + `${esc(g.note)} The league forecasts keep their own scale and are not touched by this. `
+  + 'A rating quoted against eight hundred clubs would mean something different, and the '
+  + 'projected tables would move without a single new result behind them.';
 
 document.getElementById('stamp').innerHTML = `
   <span>Fitted to <b>${g.asof}</b></span>
@@ -199,8 +199,8 @@ body.addEventListener('mouseleave', () => tip(null));
 document.getElementById('note').textContent =
   `A club is ranked once it has ${'12'} matches in the corpus and a result inside the last `
   + 'two years. Clubs marked with an age are rated on a domestic feed that stopped '
-  + 'publishing — twenty-nine associations have nothing newer than May 2025 — so their '
-  + 'rating is as old as the tag says and the simulation widens their interval to match.';
+  + 'publishing: twenty-nine associations have nothing newer than May 2025. Their rating is '
+  + 'as old as the tag says, and the simulation widens their interval to match.';
 
 /* The palette's club entries link into one league's pages, and this page is
    not league-scoped -- a Dutch club opened from a Premier League palette would

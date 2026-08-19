@@ -55,7 +55,7 @@
       <h2>The matches that matter most</h2>
       <button class="chip-btn" id="jumpstakes">Sort the whole season by stakes</button>
     </div>
-    <p class="sub" id="bigsub">Not the biggest names — the biggest swings. The score is how
+    <p class="sub" id="bigsub">Ranked by swing rather than by reputation. The score is how
       far one club's title, qualification or relegation chance moves between a home win and an
       away win, measured across every simulation.</p>
     <div id="bigmatches"></div>
@@ -94,7 +94,7 @@ setMeta({
 });
 document.getElementById('h1').textContent = `All ${nMatches} matches`;
 document.getElementById('bigsub').textContent =
-  `Not the biggest names — the biggest swings. The score is how far one club's ${
+  `Ranked by swing rather than by reputation. The score is how far one club's ${
     W.isCup ? 'trophy' : 'title'}, ${W.topAdj} or ${W.downWord} chance moves between a `
   + 'home win and an away win, measured across every simulation.';
 /* The cup's filter holds matchdays and knockout stages together, so it is

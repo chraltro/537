@@ -28,7 +28,7 @@ MAX_MOVERS = 8
 WINDOW_DAYS = 10
 MIN_AGE_DAYS = 1
 
-PRESEASON_NOTE = ("Baseline preseason forecast — movement tracking begins "
+PRESEASON_NOTE = ("Baseline preseason forecast. Movement tracking begins "
                   "once results arrive.")
 
 
@@ -167,12 +167,12 @@ def narrative(rows: list, movers: list, shocks: list, before: dict | None,
                            if before else "."))
     elif before:
         out.append("No club's chances moved by more than a percentage point "
-                   f"since {before['date']} — a quiet week for the model.")
+                   f"since {before['date']}. A quiet week for the model.")
 
     if shocks:
         s = shocks[0]
-        out.append(f"The result the model liked least was {s.get('label', '')} — "
-                   f"it gave that outcome {_pct(s.get('p'))} beforehand.")
+        out.append(f"The result the model liked least was {s.get('label', '')}. "
+                   f"It gave that outcome {_pct(s.get('p'))} beforehand.")
 
     by_rel = sorted(rows, key=lambda r: -float(r.get("releg") or 0))
     if by_rel and float(by_rel[0].get("releg") or 0) > 0.02:

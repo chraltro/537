@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The races — Premier League 2026/27</title>
-<meta name="description" content="The title race, the fight for Europe and the relegation battle — with the week's biggest forecast movers and the run of fixtures each contender faces.">
+<meta name="description" content="The title race, the fight for Europe and the relegation battle, with the week's biggest forecast movers and the run of fixtures each contender faces.">
 <meta property="og:title" content="The races — season forecast">
-<meta property="og:description" content="Who is winning the title, the European places and the relegation fight — and how the forecast has moved this week.">
+<meta property="og:description" content="Who is winning the title, the European places and the relegation fight, and how the forecast has moved this week.">
 <meta property="og:type" content="website">
 <meta property="og:type" content="website">
 <meta property="og:image" content="og/premier-league.png">
@@ -148,8 +148,8 @@
 
   <section class="card" id="relegation">
     <h2 id="relhead">The relegation battle</h2>
-    <p class="sub" id="relsub">Every club the model gives a real chance of going down —
-      anything above one season in twenty. The last column is the margin between a club's
+    <p class="sub" id="relsub">Every club the model gives a real chance of going down,
+      meaning anything above one season in twenty. The last column is the margin between a club's
       projected total and the points that usually keep a side up.</p>
     <div id="relrows"></div>
     <p class="hint" id="safetynote" style="margin-top:14px"></p>
@@ -182,7 +182,7 @@ const [sc, rc, hs] = await Promise.all([soft('schedule'), soft('recap'), soft('h
 const sched = sc?.schedule || {};
 const snaps = hs?.snapshots || [];
 const recap = rc || { mode: 'preseason', movers: [], shocks: [],
-                      note: 'Baseline preseason forecast — movement tracking begins once results arrive.' };
+                      note: 'Baseline preseason forecast. Movement tracking begins once results arrive.' };
 
 const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
 const byTitle = [...fc.teams].sort((a, b) => b.title - a.title);
@@ -206,7 +206,7 @@ setMeta({
   title: `The races — ${W.name} ${fc.season}`,
   ogTitle: `The races — ${W.name} ${fc.season} forecast`,
   description: `${W.The} ${fc.season} ${W.winRace}, the fight for the ${W.topWord} and `
-    + `${W.downRace} — with the week's biggest forecast movers and the run of fixtures `
+    + `${W.downRace}, with the week's biggest forecast movers and the run of fixtures `
     + 'each contender faces.',
   image: cardUrl(W.slug),
 });
@@ -226,12 +226,12 @@ document.getElementById('relchip').textContent = W.isCup ? 'The cut' : 'Relegati
 document.getElementById('relhead').textContent =
   `${W.downRace.charAt(0).toUpperCase()}${W.downRace.slice(1)}`;
 document.getElementById('relsub').textContent = W.isCup
-  ? 'Every club the model gives a real chance of going out at the league phase — anything '
-    + `above one season in twenty. The bottom ${W.relegPlaces} are eliminated.${W.relegTail} `
+  ? 'Every club the model gives a real chance of going out at the league phase, meaning '
+    + `anything above one season in twenty. The bottom ${W.relegPlaces} are eliminated.${W.relegTail} `
     + "The last column is the margin between a club's projected total and the points that "
     + 'usually clear the cut.'
-  : 'Every club the model gives a real chance of going down — anything above one season in '
-    + `twenty. The bottom ${W.relegPlaces} go down.${W.relegTail} The last column is the margin `
+  : 'Every club the model gives a real chance of going down, meaning anything above one '
+    + `season in twenty. The bottom ${W.relegPlaces} go down.${W.relegTail} The last column is the margin `
     + "between a club's projected total and the points that usually keep a side up.";
 /* A cup's forecast counts only the league phase, and the matches page lists the
    knockout rounds too — so the count is left out rather than stated wrongly. */
@@ -272,7 +272,7 @@ function runIn(id) {
     const opp = meta[f.opp] || { name: f.opp, short: f.opp };
     return `<span class="slot">
       <span class="box ${f.home ? '' : 'away'}" style="background:var(--ramp-${step})"
-        title="${esc(roundLabel(f.md))} — ${f.home ? 'home to' : 'away at'} ${esc(opp.name)} on ${esc(fmtDay(f.date))}, opponent rating ${f.difficulty}"
+        title="${esc(roundLabel(f.md))}, ${f.home ? 'home to' : 'away at'} ${esc(opp.name)} on ${esc(fmtDay(f.date))}, opponent rating ${f.difficulty}"
         >${esc(opp.short)}</span>
       <span class="cap">${esc(W.roundAbbr)}${f.md} ${f.home ? 'H' : 'A'}</span></span>`;
   }).join('')}</div>`;
@@ -389,13 +389,13 @@ function weekly() {
     <div class="tiles" style="margin-bottom:0">
       <div class="tile"><div class="k">Favourite</div>
         <div class="v">${esc(lead.name)}</div>
-        <div class="n">${pct(lead.title)} to win it — ${esc(second.name)} next at ${pct(second.title)}</div></div>
+        <div class="n">${pct(lead.title)} to win it, then ${esc(second.name)} at ${pct(second.title)}</div></div>
       <div class="tile"><div class="k">${W.isCup ? 'Most likely out' : 'Most likely down'}</div>
         <div class="v">${esc(drop.name)}</div>
-        <div class="n">${pct(drop.releg)} — then ${esc(byReleg[1].name)} at ${pct(byReleg[1].releg)}</div></div>
+        <div class="n">${pct(drop.releg)}, then ${esc(byReleg[1].name)} at ${pct(byReleg[1].releg)}</div></div>
       <div class="tile"><div class="k">Tightest race</div>
         <div class="v">${esc(tightest.label)}</div>
-        <div class="n">${tightest.n} clubs still between 5% and 95% — more than
+        <div class="n">${tightest.n} clubs still between 5% and 95%, more than
           ${esc(races[1].label.toLowerCase())} (${races[1].n}) or
           ${esc(races[2].label.toLowerCase())} (${races[2].n})</div></div>
     </div>`;
@@ -438,8 +438,8 @@ function render() {
         W.isCup ? 'the cut' : 'safety'}</span>`;
   });
   document.getElementById('safetynote').innerHTML = L
-    ? `Across ${fc.n_sims.toLocaleString()} simulated seasons ${ord(W.lastSafe)} place — the
-       last spot above the ${W.relegPhrase} — finishes on about <b>${L.safety.p50}</b> points,
+    ? `Across ${fc.n_sims.toLocaleString()} simulated seasons ${ord(W.lastSafe)} place, the
+       last spot above the ${W.relegPhrase}, finishes on about <b>${L.safety.p50}</b> points,
        and <b>${L.safety.enough90}</b> was enough to ${W.surviveWord} in nine seasons out of
        ten.${W.relegTail} ${danger.length
         ? `${esc(danger[0].name)} are projected on ${danger[0].pts.toFixed(1)}.` : ''}`

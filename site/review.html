@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>How wrong were we?</title>
-<meta name="description" content="The season's post-mortem: the preseason projection against what actually happened, club by club, and the results the model liked least.">
+<meta name="description" content="The season's post-mortem: the preseason projection against what actually happened, club by club, and the results the model got most wrong.">
 <meta property="og:title" content="How wrong were we?">
 <meta property="og:description" content="The preseason projection against what actually happened, club by club.">
 <meta property="og:type" content="website">
@@ -33,15 +33,14 @@
   </section>
 
   <section class="card" id="shockcard">
-    <h2>The results it liked least</h2>
+    <h2>Results it got most wrong</h2>
     <p class="sub">Ranked by the probability the model gave, before kick-off, to the result
-      that actually happened. A forecast with no entries here would be a forecast that had
-      never been surprised, which is not a forecast.</p>
+      that actually happened. Any forecast worth reading has entries here.</p>
     <div id="shocks"></div>
   </section>
 
   <section class="card" id="luckcard">
-    <h2>Where the points came from</h2>
+    <h2>Points against expectation</h2>
     <p class="sub">Points taken against points the pre-kick-off forecasts said those matches
       were worth. A club far above the line took results its own fixtures did not promise.</p>
     <div id="luck"></div>
@@ -49,8 +48,8 @@
 
   <nav class="deeper" aria-label="Go deeper">
     <a href="method.html"><b>The full accuracy record</b>
-      <span>The walk-forward backtest, the calibration curve, and the two baselines worth
-        losing to.</span></a>
+      <span>The walk-forward backtest, the calibration curve, and the comparison against
+        the closing odds and ClubElo.</span></a>
     <a href="index.html"><b>Back to the table</b>
       <span>The projected table, the position distribution and the fixtures.</span></a>
   </nav>
@@ -92,7 +91,7 @@ document.getElementById('lede').innerHTML = done
     + 'table it projected before a ball was kicked, the table that actually happened, and '
     + 'the distance between the two.'
   : `The season is <b>${Math.round((played / total) * 100)}%</b> played, so this is an `
-    + 'interim report rather than a post-mortem — the same numbers, measured so far. The '
+    + 'interim report rather than a post-mortem, with the same numbers measured so far. The '
     + 'preseason column is the first snapshot on record and never changes.';
 
 /* The preseason projection is the first daily snapshot, which is written before
@@ -146,7 +145,7 @@ if (!played) {
       <div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
 
   document.getElementById('tablesub').textContent =
-    'Projected place is the ranking implied by the first daily snapshot of the season — '
+    'Projected place is the ranking implied by the first daily snapshot of the season, '
     + 'written before any result existed and never rewritten. Sorted by how far the model '
     + 'was out, worst first.';
 

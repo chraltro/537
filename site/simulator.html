@@ -102,7 +102,7 @@ tr.touched td.name { box-shadow: inset 2px 0 0 var(--accent); }
           </div>
         </div>
         <p class="sub">Pick a home win, a draw or an away win. Clicking the same choice again
-          hands the fixture back to the model. A result-only pick is not a made-up scoreline —
+          hands the fixture back to the model. A result-only pick does not invent a scoreline:
           the match is redrawn from its own distribution, restricted to the result you chose.</p>
         <div id="fixtures"><p class="skeleton">Loading fixtures…</p></div>
       </section>
@@ -172,7 +172,7 @@ document.getElementById('winhead').title = W.isCup
   ? 'Chance of finishing first in the league phase' : 'Chance of winning the title';
 document.getElementById('uclhead').textContent = W.topN;
 document.getElementById('uclhead').title = W.isCup
-  ? `Chance of finishing in the ${W.topWord} — ${W.topMeans}`
+  ? `Chance of finishing in the ${W.topWord}, which means ${W.topMeans}`
   : `Chance of finishing in the ${W.topWord}`;
 document.getElementById('downhead').textContent = W.downN;
 document.getElementById('downhead').title =
@@ -182,7 +182,7 @@ if (W.isCup) {
     'Decide any of the league-phase results still to come and the rest of the phase is played '
     + 'out again here, five thousand times, while you watch. The ratings are the ones behind '
     + 'the published forecast; only the fixtures you fix are treated as settled. The knockout '
-    + 'rounds are not re-drawn — this is the table that seeds them.';
+    + 'rounds are not re-drawn; this is the table that seeds them.';
 }
 
 const teams = fc.teams;
@@ -208,7 +208,7 @@ document.getElementById('stamp').innerHTML =
    <span><b>${N_SIMS.toLocaleString()}</b> seasons per re-run</span>
    <span>Top ${W.advanceDirect} ${W.isCup ? 'go straight through' : 'qualify'} · bottom ${
      W.relegPlaces} ${W.downVerb}</span>
-   <span>Runs in this browser — nothing is sent anywhere</span>`;
+   <span>Runs in this browser. Nothing is sent anywhere</span>`;
 
 /* ---------------- picks ---------------- */
 const picks = new Map();                       // "h|a" -> { h, a, md, res }

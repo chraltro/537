@@ -164,7 +164,7 @@ def write_calendars(league: leagues.League, ms: list[dict], meta: dict,
     for t in teams:
         feeds.write(
             os.path.join(base, league.slug, f"{t}.ics"),
-            feeds.calendar(ms, meta, title=f"{meta[t]['name']} — {league.name}",
+            feeds.calendar(ms, meta, title=f"{meta[t]['name']}, {league.name}",
                            uid_ns=f"{league.slug}.537", team=t, round_label=label))
     print(f"  → cal/{league.slug}.ics and {len(teams)} club calendars")
 
@@ -272,7 +272,7 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
     else:
         if not market:
             print("No market anchor for this league (data/market_priors/"
-                  f"{league.market_file} absent) — ratings alone.")
+                  f"{league.market_file} absent). Ratings alone.")
         adj = base_adj
         w = 0.0
 
@@ -731,7 +731,7 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
         payload["replay_note"] = (
             f"Staging data. The {replay} league phase, forecast from the day "
             "before its first matchday; knockout rows are that season's real "
-            "ties. Not a live forecast — the 2026-27 draw is 27 August 2026.")
+            "ties. Not a live forecast: the 2026-27 draw is 27 August 2026.")
     json.dump(payload, open(os.path.join(out, "forecast.json"), "w"),
               separators=(",", ":"))
     print(f"  → forecast.json ({len(rows)} clubs), schedule.json, sim_input.json, "
@@ -954,7 +954,7 @@ def build_feeds(ready: set[str]) -> None:
                    + (f"?lg={lg.slug}" if lg.slug != leagues.DEFAULT.slug else ""),
         })
     items = feeds.feed_items(rows)
-    title = "Ninety — forecast movement"
+    title = "Ninety: forecast movement"
     site = os.path.join(HERE, "site")
     feeds.write(os.path.join(site, "feed.json"),
                 json.dumps(feeds.json_feed(items, home=HOME, title=title),

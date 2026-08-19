@@ -6,7 +6,7 @@
 <title>Compare two clubs</title>
 <meta name="description" content="Any two clubs in Europe side by side: ratings on one scale, the head-to-head record, and the match between them on neutral ground.">
 <meta property="og:title" content="Compare two clubs">
-<meta property="og:description" content="Any two clubs in Europe side by side — ratings on one scale, head-to-head, and a neutral-ground match.">
+<meta property="og:description" content="Any two clubs in Europe side by side: ratings on one scale, the head-to-head record, and a neutral-ground match.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="og/premier-league.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -19,10 +19,10 @@
 <main class="wrap" id="main">
   <div class="pagehead">
     <h1>Head to head</h1>
-    <p class="lede">Two clubs, one rating scale, and the match between them on neutral ground —
-      including the one that has never been played. Both ratings come from the same pooled fit
-      as the <a href="rankings.html">global ranking</a>, which is what makes a club from the
-      Eredivisie and a club from Serie A comparable at all.</p>
+    <p class="lede">Pick two clubs and see them side by side, including the match between
+      them that has never been played. Both ratings come from the same pooled fit as the
+      <a href="rankings.html">global ranking</a>, so a club from the Eredivisie and a club
+      from Serie A are measured against the same thing.</p>
     <div class="stamp" id="stamp"></div>
   </div>
 
@@ -39,7 +39,7 @@
   </section>
 
   <section class="card">
-    <h2>On neutral ground, today</h2>
+    <h2>On neutral ground</h2>
     <p class="sub" id="neutralsub">The match these ratings imply, with no home advantage for
       either side.</p>
     <div class="wdl" style="height:26px;margin-bottom:6px" id="wdl"></div>
@@ -90,7 +90,7 @@ const rest = g.clubs.filter((c) => !c.featured)
 const options = `<optgroup label="Clubs with a forecast">${
   featured.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')
 }</optgroup><optgroup label="Every other rated club">${
-  rest.map((c) => `<option value="${esc(c.id)}">${esc(c.name)} — ${esc(c.league)}</option>`).join('')
+  rest.map((c) => `<option value="${esc(c.id)}">${esc(c.name)} (${esc(c.league)})</option>`).join('')
 }</optgroup>`;
 
 const selA = document.getElementById('pa');
@@ -191,8 +191,8 @@ async function render() {
   const card = document.getElementById('h2hcard');
   if (!rec) {
     document.getElementById('h2hsub').textContent =
-      `${A.name} and ${B.name} have not met in any competition the corpus covers — `
-      + 'fifteen seasons of UEFA competition and every domestic league in it since 2015.';
+      `${A.name} and ${B.name} have not met in any competition the corpus covers: `
+      + 'fifteen seasons of UEFA competition, and every domestic league in it since 2015.';
     document.getElementById('h2hbody').innerHTML = '';
   } else {
     const first = x === A.id;
