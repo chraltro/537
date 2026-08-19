@@ -1,6 +1,6 @@
 {
  "default": "premier-league",
- "generated": "2026-08-19T12:04:28+00:00",
+ "generated": "2026-08-19T12:45:26+00:00",
  "leagues": [
   {
    "slug": "premier-league",
@@ -68,7 +68,8 @@
    "releg_places": 12,
    "releg_note": "9th-24th enter a two-legged knockout play-off",
    "advance_direct": 8,
-   "advance_playoff": 16
+   "advance_playoff": 16,
+   "ready_note": "League-phase draw: 27 August"
   }
  ],
  "note": "ready=false means no live forecast; the directory may still hold replay staging data, stamped with a 'replay' key."

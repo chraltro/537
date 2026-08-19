@@ -25,6 +25,10 @@
  "comps": [
   "cl"
  ],
+ "params": {
+  "decay": 0.0028,
+  "ridge": 0.02
+ },
  "calibration": [
   {
    "lo": 0.0,
