@@ -47,8 +47,11 @@ export const DEFAULT_LEAGUE =
   ((_named && _named.ready) ? _named : (_ready[0] || _named || LEAGUES[0])).slug;
 
 const _asked = new URLSearchParams(location.search).get('lg');
-/* An unknown or not-yet-built league falls back rather than 404ing. */
-const _chosen = LEAGUES.find((l) => l.slug === _asked && l.ready)
+/* An unknown league falls back rather than 404ing. A known but not-yet-live one
+   is honoured when it is asked for by name: the switcher will not offer it, but
+   a direct link renders whatever staging data its directory holds, which is how
+   a league is reviewed before it goes live. */
+const _chosen = LEAGUES.find((l) => l.slug === _asked)
              || LEAGUES.find((l) => l.slug === DEFAULT_LEAGUE);
 
 /* Live record for the current league. Starts as the manifest entry and is
@@ -73,38 +76,113 @@ function withArticle(name) {
 }
 
 /* Every league-dependent phrase on the site is derived here, once, from
-   counts. Nothing downstream is allowed to write "top five" by hand. */
+   counts. Nothing downstream is allowed to write "top five" by hand.
+
+   A cup's league phase is the same table with different stakes: the top places
+   go straight through, a middle band plays a knockout play-off and the rest are
+   out. The counts still come from the manifest, so the only thing `kind` picks
+   is which set of words describes them. */
 export function lg() {
   const n = LG.n_teams || 20;
   const ucl = LG.ucl_places || 5;
   const rel = LG.releg_places || 3;
+  const cup = LG.kind === 'cup';
+  const adv = LG.advance_direct || ucl;       // straight into the last 16
+  const pla = LG.advance_playoff || 0;        // in via the two-legged play-off
   const the = withArticle(LG.name);
+  /* A double round robin unless the data says otherwise; a cup's league phase
+     is a partial one, so its own fixture count is the only honest source. */
+  const nMatches = LG.matches_total || n * (n - 1);
   return {
     slug: LG.slug,
     name: LG.name,
     the,                                      // "the Premier League" / "La Liga"
     The: the.charAt(0).toUpperCase() + the.slice(1),   // sentence-initial
     country: LG.country || '',
+    kind: cup ? 'cup' : 'league',
+    isCup: cup,
     nTeams: n,
     uclPlaces: ucl,
     relegPlaces: rel,
     relegNote: LG.releg_note || '',
-    nMatches: n * (n - 1),                    // double round robin
-    nWeeks: (n - 1) * 2,
-    topN: `Top ${ucl}`,                       // column header
-    topWord: `top ${numWord(ucl)}`,           // "the top five"
-    topAdj: `top-${numWord(ucl)}`,            // "top-five race"
-    topFinish: `a top-${numWord(ucl)} finish`,
+    advanceDirect: adv,
+    advancePlayoff: pla,
+    cutAt: adv + pla,                         // last place still in the cup
+    nMatches,
+    nWeeks: cup ? Math.round((nMatches * 2) / n) : (n - 1) * 2,
+    roundWord: cup ? 'Matchday' : 'Matchweek',
+    roundWords: cup ? 'matchdays' : 'matchweeks',
+    roundAbbr: cup ? 'MD' : 'MW',
+    topN: `Top ${adv}`,                       // column header
+    topWord: `top ${numWord(adv)}`,           // "the top five"
+    topAdj: `top-${numWord(adv)}`,            // "top-five race"
+    topFinish: `a top-${numWord(adv)} finish`,
+    topMeans: cup ? 'a direct place in the last 16' : 'a Champions League place',
+    topRace: cup ? `the race for the top ${numWord(adv)}` : `the top-${numWord(adv)} race`,
+    winN: cup ? 'Trophy' : 'Title',           // column header
+    winWord: cup ? 'the trophy' : 'the title',
+    winRace: cup ? 'the race for the trophy' : 'the title race',
+    /* What "first place" means: the line files measure the top of the table,
+       which in a cup is the top of the league phase and not the trophy. */
+    firstWord: cup ? 'first place in the league phase' : 'the title',
+    playoffWord: 'the knockout play-off',
+    downN: cup ? 'Out' : 'Down',
+    downWord: cup ? 'elimination' : 'relegation',
+    downVerb: cup ? 'go out' : 'go down',
+    downRace: cup ? 'the race to survive the cut' : 'the relegation battle',
+    surviveWord: cup ? 'survive the cut' : 'stay up',
     lastSafe: n - rel,                        // last position above the drop
-    relegPhrase: `${rel} relegation place${rel === 1 ? '' : 's'}`,
+    relegPhrase: cup ? `${rel} places that go out`
+                     : `${rel} relegation place${rel === 1 ? '' : 's'}`,
     /* Appended, with its own leading space, wherever the drop is described. */
     relegTail: LG.releg_note ? ` ${LG.releg_note}.` : '',
   };
 }
 
-/* The events a fixture can swing, labelled for this league. */
+/* The events a fixture can swing, labelled for this league. A cup swings a
+   different three — the direct places, the cut, and going out — and carries the
+   league keys as well so anything reading `title`/`ucl`/`releg` still reads. */
 export function eventLabels() {
-  return { title: 'the title', ucl: lg().topFinish, releg: 'relegation' };
+  const W = lg();
+  const base = { title: W.winWord, ucl: W.topFinish, releg: W.downWord };
+  return W.isCup
+    ? { ...base, top8: W.topFinish, qualify: 'reaching the knockout stage', out: 'elimination' }
+    : base;
+}
+
+/* ================= rounds =================
+   The league phase numbers its rounds; the knockout names them. Stage codes are
+   the data's own, so anything unrecognised is shown as it arrived rather than
+   guessed at. */
+const STAGE = {
+  KPO: 'Knockout play-off', R16: 'Round of 16', QF: 'Quarter-final',
+  SF: 'Semi-final', F: 'Final', '3P': 'Third-place play-off',
+};
+export const isMatchweek = (md) =>
+  md !== null && md !== undefined && String(md).trim() !== '' && !Number.isNaN(Number(md));
+
+export function roundLabel(md, leg) {
+  if (isMatchweek(md)) return `${lg().roundWord} ${md}`;
+  const s = STAGE[md] || String(md);
+  return leg ? `${s}, ${leg === 1 ? 'first' : 'second'} leg` : s;
+}
+export function roundShort(md) {
+  return isMatchweek(md) ? `${lg().roundAbbr} ${md}` : String(md);
+}
+
+/* Two-legged ties arrive as two rows with the venues swapped, and which leg a
+   row is cannot be read off the row itself. Worked out once, on load. */
+function markLegs(rows) {
+  const seen = new Map();
+  rows.forEach((m) => {
+    if (isMatchweek(m.md)) return;                     // league phase: single games
+    const k = `${[m.h, m.a].sort().join('|')}@${m.md}`;
+    const first = seen.get(k);
+    if (!first) { seen.set(k, m); return; }
+    const later = String(m.date) >= String(first.date) ? m : first;
+    (later === m ? first : m).leg = 1;
+    later.leg = 2;
+  });
 }
 
 /* ================= links =================
@@ -146,9 +224,47 @@ function absorb(name, d) {
   const num = (k) => { if (typeof d[k] === 'number') LG[k] = d[k]; };
   if (name === 'forecast') {
     num('ucl_places');                                  // legacy top-level field
+    num('matches_total');
     if (d.league && typeof d.league === 'object') Object.assign(LG, d.league);
+    if (d.replay) { LG.replay = d.replay; LG.replay_note = d.replay_note || ''; }
   }
-  if (name === 'sim_input') { num('ucl_places'); num('releg_places'); num('n_teams'); }
+  if (name === 'sim_input') {
+    num('ucl_places'); num('releg_places'); num('n_teams');
+    ['kind', 'advance_direct', 'advance_playoff'].forEach((k) => {
+      if (d[k] !== null && d[k] !== undefined) LG[k] = d[k];
+    });
+    /* The simulator never loads the forecast, so its fixture list is where the
+       cup's partial round robin gets its size from. */
+    if (!LG.matches_total && Array.isArray(d.fixtures)) LG.matches_total = d.fixtures.length;
+  }
+  if (name === 'matches' && Array.isArray(d.matches)) markLegs(d.matches);
+  if (LG.replay) showReplayBanner();
+}
+
+/* ================= staging banner =================
+   A league can be published for review before it is live, with a replayed
+   season standing in for a draw that has not happened. That has to be
+   unmissable, and it has to say what the dataset says about itself: the note is
+   the file's own, never a sentence written here. Live data carries no `replay`
+   key and so shows nothing. */
+export function showReplayBanner() {
+  if (!LG.replay || !LG.replay_note) return;
+  if (document.getElementById('replaybanner')) return;
+  const html = `<div class="banner" id="replaybanner" role="status">
+      <b>Staging — ${esc(LG.replay)} replay</b>
+      <span>${esc(LG.replay_note)}</span></div>`;
+  const head = document.querySelector('header.masthead');
+  if (head) head.insertAdjacentHTML('afterend', html);
+  else document.body.insertAdjacentHTML('afterbegin', html);
+}
+
+/* For pages that never read forecast.json: only a league the manifest calls
+   not-live can be staging, so only those pay for the extra fetch. */
+export async function ensureReplayBanner() {
+  if (!LG.replay && LG.ready === false) {
+    try { await data('forecast'); } catch { /* nothing to declare */ }
+  }
+  showReplayBanner();
 }
 
 /* ================= page metadata =================
@@ -200,9 +316,17 @@ export function initChrome(page) {
   if (saved) document.documentElement.setAttribute('data-theme', saved);
 
   const W = lg();
-  const opts = LEAGUES.map((l) => `<option value="${esc(l.slug)}"${
-    l.slug === LG.slug ? ' selected' : ''}${
-    l.ready ? '' : ' disabled title="Coming soon"'}>${esc(l.name)}</option>`).join('');
+  /* A league that is not live yet stays in the list but cannot be chosen —
+     except when it is the one being looked at, since a direct link to staging
+     data has to leave the switcher showing where you are. What it is waiting
+     for is the manifest's line to write, not this file's. */
+  const opts = LEAGUES.map((l) => {
+    const here = l.slug === LG.slug;
+    const wait = l.ready_note || 'Coming soon';
+    return `<option value="${esc(l.slug)}"${here ? ' selected' : ''}${
+      (l.ready || here) ? '' : ` disabled title="${esc(wait)}"`}>${
+      esc(l.name)}${l.ready ? '' : ' — not live yet'}</option>`;
+  }).join('');
 
   document.body.insertAdjacentHTML('afterbegin', `
     <a class="skip" href="#main">Skip to content</a>
@@ -372,6 +496,62 @@ export function sparkline(values, { w = 260, h = 54, pad = 6 } = {}) {
   </svg>`;
 }
 
+/* ================= bracket strip =================
+   A cup asks a different question from a league: not where a club finishes but
+   how far it gets. This is that in one line — the two ways out of the league
+   phase, then the chance of reaching each knockout round, on the same heat ramp
+   the finishing-position strip uses so the two read as one system.
+
+   The number sits under its cell rather than inside it: a ramp runs from nearly
+   the surface colour to nearly the ink colour, and no single text colour is
+   legible against both ends of it.                                          */
+export function bracketStrip(t, opts = {}) {
+  const W = lg();
+  const cells = [
+    [W.topN, t.p_top8, `finishes in the ${W.topWord} — ${W.topMeans}`],
+    ['Play-off', t.p_playoff, 'finishes in the knockout play-off places'],
+    ['Last 16', t.p_r16, 'reaches the round of 16'],
+    ['Quarter', t.p_qf, 'reaches the quarter-finals'],
+    ['Semi', t.p_sf, 'reaches the semi-finals'],
+    ['Final', t.p_final, 'reaches the final'],
+    ['Trophy', t.p_win, 'wins it'],
+  ].filter(([, p]) => typeof p === 'number');
+  if (cells.length < 3) return '';
+
+  /* The strip scales to its container, so seven cells across a phone would
+     shrink the labels out of legibility. Wrapping to fewer columns keeps the
+     type the size it was drawn at. */
+  const cols = Math.min(opts.cols || cells.length, cells.length);
+  const cw = 92, gap = 6, split = 14, top = 15, ch = 38, rowH = top + ch + 26;
+  const col = (i) => i % cols;
+  const row = (i) => Math.floor(i / cols);
+  /* The gap after the second cell is the one real boundary on the row:
+     everything past it is the knockout, and the two cells before it are the two
+     different ways of reaching it. */
+  const x = (i) => col(i) * (cw + gap) + (row(i) === 0 && col(i) >= 2 ? split : 0);
+  const y = (i) => row(i) * rowH;
+  const w = cols * (cw + gap) - gap + (cols > 2 ? split : 0);
+  const h = (row(cells.length - 1) + 1) * rowH - 6;
+  const name = opts.name || t.name || '';
+
+  const body = cells.map(([label, p, what], i) => `
+    <g>
+      <title>${esc(name)} ${esc(what)}: ${pct(p, 1)}</title>
+      <text class="bl" x="${x(i) + cw / 2}" y="${y(i) + top - 5}" text-anchor="middle">${esc(label)}</text>
+      <rect x="${x(i)}" y="${y(i) + top}" width="${cw}" height="${ch}" rx="4"
+            fill="${rampColor(p, 1)}" stroke="var(--grid)" stroke-width="1"/>
+      <text class="bv" x="${x(i) + cw / 2}" y="${y(i) + top + ch + 15}"
+            text-anchor="middle">${pct(p)}</text>
+    </g>`).join('');
+
+  const rule = cols > 2 ? `<line x1="${x(2) - split / 2}" y1="${top - 2}"
+    x2="${x(2) - split / 2}" y2="${top + ch + 2}" stroke="var(--rule)" stroke-width="1"/>` : '';
+
+  return `<div class="bracket"><svg viewBox="0 0 ${w} ${h}" role="img"
+      aria-label="${esc(name)}: ${cells.map(([l, p]) => `${l} ${pct(p, 1)}`).join(', ')}"
+      preserveAspectRatio="xMidYMid meet">${rule}${body}</svg></div>`;
+}
+
 /* ================= command palette =================
    One keystroke to anywhere. `/` or Cmd/Ctrl-K opens it; typing filters
    clubs, matchweeks and pages; Enter goes. A dense data site is only fast
@@ -389,13 +569,17 @@ export function initPalette(teams) {
 
   const items = [
     { label: 'Projected table', kind: 'Page', href: url('index.html') },
-    { label: `All ${W.nMatches} matches`, kind: 'Page', href: url('matches.html') },
+    /* A cup's fixture count on the matches page includes the knockout rounds,
+       which the forecast's own total does not — so it is left unsaid here. */
+    { label: W.isCup ? 'All matches' : `All ${W.nMatches} matches`,
+      kind: 'Page', href: url('matches.html') },
     { label: 'The races', kind: 'Page', href: url('races.html') },
     { label: 'What if? simulator', kind: 'Page', href: url('simulator.html') },
     { label: 'Method and accuracy', kind: 'Page', href: url('method.html') },
     ...teams.map((t) => ({ label: t.name, kind: 'Club', href: url(`team.html?t=${t.id}`), hint: t.short })),
     ...Array.from({ length: W.nWeeks }, (_, i) => ({
-      label: `Matchweek ${i + 1}`, kind: 'Matchweek', href: url(`matches.html?mw=${i + 1}`) })),
+      label: `${W.roundWord} ${i + 1}`, kind: W.roundWord,
+      href: url(`matches.html?mw=${i + 1}`) })),
     ...LEAGUES.filter((l) => l.ready && l.slug !== LG.slug).map((l) => ({
       label: `Switch to ${l.name}`, kind: 'League', href: swap(l.slug), hint: l.country || '' })),
   ];
@@ -611,7 +795,7 @@ export function matchModal(m, meta, opts = {}) {
   tip(null);
   modal(`
     <h3>${esc(h.name)} v ${esc(a.name)}</h3>
-    <p class="msub">Matchweek ${m.md} · ${fmtDay(m.date)}${m.time ? ` · ${m.time}` : ''}
+    <p class="msub">${esc(roundLabel(m.md, m.leg))} · ${fmtDay(m.date)}${m.time ? ` · ${m.time}` : ''}
       ${m.played ? ` · finished ${m.hg}–${m.ag}` : ''}
       ${opts.link === false ? '' :
         ` · <a href="${url(`matches.html?m=${m.h}--${m.a}`)}">link to this match</a>`}</p>

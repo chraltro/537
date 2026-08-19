@@ -108,9 +108,9 @@
 
   <nav class="chips racenav" aria-label="Jump to a race">
     <a class="chip-btn" href="#week">This week</a>
-    <a class="chip-btn" href="#title">The title</a>
+    <a class="chip-btn" href="#title" id="titlechip">The title</a>
     <a class="chip-btn" href="#topfive" id="uclchip">Top five</a>
-    <a class="chip-btn" href="#relegation">Relegation</a>
+    <a class="chip-btn" href="#relegation" id="relchip">Relegation</a>
   </nav>
 
   <section class="card" id="week">
@@ -123,7 +123,7 @@
   </section>
 
   <section class="card" id="title">
-    <h2>The title race</h2>
+    <h2 id="titlehead">The title race</h2>
     <p class="sub">The five clubs with the best chance of winning it, with the run of
       fixtures each faces next. Squares are shaded by the opponent's rating adjusted for
       venue; outlined squares are away trips.</p>
@@ -140,7 +140,7 @@
   </section>
 
   <section class="card" id="relegation">
-    <h2>The relegation battle</h2>
+    <h2 id="relhead">The relegation battle</h2>
     <p class="sub" id="relsub">Every club the model gives a real chance of going down —
       anything above one season in twenty. The last column is the margin between a club's
       projected total and the points that usually keep a side up.</p>
@@ -161,12 +161,13 @@
 </main>
 
 <script type="module">
-import { data, pct, esc, ord, initChrome, initPalette, chipColor,
+import { data, pct, esc, ord, initChrome, initPalette, chipColor, roundLabel,
          lineChart, probBar, lg, url, setMeta } from './assets/app.js';
 initChrome('races');
 
 const fc = await data('forecast');
 const W = lg();
+document.documentElement.setAttribute('data-kind', W.kind);
 /* Everything below the forecast is optional: the page has to be right on the
    first build of a season, when none of these files exist yet. */
 const soft = async (n) => { try { return await data(n); } catch { return null; } };
@@ -181,7 +182,9 @@ const byTitle = [...fc.teams].sort((a, b) => b.title - a.title);
 const byReleg = [...fc.teams].sort((a, b) => b.releg - a.releg);
 const L = fc.lines;
 
-const METRIC = { title: 'title chance', ucl: `${W.topAdj} chance`, releg: 'relegation risk' };
+const METRIC = { title: W.isCup ? 'trophy chance' : 'title chance',
+                 ucl: `${W.topAdj} chance`,
+                 releg: W.isCup ? 'elimination risk' : 'relegation risk' };
 /* A rising relegation risk is bad news; a rising title chance is good news. */
 const GOOD_UP = { title: true, ucl: true, releg: false };
 const fmtDay = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
@@ -195,29 +198,46 @@ const nMatches = fc.matches_total || W.nMatches;
 setMeta({
   title: `The races — ${W.name} ${fc.season}`,
   ogTitle: `The races — ${W.name} ${fc.season} forecast`,
-  description: `The ${W.name} ${fc.season} title race, the fight for the ${W.topWord} and the `
-    + `relegation battle — with the week's biggest forecast movers and the run of fixtures `
+  description: `${W.The} ${fc.season} ${W.winRace}, the fight for the ${W.topWord} and `
+    + `${W.downRace} — with the week's biggest forecast movers and the run of fixtures `
     + 'each contender faces.',
 });
-document.getElementById('uclchip').textContent = `Top ${W.uclPlaces}`;
-document.getElementById('uclhead').textContent = `The ${W.topAdj} race`;
-document.getElementById('uclsub').textContent =
-  'The contested part of the table: clubs whose Champions League place is neither settled '
-  + `nor gone. Ranked by their chance of finishing in the ${W.topWord}.`;
-document.getElementById('relsub').textContent =
-  'Every club the model gives a real chance of going down — anything above one season in '
-  + `twenty. The bottom ${W.relegPlaces} go down.${W.relegTail} The last column is the margin `
-  + "between a club's projected total and the points that usually keep a side up.";
-document.getElementById('deepermatches').textContent =
-  `All ${nMatches} fixtures, sorted by how much the result swings someone's season.`;
+document.getElementById('titlechip').textContent = W.isCup ? 'The trophy' : 'The title';
+document.getElementById('titlehead').textContent =
+  `${W.winRace.charAt(0).toUpperCase()}${W.winRace.slice(1)}`;
+document.getElementById('uclchip').textContent = W.topN;
+document.getElementById('uclhead').textContent =
+  `${W.topRace.charAt(0).toUpperCase()}${W.topRace.slice(1)}`;
+document.getElementById('uclsub').textContent = W.isCup
+  ? 'The contested part of the league phase: clubs whose direct place in the last 16 is '
+    + `neither settled nor gone. Ranked by their chance of finishing in the ${W.topWord}, `
+    + 'which skips the knockout play-off.'
+  : 'The contested part of the table: clubs whose Champions League place is neither settled '
+    + `nor gone. Ranked by their chance of finishing in the ${W.topWord}.`;
+document.getElementById('relchip').textContent = W.isCup ? 'The cut' : 'Relegation';
+document.getElementById('relhead').textContent =
+  `${W.downRace.charAt(0).toUpperCase()}${W.downRace.slice(1)}`;
+document.getElementById('relsub').textContent = W.isCup
+  ? 'Every club the model gives a real chance of going out at the league phase — anything '
+    + `above one season in twenty. The bottom ${W.relegPlaces} are eliminated.${W.relegTail} `
+    + "The last column is the margin between a club's projected total and the points that "
+    + 'usually clear the cut.'
+  : 'Every club the model gives a real chance of going down — anything above one season in '
+    + `twenty. The bottom ${W.relegPlaces} go down.${W.relegTail} The last column is the margin `
+    + "between a club's projected total and the points that usually keep a side up.";
+/* A cup's forecast counts only the league phase, and the matches page lists the
+   knockout rounds too — so the count is left out rather than stated wrongly. */
+document.getElementById('deepermatches').textContent = W.isCup
+  ? "Every fixture, sorted by how much the result swings someone's season."
+  : `All ${nMatches} fixtures, sorted by how much the result swings someone's season.`;
 
 /* ---- lede and stamp ---- */
 const lead = byTitle[0], drop = byReleg[0];
 document.getElementById('lede').innerHTML =
   `Three races decide a ${esc(W.name)} season, and the model has an opinion on all of them.
-   <b>${esc(lead.name)}</b> are the likeliest champions at ${pct(lead.title)},
-   and <b>${esc(drop.name)}</b> the likeliest to go down at ${pct(drop.releg)}.
-   Each contender is shown with the run of fixtures that will settle it.`;
+   <b>${esc(lead.name)}</b> are the likeliest ${W.isCup ? 'winners' : 'champions'} at
+   ${pct(lead.title)}, and <b>${esc(drop.name)}</b> the likeliest to ${W.downVerb} at
+   ${pct(drop.releg)}. Each contender is shown with the run of fixtures that will settle it.`;
 document.getElementById('stamp').innerHTML = `
   <span>Season <b>${esc(fc.season)}</b></span>
   <span><b>${fc.matches_played}</b> of ${nMatches} matches played</span>
@@ -244,9 +264,9 @@ function runIn(id) {
     const opp = meta[f.opp] || { name: f.opp, short: f.opp };
     return `<span class="slot">
       <span class="box ${f.home ? '' : 'away'}" style="background:var(--ramp-${step})"
-        title="Matchweek ${f.md} — ${f.home ? 'home to' : 'away at'} ${esc(opp.name)} on ${esc(fmtDay(f.date))}, opponent rating ${f.difficulty}"
+        title="${esc(roundLabel(f.md))} — ${f.home ? 'home to' : 'away at'} ${esc(opp.name)} on ${esc(fmtDay(f.date))}, opponent rating ${f.difficulty}"
         >${esc(opp.short)}</span>
-      <span class="cap">MW${f.md} ${f.home ? 'H' : 'A'}</span></span>`;
+      <span class="cap">${esc(W.roundAbbr)}${f.md} ${f.home ? 'H' : 'A'}</span></span>`;
   }).join('')}</div>`;
 }
 
@@ -261,7 +281,9 @@ function raceRows(list, key, third) {
     <div class="racerow">
       ${club(t)}
       <div class="big">${pct(t[key])}<small>${
-        key === 'releg' ? 'down' : (key === 'title' ? 'title' : `top ${W.uclPlaces}`)}</small></div>
+        key === 'releg' ? (W.isCup ? 'out' : 'down')
+          : (key === 'title' ? (W.isCup ? 'trophy' : 'title') : `top ${W.advanceDirect}`)
+      }</small></div>
       <div class="num">${third(t, i)}</div>
       <div class="runin">${runIn(t.id)}</div>
     </div>`).join('');
@@ -317,7 +339,7 @@ function weekly() {
       <div class="charthead">Results the model did not see coming</div>
       <div id="tipish">${recap.shocks.map((s) => `
         <div class="r rb"><span>${esc(s.label)}
-          <span class="hint">Matchweek ${s.md} · ${esc(fmtDay(s.date))}</span>
+          <span class="hint">${esc(roundLabel(s.md))} · ${esc(fmtDay(s.date))}</span>
           ${probBar(s.p, 'away')}</span><b>${pct(s.p, 1)}</b></div>`).join('')}</div>
       <p class="hint" style="margin-top:8px">The probability this model gave the result that
         actually happened, taken from the forecast frozen before kick-off.</p>` : '';
@@ -335,7 +357,9 @@ function weekly() {
     + ' before a ball is kicked. Every later week is measured against this.';
 
   const alive = (k) => fc.teams.filter((t) => t[k] >= 0.05 && t[k] <= 0.95).length;
-  const races = [['title', 'The title'], ['ucl', `The ${W.topWord}`], ['releg', 'Relegation']]
+  const races = [['title', W.isCup ? 'The trophy' : 'The title'],
+                 ['ucl', `The ${W.topWord}`],
+                 ['releg', W.isCup ? 'The cut' : 'Relegation']]
     .map(([k, label]) => ({ k, label, n: alive(k) }))
     .sort((a, b) => b.n - a.n);
   const tightest = races[0];
@@ -347,7 +371,7 @@ function weekly() {
       <div class="tile"><div class="k">Favourite</div>
         <div class="v">${esc(lead.name)}</div>
         <div class="n">${pct(lead.title)} to win it — ${esc(second.name)} next at ${pct(second.title)}</div></div>
-      <div class="tile"><div class="k">Most likely down</div>
+      <div class="tile"><div class="k">${W.isCup ? 'Most likely out' : 'Most likely down'}</div>
         <div class="v">${esc(drop.name)}</div>
         <div class="n">${pct(drop.releg)} — then ${esc(byReleg[1].name)} at ${pct(byReleg[1].releg)}</div></div>
       <div class="tile"><div class="k">Tightest race</div>
@@ -370,7 +394,7 @@ function render() {
       <span>${gap < 0.05 ? 'sets the pace' : `${gap.toFixed(1)} behind`}</span>`;
   });
   document.getElementById('titlechart').innerHTML =
-    raceChart(top, 'title', 'the title race');
+    raceChart(top, 'title', W.winRace);
 
   /* One more club than there are places, so the group always shows somebody
      on the wrong side of the line. */
@@ -382,8 +406,7 @@ function render() {
     return `<b>${t.pts.toFixed(1)}</b> pts<br>
       <span>${gap < 0.05 ? 'leads this group' : `${gap.toFixed(1)} behind`}</span>`;
   });
-  document.getElementById('uclchart').innerHTML =
-    raceChart(zone, 'ucl', `the ${W.topAdj} race`);
+  document.getElementById('uclchart').innerHTML = raceChart(zone, 'ucl', W.topRace);
 
   const danger = byReleg.filter((t) => t.releg >= 0.05).slice(0, Math.max(5, W.relegPlaces + 4));
   const safe = L ? L.safety.p50 : null;
@@ -391,17 +414,18 @@ function render() {
     if (safe === null) return `<b>${t.pts.toFixed(1)}</b> pts`;
     const m = t.pts - safe;
     return `<b>${t.pts.toFixed(1)}</b> pts<br>
-      <span>${m >= 0 ? `+${m.toFixed(1)}` : `−${Math.abs(m).toFixed(1)}`} vs safety</span>`;
+      <span>${m >= 0 ? `+${m.toFixed(1)}` : `−${Math.abs(m).toFixed(1)}`} vs ${
+        W.isCup ? 'the cut' : 'safety'}</span>`;
   });
   document.getElementById('safetynote').innerHTML = L
     ? `Across ${fc.n_sims.toLocaleString()} simulated seasons ${ord(W.lastSafe)} place — the
        last spot above the ${W.relegPhrase} — finishes on about <b>${L.safety.p50}</b> points,
-       and <b>${L.safety.enough90}</b> was enough to stay up in nine seasons out of
+       and <b>${L.safety.enough90}</b> was enough to ${W.surviveWord} in nine seasons out of
        ten.${W.relegTail} ${danger.length
         ? `${esc(danger[0].name)} are projected on ${danger[0].pts.toFixed(1)}.` : ''}`
     : '';
   document.getElementById('relchart').innerHTML =
-    raceChart(danger.slice(0, 5), 'releg', 'the relegation battle');
+    raceChart(danger.slice(0, 5), 'releg', W.downRace);
 }
 render();
 window.addEventListener('themechange', render);

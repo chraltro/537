@@ -338,6 +338,9 @@ def run_european(corpus, seasons: list[str], *, comps=("cl",),
             "baselines": {"league_average": score_all(B, Y)},
             "names": {"league_average": LeagueAverage.name},
             "seasons": seasons, "comps": list(comps),
+            # Shape parity with the domestic backtest. The pooled European fit
+            # has no goals/shots blend, so that key is honestly absent.
+            "params": {"decay": decay, "ridge": ridge},
             "calibration": calibration(P, Y)}
 
 

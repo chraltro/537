@@ -80,7 +80,7 @@ tr.touched td.name { box-shadow: inset 2px 0 0 var(--accent); }
 <main class="wrap" id="main">
   <div class="pagehead">
     <h1>What if?</h1>
-    <p class="lede">Decide any of the results still to come and the rest of the season is
+    <p class="lede" id="lede">Decide any of the results still to come and the rest of the season is
       played out again here, five thousand times, while you watch. The ratings are the ones
       behind the published forecast; only the fixtures you fix are treated as settled.</p>
     <div class="stamp" id="stamp"></div>
@@ -123,7 +123,7 @@ tr.touched td.name { box-shadow: inset 2px 0 0 var(--accent); }
             <th class="l">#</th>
             <th class="l">Club</th>
             <th>Pts</th>
-            <th>Title</th>
+            <th id="winhead">Title</th>
             <th id="uclhead">Top 5</th>
             <th id="downhead">Down</th>
           </tr></thead>
@@ -139,8 +139,8 @@ tr.touched td.name { box-shadow: inset 2px 0 0 var(--accent); }
 </main>
 
 <script type="module">
-import { data, pct, esc, initChrome, initPalette, chipColor,
-         lg, setMeta } from './assets/app.js';
+import { data, pct, esc, initChrome, initPalette, chipColor, roundLabel,
+         ensureReplayBanner, lg, setMeta } from './assets/app.js';
 initChrome('sim');
 
 const N_SIMS = 5000;
@@ -149,16 +149,35 @@ const fc = await data('sim_input');
 /* sim_input.json carries the league's own lines; where an older build does not,
    lg() still answers from the manifest. */
 const W = lg();
+document.documentElement.setAttribute('data-kind', W.kind);
+/* This page never reads the forecast, and the forecast is where a staging
+   league says so. */
+ensureReplayBanner();
 setMeta({
   title: `What if? — ${W.name}`,
   ogTitle: `What if? — ${W.name} simulator`,
   description: 'Pick results for the fixtures still to come and watch '
     + `${W.the} forecast recompute, five thousand seasons at a time, in your browser.`,
 });
+/* The worker replays the league phase, so its first column is the top of that
+   table — in a cup that is not the trophy, and must not be labelled as one. */
+document.getElementById('winhead').textContent = W.isCup ? '1st' : 'Title';
+document.getElementById('winhead').title = W.isCup
+  ? 'Chance of finishing first in the league phase' : 'Chance of winning the title';
 document.getElementById('uclhead').textContent = W.topN;
-document.getElementById('uclhead').title = `Chance of finishing in the ${W.topWord}`;
+document.getElementById('uclhead').title = W.isCup
+  ? `Chance of finishing in the ${W.topWord} — ${W.topMeans}`
+  : `Chance of finishing in the ${W.topWord}`;
+document.getElementById('downhead').textContent = W.downN;
 document.getElementById('downhead').title =
   `Chance of finishing in the ${W.relegPhrase}.${W.relegTail}`;
+if (W.isCup) {
+  document.getElementById('lede').textContent =
+    'Decide any of the league-phase results still to come and the rest of the phase is played '
+    + 'out again here, five thousand times, while you watch. The ratings are the ones behind '
+    + 'the published forecast; only the fixtures you fix are treated as settled. The knockout '
+    + 'rounds are not re-drawn — this is the table that seeds them.';
+}
 
 const teams = fc.teams;
 const meta = Object.fromEntries(teams.map((t) => [t.id, t]));
@@ -179,9 +198,10 @@ const fmtDay = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
   { weekday: 'short', day: 'numeric', month: 'short' });
 
 document.getElementById('stamp').innerHTML =
-  `<span><b>${remaining.length}</b> of ${W.nMatches} fixtures still to play</span>
+  `<span><b>${remaining.length}</b> of ${fc.fixtures.length} fixtures still to play</span>
    <span><b>${N_SIMS.toLocaleString()}</b> seasons per re-run</span>
-   <span>Top ${W.uclPlaces} qualify · bottom ${W.relegPlaces} go down</span>
+   <span>Top ${W.advanceDirect} ${W.isCup ? 'go straight through' : 'qualify'} · bottom ${
+     W.relegPlaces} ${W.downVerb}</span>
    <span>Runs in this browser — nothing is sent anywhere</span>`;
 
 /* ---------------- picks ---------------- */
@@ -303,7 +323,8 @@ function schedule() {
 const mws = [...new Set(fc.fixtures.map((f) => f.md))].sort((x, y) => x - y);
 const firstOpen = (fc.fixtures.find((f) => !f.played) || fc.fixtures[fc.fixtures.length - 1]).md;
 const mwSel = document.getElementById('mw');
-mwSel.innerHTML = mws.map((n) => `<option value="${n}">Matchweek ${n}</option>`).join('');
+mwSel.innerHTML = mws.map((n) =>
+  `<option value="${esc(n)}">${esc(roundLabel(n))}</option>`).join('');
 mwSel.value = String(firstOpen);
 
 const RES = { H: 'H', D: 'D', A: 'A' };
@@ -311,7 +332,7 @@ const RES = { H: 'H', D: 'D', A: 'A' };
 function drawFixtures() {
   const md = +mwSel.value;
   const list = fc.fixtures.filter((f) => f.md === md);
-  document.getElementById('mwhead').textContent = `Matchweek ${md}`;
+  document.getElementById('mwhead').textContent = roundLabel(md);
   if (!list.length) {
     document.getElementById('fixtures').innerHTML = '<p class="empty">No fixtures in that week.</p>';
     return;
@@ -373,7 +394,7 @@ function drawTray() {
   const items = [...picks.entries()].sort((x, y) => x[1].md - y[1].md);
   tray.innerHTML = `<div class="picklist">${items.map(([k, p]) => `
     <div class="pick">
-      <span class="mwtag">MW ${p.md}</span>
+      <span class="mwtag">${esc(W.roundAbbr)} ${p.md}</span>
       <span class="who">${pickText(p)}</span>
       <button class="x" data-drop="${k}" aria-label="Remove this pick">✕</button>
     </div>`).join('')}</div>`;

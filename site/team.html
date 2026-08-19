@@ -58,12 +58,30 @@
     </section>
 
     <section class="card">
-      <h2>Finishing position</h2>
+      <h2 id="poshead">Finishing position</h2>
       <p class="sub" id="possub">How often the club lands in each place across 50,000 seasons.</p>
       <div class="posbars" id="posbars"></div>
       <div class="axis20" id="posaxis" style="margin-top:6px"></div>
     </section>
   </div>
+
+  <section class="card cuponly" id="bracketcard">
+    <h2>How far they get</h2>
+    <p class="sub" id="bracketsub">The chance of reaching each round, on the same scale as the
+      finishing-position strip.</p>
+    <div id="bracket"></div>
+    <div class="legend">
+      <span>Chance of getting this far</span>
+      <span class="swatches" aria-hidden="true">
+        <i style="background:var(--ramp-0)"></i><i style="background:var(--ramp-1)"></i>
+        <i style="background:var(--ramp-2)"></i><i style="background:var(--ramp-3)"></i>
+        <i style="background:var(--ramp-4)"></i><i style="background:var(--ramp-5)"></i>
+        <i style="background:var(--ramp-6)"></i>
+      </span>
+      <span>never → certain</span>
+    </div>
+    <p class="hint" id="bracketnote" style="margin-top:12px"></p>
+  </section>
 
   <section class="card">
     <h2>The run of fixtures</h2>
@@ -90,11 +108,13 @@
 
 <script type="module">
 import { data, pct, signed, esc, ord, initChrome, tip, tipRows, sparkline, chipColor,
-         initPalette, matchModal, lg, withLg, setMeta, eventLabels } from './assets/app.js';
+         initPalette, matchModal, lg, withLg, setMeta, eventLabels,
+         bracketStrip, roundLabel, roundShort } from './assets/app.js';
 initChrome('team');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
 const W = lg();
+document.documentElement.setAttribute('data-kind', W.kind);
 const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
 
 setMeta({
@@ -102,12 +122,21 @@ setMeta({
   description: `Per-club ${W.name} ${fc.season} forecast: rating trajectory, `
     + 'finishing-position distribution and every remaining fixture.',
 });
+document.getElementById('poshead').textContent =
+  W.isCup ? 'League-phase position' : 'Finishing position';
 document.getElementById('possub').textContent =
   `How often the club lands in each place across ${fc.n_sims.toLocaleString()} seasons. `
-  + `Vertical rules mark the ${W.topWord} and the ${W.relegPhrase}.${W.relegTail}`;
+  + (W.isCup
+    ? `Vertical rules mark the ${W.topWord}, who go straight through, and ${ord(W.cutAt)} place, `
+      + `the last spot still in the cup.${W.relegTail}`
+    : `Vertical rules mark the ${W.topWord} and the ${W.relegPhrase}.${W.relegTail}`);
+document.getElementById('bracketsub').textContent =
+  `The chance of getting through the league phase each way, and of reaching each knockout `
+  + `round after it, across ${(fc.bracket_sims || fc.n_sims).toLocaleString()} simulated `
+  + 'brackets. The same heat ramp as the position strip.';
 document.getElementById('bigsub').textContent =
-  `Ranked by how far the result moves this club's own title, ${W.topAdj} or relegation `
-  + 'chances. Click one for the full picture.';
+  `Ranked by how far the result moves this club's own ${W.isCup ? 'trophy' : 'title'}, `
+  + `${W.topAdj} or ${W.downWord} chances. Click one for the full picture.`;
 const pick = document.getElementById('pick');
 pick.innerHTML = [...fc.teams].sort((a, b) => a.name.localeCompare(b.name))
   .map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
@@ -138,21 +167,41 @@ function render() {
   document.title = `${t.name} — ${W.name} ${fc.season} forecast`;
   document.getElementById('title').innerHTML =
     `<span class="chip" style="background:${chipColor(t.primary)};height:.85em;width:6px;display:inline-block;vertical-align:baseline;margin-right:12px"></span>${esc(t.name)}`;
-  document.getElementById('lede').textContent =
-    `Projected to finish ${ord(rank)} on ${t.pts.toFixed(1)} points, `
-    + `with 80% of simulations between ${t.pts_lo} and ${t.pts_hi}.`;
+  document.getElementById('lede').textContent = W.isCup
+    ? `Projected ${ord(rank)} in the league phase on ${t.pts.toFixed(1)} points, with 80% of `
+      + `simulations between ${t.pts_lo} and ${t.pts_hi}, and ${pct(t.p_win ?? t.title, 1)} `
+      + 'to win the whole thing.'
+    : `Projected to finish ${ord(rank)} on ${t.pts.toFixed(1)} points, `
+      + `with 80% of simulations between ${t.pts_lo} and ${t.pts_hi}.`;
   document.getElementById('stamp').innerHTML =
     `<span>SPI <b>${t.spi.toFixed(1)}</b></span>
      <span>Attack <b>${t.off.toFixed(2)}</b> goals/game vs average</span>
      <span>Defence <b>${t.def.toFixed(2)}</b> conceded/game vs average</span>
      ${t.promoted ? '<span><b>Promoted</b> from the division below</span>' : ''}`;
 
-  document.getElementById('tiles').innerHTML = [
+  document.getElementById('tiles').innerHTML = (W.isCup ? [
+    ['Projected phase finish', ord(rank), `${t.pts.toFixed(1)} points, GD ${signed(t.gd)}`],
+    ['Win the trophy', pct(t.title, 1),
+      t.title < 0.005 ? 'Effectively out of reach' : 'Across all simulated brackets'],
+    [W.topN, pct(t.ucl, 1), 'Straight into the last 16'],
+    ['Out at the league phase', pct(t.releg, 1), `Bottom ${W.relegPlaces} go out`],
+  ] : [
     ['Projected finish', ord(rank), `${t.pts.toFixed(1)} points, GD ${signed(t.gd)}`],
     ['Win the title', pct(t.title, 1), t.title < 0.005 ? 'Effectively out of reach' : 'Across all simulations'],
     ['Champions League', pct(t.ucl, 1), `${W.topN} qualifies`],
     ['Relegated', pct(t.releg, 1), `Best case ${t.pts_max} pts, worst ${t.pts_min}`],
-  ].map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
+  ]).map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
+
+  /* The cup's own question: not where they finish, but how far they get. */
+  if (W.isCup) {
+    document.getElementById('bracket').innerHTML =
+      bracketStrip(t, { cols: matchMedia('(max-width: 620px)').matches ? 4 : 7 });
+    document.getElementById('bracketnote').innerHTML =
+      `${esc(t.name)} reach the last 16 in ${pct(t.p_r16 ?? 0, 1)} of simulations — `
+      + `${pct(t.p_top8 ?? 0, 1)} straight from the league phase and `
+      + `${pct(Math.max(0, (t.p_r16 ?? 0) - (t.p_top8 ?? 0)), 1)} through ${W.playoffWord} — `
+      + `and win it in ${pct(t.p_win ?? 0, 1)}.`;
+  }
 
   const hist = t.history || [];
   document.getElementById('spark').innerHTML = hist.length > 1
@@ -189,13 +238,13 @@ function render() {
       const step = Math.min(6, Math.max(1, Math.ceil(f * 6)));
       return `<span class="slot">
         <span class="box ${r.home ? '' : 'away'}" style="background:var(--ramp-${step})"
-          title="Matchweek ${r.md} — ${r.home ? 'home to' : 'away at'} ${esc(meta[r.opp].name)}, opponent rating ${r.difficulty}"
+          title="${esc(roundLabel(r.md))} — ${r.home ? 'home to' : 'away at'} ${esc(meta[r.opp].name)}, opponent rating ${r.difficulty}"
           >${esc(meta[r.opp].short)}</span>
-        <span class="cap">MW${r.md} ${r.home ? 'H' : 'A'}</span></span>`;
+        <span class="cap">${esc(W.roundAbbr)}${r.md} ${r.home ? 'H' : 'A'}</span></span>`;
     }).join('')}</div>` : '<p class="empty">No fixtures left.</p>';
   document.getElementById('fdrnote').innerHTML = t.sos
     ? `Across the whole run left, ${esc(t.name)} face an average opponent rating of
-       <b>${t.sos}</b> — the ${ord(t.sos_rank)} hardest schedule in the league.
+       <b>${t.sos}</b> — the ${ord(t.sos_rank)} hardest schedule in ${esc(W.the)}.
        Every club's schedule excludes itself, so strong clubs get an easier one by construction.`
     : '';
 
@@ -212,7 +261,7 @@ function render() {
     const opp = meta[m.h === current ? m.a : m.h];
     const lo = Math.min(s.home, s.away), hi = Math.max(s.home, s.away);
     return `<div class="bigmatch" data-key="${m.h}|${m.a}">
-      <span class="mdno">MW ${m.md}<br>${fmtD(m.date)}</span>
+      <span class="mdno">${esc(roundShort(m.md))}<br>${fmtD(m.date)}</span>
       <span><span class="teams">${m.h === current ? 'v' : 'at'} ${esc(opp.name)}</span>
         <span class="why">Chance of ${EVENT[s.event]} moves ${pct(lo)} → ${pct(hi)}
           with the result</span></span>
@@ -230,7 +279,7 @@ function render() {
       ? `<b>${m.hg}–${m.ag}</b>`
       : `${(home ? m.xgh : m.xga).toFixed(1)}–${(home ? m.xga : m.xgh).toFixed(1)}`;
     return `<div class="fixrow" data-i="${mm.matches.indexOf(m)}">
-      <span class="mwn">${m.md}</span>
+      <span class="mwn" title="${esc(roundLabel(m.md, m.leg))}">${esc(m.md)}</span>
       <span class="ha">${home ? 'Home' : 'Away'}</span>
       <span><span class="chip" style="background:${chipColor(opp.primary)};display:inline-block;vertical-align:-4px;margin-right:9px"></span>${esc(opp.name)}</span>
       <span class="wdl">
@@ -257,7 +306,7 @@ document.getElementById('fixtures').addEventListener('mousemove', (e) => {
   if (!r) return tip(null);
   const m = mm.matches[+r.dataset.i];
   tip(tipRows(`${esc(meta[m.h].name)} v ${esc(meta[m.a].name)}`, [
-    ['Matchweek', m.md], ['Date', m.date],
+    ['Round', esc(roundLabel(m.md, m.leg))], ['Date', m.date],
     [`${esc(meta[m.h].short)} win`, pct(m.ph, 1)],
     ['Draw', pct(m.pd, 1)],
     [`${esc(meta[m.a].short)} win`, pct(m.pa, 1)],

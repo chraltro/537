@@ -54,6 +54,10 @@ class League:
     advance_direct: int | None = None    # league-phase positions straight to the R16
     advance_playoff: int | None = None   # further positions into the knockout play-off
 
+    #: Shown by the site's league switcher while ready=false, e.g. the date the
+    #: competition's draw makes a real forecast possible.
+    ready_note: str | None = None
+
     # -- sources -------------------------------------------------------------
     fd_dir: str = ""           # football-datasets mirror directory (history + shots)
     of_top: str = ""           # openfootball path template, top flight
@@ -104,6 +108,8 @@ class League:
         if self.kind == "cup":
             row["advance_direct"] = self.advance_direct
             row["advance_playoff"] = self.advance_playoff
+        if self.ready_note:
+            row["ready_note"] = self.ready_note
         return row
 
     def public(self) -> dict:
@@ -214,6 +220,7 @@ CHAMPIONS_LEAGUE = League(
     country="Europe",
     n_teams=36, n_matches=144,
     kind="cup", advance_direct=8, advance_playoff=16,
+    ready_note="League-phase draw: 27 August",
     # UCL/relegation lines are meaningless for a cup; kept harmless.
     ucl_places=8, releg_places=12,
     releg_note="9th-24th enter a two-legged knockout play-off",

@@ -114,6 +114,29 @@ nav.top a[aria-current="page"] { background: var(--raised); color: var(--ink); }
   clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
 }
 
+/* ---------- staging banner ----------
+   Full bleed, directly under the masthead, warning-toned: a reader who lands
+   deep in a staging league from a shared link has to see it before the numbers,
+   and it must not be mistakable for part of the forecast. */
+.banner {
+  background: var(--raised); border-bottom: 1px solid var(--warning);
+  box-shadow: inset 3px 0 0 var(--warning);
+  padding: 10px 24px; font-size: 12.5px; color: var(--ink2);
+  display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap;
+}
+.banner b {
+  color: var(--warning); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .07em; white-space: nowrap;
+}
+.banner span { max-width: 92ch; }
+@media (max-width: 900px) { .banner { padding: 9px 14px; } }
+
+/* ---------- kind-dependent columns ----------
+   Some columns only mean something in one kind of competition. Which ones are
+   live is set once, on the root element, from the manifest's `kind`. */
+:root:not([data-kind="cup"]) .cuponly { display: none; }
+:root[data-kind="cup"] .leagueonly { display: none; }
+
 /* ---------- page head ---------- */
 .pagehead { padding: 40px 0 26px; }
 .pagehead h1 {
@@ -156,6 +179,11 @@ thead th[data-dir="asc"]::after { content: " \25B4"; color: var(--accent); }
 tbody td { padding: 7px 8px; text-align: right; border-bottom: 1px solid var(--grid); font-size: 13.5px; }
 tbody tr:hover { background: var(--raised); }
 .scroller { overflow-x: visible; }
+/* A cup's table carries two more probability columns than a league's. On a
+   narrow screen they will not fit, so the table scrolls inside its own box —
+   never the page. Wide screens have the room and keep a plain block, so nothing
+   becomes a scroll container that does not need to be one. */
+@media (max-width: 900px) { .scroller.wide { overflow-x: auto; } }
 
 .club { display: flex; align-items: center; gap: 10px; min-width: 165px; }
 .chip { width: 4px; height: 20px; border-radius: 2px; flex: none; }
@@ -188,6 +216,18 @@ tbody tr:hover { background: var(--raised); }
 /* One column per finishing position; --n is the league's club count. */
 .axis20 { display: grid; grid-template-columns: repeat(var(--n, 20), 1fr); gap: 2px; }
 .axis20 span { font-size: 10px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+/* ---------- bracket strip ----------
+   One row, seven cells, the same ramp as the season strip. The SVG scales to
+   whatever width it is given; nothing inside it is sized in pixels the reader
+   can notice. */
+.bracket svg { width: 100%; height: auto; display: block; overflow: visible; }
+.bracket .bl {
+  fill: var(--muted); font-size: 10px; font-weight: 650;
+  letter-spacing: .05em; text-transform: uppercase;
+}
+.bracket .bv { fill: var(--ink); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bracket + .hint { margin-top: 10px; }
+
 .legend { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11.5px; margin-top: 14px; flex-wrap: wrap; }
 .legend .swatches { display: flex; gap: 2px; }
 .legend .swatches i { width: 22px; height: 9px; border-radius: 2px; display: block; }

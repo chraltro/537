@@ -40,15 +40,16 @@
             <th class="l" data-k="rank">#</th>
             <th class="l" data-k="name">Club</th>
             <th data-k="pts">Points</th>
-            <th data-k="title">Title</th>
+            <th data-k="title" id="winhead">Title</th>
             <th class="p2" data-k="ucl" id="uclhead">Top 5</th>
+            <th class="cuponly p2" data-k="p_playoff" id="pohead">Play-off</th>
             <th data-k="releg" id="downhead">Down</th>
             <th class="x p3" data-k="spi" title="Expected share of points against an average team">SPI</th>
             <th class="x p3" data-k="off" title="Goals expected to score vs an average team">Att</th>
             <th class="x p3" data-k="def" title="Goals expected to concede vs an average team">Def</th>
             <th class="x p3" data-k="gd">GD</th>
             <th class="x p3" data-k="sos" title="Average rating of the opponents left to play">Sched</th>
-            <th class="x p3" data-k="europa">Europa</th>
+            <th class="x p3 leagueonly" data-k="europa">Europa</th>
           </tr></thead>
           <tbody id="tbody"><tr><td colspan="6" class="skeleton">Loading forecast…</td></tr></tbody>
         </table>
@@ -97,7 +98,7 @@
 
 <script type="module">
 import { data, pct, signed, esc, ord, initChrome, tip, tipRows, rampColor,
-         makeSortable, chipColor, initPalette, matchModal,
+         makeSortable, chipColor, initPalette, matchModal, roundLabel,
          lg, url, setMeta } from './assets/app.js';
 initChrome('table');
 
@@ -111,6 +112,11 @@ const fc = await data('forecast');
    own figures win over the manifest's. */
 const W = lg();
 const nMatches = fc.matches_total || W.nMatches;
+/* Which competition this is decides which columns mean anything. */
+document.documentElement.setAttribute('data-kind', W.kind);
+/* A cup carries a fourth probability column, which is more than a phone has
+   room for: let the table scroll inside its card rather than clipping. */
+if (W.isCup) document.querySelector('#tableview .scroller').classList.add('wide');
 
 setMeta({
   title: `${W.name} ${fc.season} Forecast`,
@@ -119,13 +125,25 @@ setMeta({
     + `${nMatches} matches, and ${fc.n_sims.toLocaleString()} simulations of the ${fc.season} season.`,
 });
 document.getElementById('h1').textContent = `Who wins ${W.the}?`;
+document.getElementById('winhead').textContent = W.winN;
+document.getElementById('winhead').title = `Chance of winning ${W.winWord}`;
 document.getElementById('uclhead').textContent = W.topN;
+document.getElementById('uclhead').title = W.isCup
+  ? `Chance of finishing in the ${W.topWord} — ${W.topMeans}` : `Chance of ${W.topFinish}`;
+document.getElementById('pohead').title =
+  `Chance of finishing in the places that go into ${W.playoffWord}`;
+document.getElementById('downhead').textContent = W.downN;
 document.getElementById('downhead').title = `Bottom ${W.relegPlaces}`;
+/* The cup's own column is the one worth keeping on a phone, so the top-places
+   column gives up its low-priority marker and the play-off column takes it. */
+if (W.isCup) document.getElementById('uclhead').classList.remove('p2');
 document.getElementById('alllink').textContent = `All ${nMatches} matches →`;
 document.getElementById('deepermatches').textContent =
   `Win, draw and loss probabilities for all ${nMatches} fixtures, sorted by what is at stake.`;
-document.getElementById('bandnote').textContent =
-  `Rules mark the ${W.topWord} and the ${W.relegPhrase}.${W.relegTail}`;
+document.getElementById('bandnote').textContent = W.isCup
+  ? `Rules mark the ${W.topWord}, who go straight through, and ${ord(W.cutAt)} place, `
+    + `the last spot still in the cup.${W.relegTail}`
+  : `Rules mark the ${W.topWord} and the ${W.relegPhrase}.${W.relegTail}`;
 
 const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
 const rows = fc.teams.map((t, i) => ({ ...t, rank: i + 1 }));
@@ -144,27 +162,33 @@ document.getElementById('answer').innerHTML =
   `<b>${esc(lead.name)}</b> are favourites at ${pct(lead.title)}, `
   + (close ? `with ${esc(second.name)} close behind on ${pct(second.title)}. `
            : `clear of ${esc(second.name)} on ${pct(second.title)}. `)
-  + `<b>${esc(drop.name)}</b> are the most likely to go down, at ${pct(drop.releg)}. `
-  + `Everything here comes from 50,000 simulations of the season, rebuilt from public data every six hours.`;
+  + `<b>${esc(drop.name)}</b> are the most likely to ${W.downVerb}, at ${pct(drop.releg)}. `
+  + `Everything here comes from ${fc.n_sims.toLocaleString()} simulations of the season, `
+  + 'rebuilt from public data every six hours.';
 
 document.getElementById('stamp').innerHTML = `
   <span>Season <b>${esc(fc.season)}</b></span>
   <span><b>${fc.matches_played}</b> of ${nMatches} matches played</span>
   <span>Updated <b>${fmtStamp(fc.generated)}</b></span>`;
 
+/* The lines are read off the simulated tables, so in a cup they describe the
+   league phase — first place there is not the trophy, and the sentence has to
+   say so rather than borrowing the league's word for it. */
 if (fc.lines) {
   const L = fc.lines;
   document.getElementById('lines').textContent =
-    `Across these simulations the title is usually won with about ${L.title.p50} points, `
-    + `the ${W.topWord} taken with ${L.top5.p50}, and ${L.safety.enough90} is enough to stay up `
-    + `in nine seasons out of ten.`;
+    `Across these simulations ${W.firstWord} usually takes about ${L.title.p50} points, `
+    + `the ${W.topWord} ${L.top5.p50}, and ${L.safety.enough90} is enough to ${W.surviveWord} `
+    + 'in nine seasons out of ten.';
 }
 
 document.getElementById('tiles').innerHTML = [
-  ['Title favourite', esc(lead.name), `${pct(lead.title)} across every simulation`],
-  ['Projected champion', `${rows[0].pts.toFixed(0)} pts`,
+  [W.isCup ? 'Trophy favourite' : 'Title favourite', esc(lead.name),
+    `${pct(lead.title)} across every simulation`],
+  [W.isCup ? 'Projected phase leader' : 'Projected champion', `${rows[0].pts.toFixed(0)} pts`,
     `80% of seasons land ${rows[0].pts_lo}–${rows[0].pts_hi}`],
-  ['Most likely down', esc(drop.name), `${pct(drop.releg)} — then ${esc(byReleg[1].name)} at ${pct(byReleg[1].releg)}`],
+  [W.isCup ? 'Most likely out' : 'Most likely down', esc(drop.name),
+    `${pct(drop.releg)} — then ${esc(byReleg[1].name)} at ${pct(byReleg[1].releg)}`],
 ].map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div>
     <div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
 
@@ -172,6 +196,7 @@ document.getElementById('tiles').innerHTML = [
 const maxPts = Math.max(...rows.map((r) => r.pts));
 const tbody = document.getElementById('tbody');
 const cls = (p) => (p >= 0.10 ? 'p-hi' : 'p-lo');
+const uclCls = W.isCup ? '' : 'p2';
 
 function render(list) {
   tbody.innerHTML = list.map((t) => `
@@ -185,7 +210,8 @@ function render(list) {
       <td><b>${t.pts.toFixed(1)}</b>
         <span class="minibar" style="width:${(t.pts / maxPts * 100).toFixed(1)}%"></span></td>
       <td class="${cls(t.title)}">${pct(t.title)}</td>
-      <td class="p2 ${cls(t.ucl)}">${pct(t.ucl)}</td>
+      <td class="${uclCls} ${cls(t.ucl)}">${pct(t.ucl)}</td>
+      <td class="cuponly p2 ${cls(t.p_playoff)}">${pct(t.p_playoff ?? 0)}</td>
       <td class="${cls(t.releg)}">${pct(t.releg)}</td>
       <td class="x p3"><b>${t.spi.toFixed(1)}</b></td>
       <td class="x p3">${t.off.toFixed(2)}</td>
@@ -193,7 +219,7 @@ function render(list) {
       <td class="x p3">${signed(t.gd)}</td>
       <td class="x p3 ${t.sos_rank && t.sos_rank <= 5 ? 'p-hi' : 'p-lo'}"
           title="${t.sos_rank ? ord(t.sos_rank) + ' hardest run left' : ''}">${t.sos ?? '—'}</td>
-      <td class="x p3 ${cls(t.europa)}">${pct(t.europa)}</td>
+      <td class="x p3 leagueonly ${cls(t.europa)}">${pct(t.europa ?? 0)}</td>
     </tr>`).join('');
 }
 makeSortable(document.getElementById('tbl'), rows, render, 'pts');
@@ -206,9 +232,12 @@ tbody.addEventListener('mousemove', (e) => {
     ['Projected points', t.pts.toFixed(1)],
     ['80% of seasons', `${t.pts_lo}–${t.pts_hi} pts`],
     ['Best / worst simulated', `${t.pts_max} / ${t.pts_min} pts`],
-    ['Win the league', pct(t.title, 1)],
-    [`Champions League (${W.topWord})`, pct(t.ucl, 1)],
-    ['Relegated', pct(t.releg, 1)],
+    [W.isCup ? 'Win the trophy' : 'Win the league', pct(t.title, 1)],
+    [W.isCup ? `${W.topN} — straight to the last 16` : `Champions League (${W.topWord})`,
+      pct(t.ucl, 1)],
+    ...(W.isCup ? [['Knockout play-off', pct(t.p_playoff ?? 0, 1)],
+                   ['Reach the final', pct(t.p_final ?? 0, 1)]] : []),
+    [W.isCup ? 'Out at the league phase' : 'Relegated', pct(t.releg, 1)],
     ['Schedule left', t.sos ? `${t.sos} avg opponent (${ord(t.sos_rank)} hardest)` : '—'],
   ]), e);
 });
@@ -277,7 +306,15 @@ const mm = await mmPromise;
 const next = mm.matches.find((m) => !m.played);
 const round = next ? mm.matches.filter((m) => m.md === next.md) : [];
 document.getElementById('nexthead').textContent =
-  next ? `Next up — matchweek ${next.md}` : 'The season is complete';
+  next ? `Next up — ${roundLabel(next.md).toLowerCase()}` : 'The season is complete';
+/* A cup's forecast counts the league phase; the fixture list also carries the
+   knockout rounds, so the link says how many matches are actually there. */
+if (mm.matches.length !== nMatches) {
+  document.getElementById('alllink').textContent = `All ${mm.matches.length} matches →`;
+  document.getElementById('deepermatches').textContent =
+    `Win, draw and loss probabilities for all ${mm.matches.length} fixtures, `
+    + 'sorted by what is at stake.';
+}
 const maxLev = Math.max(0.05, ...round.map((m) => m.lev));
 
 document.getElementById('nextup').innerHTML = round.length ? round.map((m) => `
