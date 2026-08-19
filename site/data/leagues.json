@@ -1,0 +1,17 @@
+{
+  "default": "premier-league",
+  "leagues": [
+    {"slug": "premier-league", "name": "Premier League", "country": "England", "ready": true,
+     "n_teams": 20, "ucl_places": 5, "releg_places": 3, "releg_note": null},
+    {"slug": "la-liga", "name": "La Liga", "country": "Spain", "ready": false,
+     "n_teams": 20, "ucl_places": 5, "releg_places": 3, "releg_note": null},
+    {"slug": "serie-a", "name": "Serie A", "country": "Italy", "ready": false,
+     "n_teams": 20, "ucl_places": 4, "releg_places": 3, "releg_note": null},
+    {"slug": "bundesliga", "name": "Bundesliga", "country": "Germany", "ready": false,
+     "n_teams": 18, "ucl_places": 4, "releg_places": 2,
+     "releg_note": "16th enters a relegation play-off"},
+    {"slug": "ligue-1", "name": "Ligue 1", "country": "France", "ready": false,
+     "n_teams": 18, "ucl_places": 4, "releg_places": 2,
+     "releg_note": "16th enters a relegation play-off"}
+  ]
+}
