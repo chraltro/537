@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compare two clubs</title>
+<meta name="description" content="Any two clubs in Europe side by side: ratings on one scale, the head-to-head record, and the match between them on neutral ground.">
+<meta property="og:title" content="Compare two clubs">
+<meta property="og:description" content="Any two clubs in Europe side by side — ratings on one scale, head-to-head, and a neutral-ground match.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="og/premier-league.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="og/premier-league.png">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
+</head>
+<body>
+<main class="wrap" id="main">
+  <div class="pagehead">
+    <h1>Head to head</h1>
+    <p class="lede">Two clubs, one rating scale, and the match between them on neutral ground —
+      including the one that has never been played. Both ratings come from the same pooled fit
+      as the <a href="rankings.html">global ranking</a>, which is what makes a club from the
+      Eredivisie and a club from Serie A comparable at all.</p>
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <section class="card">
+    <div class="cmp-pickers">
+      <label class="vh" for="pa">First club</label>
+      <select id="pa"></select>
+      <span class="vs">versus</span>
+      <label class="vh" for="pb">Second club</label>
+      <select id="pb"></select>
+    </div>
+    <div id="rows"></div>
+    <p class="hint" id="scalenote" style="margin-top:14px"></p>
+  </section>
+
+  <section class="card">
+    <h2>On neutral ground, today</h2>
+    <p class="sub" id="neutralsub">The match these ratings imply, with no home advantage for
+      either side.</p>
+    <div class="wdl" style="height:26px;margin-bottom:6px" id="wdl"></div>
+    <div class="hint" id="wdlkey" style="margin-bottom:20px"></div>
+    <div id="grid"></div>
+  </section>
+
+  <section class="card" id="h2hcard">
+    <h2>When they have actually met</h2>
+    <p class="sub" id="h2hsub"></p>
+    <div id="h2hbody"></div>
+  </section>
+
+  <section class="card">
+    <h2>Rating trajectories</h2>
+    <p class="sub">Where each club has been, on its own vertical scale. The line comes from
+      that club's league forecast, so a club whose competition this site does not build has
+      no line to draw.</p>
+    <div id="traj"></div>
+  </section>
+</main>
+
+<script type="module">
+import { siteData, data, esc, ord, pct, initChrome, initPalette, setMeta, chipColor,
+         scoreGrid, dcGrid, dcOutcome, neutralLambdas, timeline } from './assets/app.js';
+initChrome('compare');
+
+const g = await siteData('global');
+const byId = Object.fromEntries(g.clubs.map((c) => [c.id, c]));
+let h2h = { pairs: {} };
+try { h2h = await siteData('h2h'); } catch { /* no pairs file yet */ }
+
+setMeta({
+  title: 'Compare two clubs',
+  description: 'Any two clubs in Europe side by side: ratings on one scale, the '
+    + 'head-to-head record, and the match between them on neutral ground.',
+});
+document.getElementById('stamp').innerHTML =
+  `<span><b>${g.n_clubs}</b> clubs</span><span><b>${g.n_leagues}</b> leagues</span>
+   <span>Fitted to <b>${g.asof}</b></span>`;
+
+/* Clubs we forecast come first, because they are the ones with a page to click
+   through to; everything else follows, alphabetically. */
+const featured = g.clubs.filter((c) => c.featured)
+  .sort((a, b) => a.name.localeCompare(b.name));
+const rest = g.clubs.filter((c) => !c.featured)
+  .sort((a, b) => a.name.localeCompare(b.name));
+const options = `<optgroup label="Clubs with a forecast">${
+  featured.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')
+}</optgroup><optgroup label="Every other rated club">${
+  rest.map((c) => `<option value="${esc(c.id)}">${esc(c.name)} — ${esc(c.league)}</option>`).join('')
+}</optgroup>`;
+
+const selA = document.getElementById('pa');
+const selB = document.getElementById('pb');
+selA.innerHTML = options;
+selB.innerHTML = options;
+
+const params = new URLSearchParams(location.search);
+const pick = (want, fallback) => (byId[want] ? want : fallback);
+selA.value = pick(params.get('a'), featured[0]?.id || g.clubs[0].id);
+selB.value = pick(params.get('b'), (featured[1] || g.clubs[1] || g.clubs[0]).id);
+
+[selA, selB].forEach((s) => s.addEventListener('change', () => {
+  const q = new URLSearchParams();
+  q.set('a', selA.value);
+  q.set('b', selB.value);
+  history.replaceState({}, '', `?${q}`);
+  render();
+}));
+
+document.getElementById('scalenote').textContent = g.note
+  + ' Attack and defence are goals against that same average club. A rating is only as '
+  + 'fresh as the feed behind it, so a club whose league stopped publishing carries the '
+  + 'age of its newest result.';
+
+const fmtStale = (c) => (c.stale > 13 ? ` · rated to ${c.last}` : '');
+
+function row(label, a, b, better) {
+  const lead = better === 0 ? 'a' : (better === 1 ? 'b' : '');
+  return `<div class="cmp-row">
+    <span class="a${lead === 'a' ? ' lead' : ''}">${a}</span>
+    <span class="lab">${esc(label)}</span>
+    <span class="b${lead === 'b' ? ' lead' : ''}">${b}</span>
+  </div>`;
+}
+
+async function trajectory(c) {
+  /* The per-season rating line lives in the club's own league forecast, which
+     only exists for competitions this site builds. Anything else shows nothing
+     rather than a made-up line. */
+  if (!c.slug) return null;
+  try {
+    const r = await fetch(`data/${c.slug}/forecast.json`, { cache: 'no-cache' });
+    if (!r.ok) return null;
+    const fc = await r.json();
+    const t = (fc.teams || []).find((x) => x.id === c.id);
+    return t && t.history && t.history.length > 1 ? t.history : null;
+  } catch { return null; }
+}
+
+async function render() {
+  const A = byId[selA.value];
+  const B = byId[selB.value];
+  if (!A || !B) return;
+
+  const cmp = (x, y, higherIsBetter = true) =>
+    (x === y ? -1 : ((x > y) === higherIsBetter ? 0 : 1));
+
+  const head = (c, side) => `<span class="club" style="${side === 'b' ? '' : 'justify-content:flex-end'}">
+      ${side === 'b' ? `<span class="chip" style="background:${chipColor(c.primary)}"></span>` : ''}
+      ${c.slug ? `<a href="team.html?t=${encodeURIComponent(c.id)}&lg=${encodeURIComponent(c.slug)}">${esc(c.name)}</a>`
+               : `<b>${esc(c.name)}</b>`}
+      ${side === 'a' ? `<span class="chip" style="background:${chipColor(c.primary)}"></span>` : ''}
+    </span>`;
+
+  document.getElementById('rows').innerHTML =
+    `<div class="cmp-row" style="border-bottom:1px solid var(--rule);padding-bottom:14px">
+       <span class="a">${head(A, 'a')}</span><span class="lab"></span>
+       <span class="b">${head(B, 'b')}</span></div>`
+    + row('SPI', A.spi.toFixed(1), B.spi.toFixed(1), cmp(A.spi, B.spi))
+    + row('Rank in Europe', ord(A.rank), ord(B.rank), cmp(A.rank, B.rank, false))
+    + row('League', `${esc(A.league)} (${ord(A.league_rank)})`,
+          `${esc(B.league)} (${ord(B.league_rank)})`, -1)
+    + row('Attack', A.off.toFixed(2), B.off.toFixed(2), cmp(A.off, B.off))
+    + row('Defence', A.def.toFixed(2), B.def.toFixed(2), cmp(A.def, B.def, false))
+    + row('Matches in the fit', `${A.n}${fmtStale(A)}`, `${B.n}${fmtStale(B)}`, -1);
+
+  /* neutral ground */
+  const [lh, la] = neutralLambdas(A, B, g);
+  const grid = dcGrid(lh, la, g.rho, 6);
+  const [ph, pd, pa] = dcOutcome(grid);
+  document.getElementById('wdl').innerHTML = `
+    <i class="h" style="flex:${Math.max(ph, .02)}"><b>${Math.round(ph * 100)}</b></i>
+    <i class="d" style="flex:${Math.max(pd, .02)}"><b>${Math.round(pd * 100)}</b></i>
+    <i class="a" style="flex:${Math.max(pa, .02)}"><b>${Math.round(pa * 100)}</b></i>`;
+  document.getElementById('wdlkey').innerHTML =
+    `${esc(A.name)} win · draw · ${esc(B.name)} win &nbsp;·&nbsp; expected goals `
+    + `${lh.toFixed(2)} – ${la.toFixed(2)}`;
+  document.getElementById('neutralsub').textContent =
+    `The match these two ratings imply with no home advantage for either side, from the same `
+    + `Dixon–Coles machinery the fixture pages use. ${A.name} ${pct(ph, 1)}, `
+    + `draw ${pct(pd, 1)}, ${B.name} ${pct(pa, 1)}.`;
+  document.getElementById('grid').innerHTML = scoreGrid(grid, A.short, B.short, null);
+
+  /* what actually happened */
+  const [x, y] = [A.id, B.id].sort();
+  const rec = h2h.pairs[`${x}|${y}`];
+  const card = document.getElementById('h2hcard');
+  if (!rec) {
+    document.getElementById('h2hsub').textContent =
+      `${A.name} and ${B.name} have not met in any competition the corpus covers — `
+      + 'fifteen seasons of UEFA competition and every domestic league in it since 2015.';
+    document.getElementById('h2hbody').innerHTML = '';
+  } else {
+    const first = x === A.id;
+    const aw = first ? rec.aw : rec.bw;
+    const bw = first ? rec.bw : rec.aw;
+    const agf = first ? rec.agf : rec.bgf;
+    const bgf = first ? rec.bgf : rec.agf;
+    document.getElementById('h2hsub').textContent =
+      `${rec.n} meeting${rec.n === 1 ? '' : 's'} in the corpus, most recently on ${rec.last}.`;
+    document.getElementById('h2hbody').innerHTML =
+      row('Wins', aw, bw, aw === bw ? -1 : (aw > bw ? 0 : 1))
+      + row('Draws', rec.d, rec.d, -1)
+      + row('Goals', agf, bgf, agf === bgf ? -1 : (agf > bgf ? 0 : 1))
+      + `<p class="hint" style="margin-top:14px">Last meeting: ${esc(rec.lastr || '')}.</p>`;
+  }
+  card.hidden = false;
+
+  /* trajectories */
+  const [ha, hb] = await Promise.all([trajectory(A), trajectory(B)]);
+  const el = document.getElementById('traj');
+  if (!ha && !hb) {
+    el.innerHTML = '<p class="empty">Neither club plays in a competition this site '
+      + 'forecasts, so there is no season-by-season line to draw.</p>';
+    return;
+  }
+  /* Two charts rather than two lines on one: a shared axis from zero squashes
+     both series into the top tenth of the frame, and these two clubs are being
+     compared on the numbers above, not on the shape of a shared y-axis. */
+  const panel = (h, c) => !h ? `
+    <section><h3 style="font-size:13.5px;margin:0 0 8px">${esc(c.name)}</h3>
+      <p class="empty" style="padding:12px 0">No season-by-season line: this site does not
+        forecast ${esc(c.league)}.</p></section>` : `
+    <section><h3 style="font-size:13.5px;margin:0 0 8px">${esc(c.name)}</h3>
+      ${timeline(h, { w: 520, h: 210, color: chipColor(c.primary) })}
+      <p class="hint" style="margin-top:6px">${esc(h[0].season)} → ${esc(h[h.length - 1].season)}</p>
+    </section>`;
+  el.innerHTML = `<div class="split">${panel(ha, A)}${panel(hb, B)}</div>
+    <p class="hint" style="margin-top:10px">Each point is fitted only on matches played
+      before that season began, so the line is a walk-forward record rather than a curve
+      drawn through hindsight. Vertical scales are each club's own.</p>`;
+}
+
+initPalette([]);
+await render();
+window.addEventListener('themechange', render);
+</script>
+</body>
+</html>

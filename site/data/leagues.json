@@ -1,6 +1,6 @@
 {
  "default": "premier-league",
- "generated": "2026-08-19T12:45:26+00:00",
+ "generated": "2026-08-19T18:52:46+00:00",
  "leagues": [
   {
    "slug": "premier-league",
@@ -56,6 +56,41 @@
    "ucl_places": 3,
    "releg_places": 2,
    "releg_note": "16th plays a two-legged relegation play-off against a Ligue 2 club; 4th enters Champions League qualifying"
+  },
+  {
+   "slug": "eredivisie",
+   "name": "Eredivisie",
+   "country": "Netherlands",
+   "ready": true,
+   "kind": "league",
+   "n_teams": 18,
+   "ucl_places": 2,
+   "releg_places": 1,
+   "releg_note": "16th and 17th enter the promotion/relegation play-offs"
+  },
+  {
+   "slug": "primeira-liga",
+   "name": "Primeira Liga",
+   "country": "Portugal",
+   "ready": true,
+   "kind": "league",
+   "n_teams": 18,
+   "ucl_places": 2,
+   "releg_places": 2,
+   "releg_note": null
+  },
+  {
+   "slug": "championship",
+   "name": "Championship",
+   "country": "England",
+   "ready": true,
+   "kind": "promotion",
+   "n_teams": 24,
+   "ucl_places": 2,
+   "releg_places": 3,
+   "releg_note": "3rd to 6th play off for the third promotion place",
+   "advance_direct": 2,
+   "advance_playoff": 4
   },
   {
    "slug": "champions-league",

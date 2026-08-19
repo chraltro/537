@@ -134,8 +134,10 @@ nav.top a[aria-current="page"] { background: var(--raised); color: var(--ink); }
 /* ---------- kind-dependent columns ----------
    Some columns only mean something in one kind of competition. Which ones are
    live is set once, on the root element, from the manifest's `kind`. */
-:root:not([data-kind="cup"]) .cuponly { display: none; }
-:root[data-kind="cup"] .leagueonly { display: none; }
+:root:not([data-kind="cup"]):not([data-kind="promotion"]) .cuponly { display: none; }
+:root[data-kind="cup"] .leagueonly,
+:root[data-kind="promotion"] .leagueonly { display: none; }
+:root:not([data-kind="promotion"]) .promoonly { display: none; }
 
 /* ---------- page head ---------- */
 .pagehead { padding: 40px 0 26px; }
@@ -617,4 +619,115 @@ kbd {
    to it, wrapping every run-in strip at 390px. */
 @media (max-width: 620px) {
   .fdr .box { width: 44px; height: 34px; font-size: 10.5px; }
+}
+
+/* ================= additions =================
+   Everything below belongs to a component added after the original five-league
+   site: the luck table, the rating timeline, the scenario curves, the global
+   ranking, the comparison tool, the freshness panel and the review page. Same
+   tokens, same shapes, nothing new invented. */
+
+/* the spoken form of the scoreline grid, for anyone who cannot hover it */
+.gspoken { margin: 10px 0 0; line-height: 1.6; }
+
+/* generated weekly narrative */
+.narr { margin: 0 0 18px; }
+.narr p {
+  margin: 0 0 8px; color: var(--ink2); font-size: 14.5px; line-height: 1.65;
+  max-width: 76ch;
+}
+.narr p:first-child { color: var(--ink); font-size: 15.5px; }
+
+/* over/under-performance */
+.luck { display: inline-flex; align-items: center; gap: 8px; min-width: 132px; }
+.luck-track {
+  position: relative; flex: 1; height: 6px; border-radius: 3px;
+  background: var(--grid); min-width: 84px;
+}
+.luck-track i {
+  position: absolute; top: 0; height: 6px; border-radius: 3px; display: block;
+}
+.luck-track i.over  { background: var(--good); }
+.luck-track i.under { background: var(--away); }
+.luck-track::before {
+  content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px;
+  width: 1px; background: var(--rule);
+}
+.luck b { font-variant-numeric: tabular-nums; min-width: 40px; text-align: right; }
+
+/* rating timeline */
+.timeline { position: relative; }
+.timeline svg { width: 100%; height: auto; display: block; overflow: visible; }
+.timeline .tl-axis { fill: var(--muted); font-size: 10px; }
+.timeline .tl-peak { fill: var(--ink2); font-size: 10.5px; }
+
+/* points-conditional scenario curves */
+.scen { display: grid; gap: 4px; }
+.scen-row { display: grid; grid-template-columns: 58px 1fr 54px; gap: 10px; align-items: center; }
+.scen-row .pts { color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.scen-row .val { font-size: 11.5px; font-variant-numeric: tabular-nums; color: var(--ink2); text-align: right; }
+.scen-bar { height: 12px; border-radius: 3px; background: var(--grid); overflow: hidden; }
+.scen-bar > i { display: block; height: 100%; background: var(--accent); }
+
+/* game state / discipline stat rows */
+.statgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.statgrid .s { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 13px 15px; }
+.statgrid .s .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.statgrid .s .v { font-size: 21px; font-weight: 700; margin-top: 5px; font-variant-numeric: tabular-nums; }
+.statgrid .s .n { color: var(--ink2); font-size: 11.5px; margin-top: 2px; }
+
+/* data freshness */
+.fresh { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap;
+  color: var(--muted); font-size: 12.5px; }
+.fresh .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); display: inline-block; }
+.fresh.stale .dot { background: var(--warning); }
+.fresh.old .dot { background: var(--critical); }
+.fresh b { color: var(--ink2); font-weight: 600; }
+
+/* global ranking */
+.rk-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.rk-filters input[type="search"] {
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  border-radius: 9px; padding: 7px 11px; font: inherit; font-size: 13px; min-width: 190px;
+}
+.stale-tag {
+  font-size: 10px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--warning); border: 1px solid currentColor; border-radius: 4px;
+  padding: 0 4px; margin-left: 7px; white-space: nowrap;
+}
+
+/* comparison */
+.cmp-pickers { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: center; margin-bottom: 20px; }
+.cmp-pickers .vs { color: var(--muted); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+.cmp-pickers select {
+  width: 100%; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 13.5px;
+}
+.cmp-row { display: grid; grid-template-columns: 1fr 150px 1fr; gap: 12px; align-items: center;
+  padding: 9px 0; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+.cmp-row .lab { color: var(--muted); font-size: 11.5px; text-align: center;
+  text-transform: uppercase; letter-spacing: .05em; }
+.cmp-row .a { text-align: right; font-weight: 600; }
+.cmp-row .b { text-align: left; font-weight: 600; }
+.cmp-row .lead { color: var(--accent); }
+
+/* review / post-mortem */
+.errrow { display: grid; grid-template-columns: 1fr 90px 90px 84px; gap: 12px; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--grid); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.errrow .h { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+
+@media (max-width: 720px) {
+  .cmp-pickers { grid-template-columns: 1fr; }
+  .cmp-pickers .vs { text-align: center; }
+  .cmp-row { grid-template-columns: 1fr 110px 1fr; gap: 8px; }
+  .errrow { grid-template-columns: 1fr 62px 62px 60px; gap: 8px; font-size: 12.5px; }
+  .scen-row { grid-template-columns: 46px 1fr 46px; }
+}
+
+/* Motion is decoration here; anyone who has asked for less should get none. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important; scroll-behavior: auto !important;
+  }
 }

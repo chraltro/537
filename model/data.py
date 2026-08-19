@@ -27,6 +27,14 @@ class Dataset:
         self.top: list[Match] = []           # top-flight history, with shots
         self.second: list[Match] = []        # second-tier history, goals only
         self.fixtures: list[Match] = []      # the season ahead, in full
+        #: Where this season's results actually came from, and how fresh they
+        #: are. The build stamp says when the pipeline ran; this says what the
+        #: pipeline could see, which is routinely weeks older -- the results
+        #: mirror does not even create a season's CSV until months in (it added
+        #: 2025-26 on 2026-02-17), so early-season builds run entirely off the
+        #: openfootball fallback. A site that hides that is claiming currency it
+        #: does not have.
+        self.sources: dict = {}
 
     # Legacy names from the single-league pipeline. They alias the same lists,
     # so `ds.pl.append(...)` and `ds.top.append(...)` are the same call.
@@ -42,18 +50,33 @@ class Dataset:
     def load(self) -> "Dataset":
         lg = self.league
         print(f"Loading {lg.name} history…")
-        for code in lg.fd_season_codes(self.season):
-            label = _season_label(code)
-            current = label == self.season
-            text = fetch.results_csv(lg, code, required=not current)
-            if not text:
-                if current:
-                    print(f"  · {label}: no results yet (season not started)")
-                continue
-            got = parse_football_data_csv(text, label, self.reg)
-            self.top.extend(m for m in got if m.played)
+        if lg.source == "openfootball":
+            # No football-datasets directory exists for this competition -- the
+            # mirror carries five leagues and no more -- so history comes from
+            # the same plain-text feed as the fixtures. Goals only: no shots, no
+            # cards, no half-time score, no referee.
+            for label in lg.top_season_labels(self.season):
+                if label == self.season:
+                    continue          # the fixture file below is that season
+                text = fetch.fixtures_text(lg, label, "top", required=False)
+                if not text:
+                    continue
+                self.top.extend(m for m in parse_openfootball(text, label, self.reg)
+                                if m.played)
+        else:
+            for code in lg.fd_season_codes(self.season):
+                label = _season_label(code)
+                current = label == self.season
+                text = fetch.results_csv(lg, code, required=not current)
+                if not text:
+                    if current:
+                        print(f"  · {label}: no results yet (season not started)")
+                    continue
+                got = parse_football_data_csv(text, label, self.reg)
+                self.top.extend(m for m in got if m.played)
         print(f"  · {len(self.top)} matches over "
-              f"{len({m.season for m in self.top})} seasons")
+              f"{len({m.season for m in self.top})} seasons "
+              f"(source: {lg.source})")
 
         print("Loading second-tier history…")
         for label in lg.second_season_labels(self.season):
@@ -87,22 +110,55 @@ class Dataset:
         for m in self.top:
             if m.season == self.season:
                 played[(m.home, m.away)] = m
+        n_mirror = len(played)
         for m in self.fixtures:
             if m.played and (m.home, m.away) not in played:
                 played[(m.home, m.away)] = m       # openfootball fallback
+        n_fallback = len(played) - n_mirror
 
         for f in self.fixtures:
             src = played.get((f.home, f.away))
             if src is not None and src is not f:
                 f.hg, f.ag, f.played = src.hg, src.ag, True
                 f.hs, f.as_, f.hst, f.ast = src.hs, src.as_, src.hst, src.ast
+                f.hthg, f.htag, f.referee = src.hthg, src.htag, src.referee
+                f.hc, f.ac, f.hf, f.af = src.hc, src.ac, src.hf, src.af
+                f.hy, f.ay, f.hr, f.ar = src.hy, src.ay, src.hr, src.ar
         # Make sure in-season results reach the rating fit exactly once.
         have = {(m.home, m.away) for m in self.top if m.season == self.season}
         for f in self.fixtures:
             if f.played and (f.home, f.away) not in have:
                 self.top.append(f)
         done = sum(1 for f in self.fixtures if f.played)
-        print(f"  · {len(self.fixtures)} fixtures, {done} already played")
+        results = [f for f in self.fixtures if f.played]
+        upcoming = [f for f in self.fixtures if not f.played]
+        latest = max((f.date for f in results), default=None)
+        nxt = min((f.date for f in upcoming), default=None)
+        shots = sum(1 for f in results if f.hst is not None)
+        lg = self.league
+        mirror = (lg.source == "mirror")
+        self.sources = {
+            "kind": lg.source,
+            "mirror": {
+                "name": "football-datasets (football-data.co.uk mirror)",
+                "url": (lg.fd_csv_url(lg.fd_season_codes(self.season)[-1])
+                        if mirror else None),
+                "played": n_mirror,
+                "available": mirror,
+            },
+            "fixtures": {
+                "name": "openfootball",
+                "url": lg.of_url(self.season, "top"),
+                "played": n_fallback,
+                "available": True,
+            },
+            "results_to": latest.isoformat() if latest else None,
+            "next_fixture": nxt.isoformat() if nxt else None,
+            "played": done,
+            "with_shots": shots,
+        }
+        print(f"  · {len(self.fixtures)} fixtures, {done} already played "
+              f"({n_mirror} from the results mirror, {n_fallback} from openfootball)")
 
     # -- integrity ----------------------------------------------------------
     def validate(self) -> None:

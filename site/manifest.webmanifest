@@ -1,0 +1,19 @@
+{
+  "name": "Ninety — open football forecast",
+  "short_name": "Ninety",
+  "description": "A rating for every club, a probability for every match, and a simulated season — for eight competitions, rebuilt from public data every six hours.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d0d0d",
+  "theme_color": "#3987e5",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

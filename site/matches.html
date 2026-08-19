@@ -7,7 +7,12 @@
 <meta name="description" content="Win, draw and loss probabilities plus a projected scoreline for every match of the season.">
 <meta property="og:title" content="Every match — season forecast">
 <meta property="og:description" content="Win, draw and loss probabilities plus a projected scoreline for every fixture.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="og/premier-league.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="og/premier-league.png">
 <link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
 </head>
 <body>
@@ -68,7 +73,7 @@
 <script type="module">
 import { data, pct, esc, initChrome, tip, tipRows, chipColor, initPalette, matchModal,
          lg, withLg, setMeta, eventLabels, roundLabel, roundShort,
-         isMatchweek } from './assets/app.js';
+         isMatchweek, cardUrl} from './assets/app.js';
 initChrome('matches');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
@@ -85,6 +90,7 @@ setMeta({
   ogTitle: `All ${nMatches} ${W.name} matches — ${fc.season} forecast`,
   description: `Win, draw and loss probabilities plus a projected scoreline for all `
     + `${nMatches} ${W.name} matches in ${fc.season}.`,
+  image: cardUrl(W.slug),
 });
 document.getElementById('h1').textContent = `All ${nMatches} matches`;
 document.getElementById('bigsub').textContent =

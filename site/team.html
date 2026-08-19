@@ -5,7 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Club forecast — Premier League 2026/27</title>
 <meta name="description" content="Per-club season forecast: rating trajectory, finishing-position distribution and every remaining fixture.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="og/premier-league.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="og/premier-league.png">
 <link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
 <style>
   .posbars { display: grid; grid-template-columns: repeat(var(--n, 20), 1fr); gap: 2px; align-items: end; height: 130px; }
@@ -51,8 +56,9 @@
   <div class="split">
     <section class="card">
       <h2>Rating trajectory</h2>
-      <p class="sub">SPI at the start of each season — the share of points this club would
-        take against an average team, home and away.</p>
+      <p class="sub" id="sparksub">SPI at the start of each season — the share of points this
+        club would take against an average team, home and away. Every point is fitted only on
+        matches played before that season began.</p>
       <div id="spark"></div>
       <div id="sparklab" style="color:var(--muted);font-size:11.5px;margin-top:6px"></div>
     </section>
@@ -83,6 +89,21 @@
     <p class="hint" id="bracketnote" style="margin-top:12px"></p>
   </section>
 
+  <section class="card" id="scencard" hidden>
+    <h2 id="scenhead">What they need</h2>
+    <p class="sub" id="scensub"></p>
+    <div class="chips" role="tablist" aria-label="Outcome" id="scenchips"></div>
+    <div class="scen" id="scenbody" style="margin-top:16px"></div>
+    <p class="hint" id="scennote" style="margin-top:14px"></p>
+  </section>
+
+  <section class="card" id="statecard" hidden>
+    <h2>Either side of the interval</h2>
+    <p class="sub" id="statesub"></p>
+    <div class="statgrid" id="stategrid"></div>
+    <div class="statgrid" id="discgrid" style="margin-top:12px"></div>
+  </section>
+
   <section class="card">
     <h2>The run of fixtures</h2>
     <p class="sub">Difficulty of each of the next matches, shaded by the opponent's rating
@@ -100,19 +121,27 @@
   </section>
 
   <section class="card">
-    <h2>Every fixture</h2>
-    <p class="sub">Win probability for this club in each match of the season.</p>
+    <div class="cardbar">
+      <h2>Every fixture</h2>
+      <a class="morelink" id="callink" href="#">Subscribe in your calendar →</a>
+    </div>
+    <p class="sub">Win probability for this club in each match of the season. The calendar
+      feed carries the same probabilities and refreshes itself as the season moves.</p>
     <div id="fixtures"></div>
   </section>
 </main>
 
 <script type="module">
-import { data, pct, signed, esc, ord, initChrome, tip, tipRows, sparkline, chipColor,
-         initPalette, matchModal, lg, withLg, setMeta, eventLabels,
+import { data, pct, signed, esc, ord, initChrome, tip, tipRows, timeline, chipColor,
+         initPalette, matchModal, lg, withLg, setMeta, eventLabels, cardUrl,
          bracketStrip, roundLabel, roundShort } from './assets/app.js';
 initChrome('team');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
+/* Two files this page can do without: a competition built before they existed,
+   or one whose feed has no half-time score, simply hides those sections. */
+const soft = async (name) => { try { return await data(name); } catch { return null; } };
+const [scen, gs] = [await soft('scenarios'), await soft('gamestate')];
 const W = lg();
 document.documentElement.setAttribute('data-kind', W.kind);
 const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
@@ -161,10 +190,128 @@ document.getElementById('clubbig').addEventListener('click', (e) => {
   matchModal(mm.matches.find((m) => m.h === hh && m.a === aa), meta);
 });
 
+/* ---- what they need ----
+   `scenarios.json` holds, for every club, how often each of the three outcomes
+   happened in the simulated seasons where that club finished on a given points
+   total. It is a conditional, not a promise: "seasons in which they finished on
+   N points", never "if they get N points". */
+let scenEvent = null;
+
+function renderScenarios(t) {
+  const card = document.getElementById('scencard');
+  const row = (scen && scen.teams || []).find((r) => r.id === t.id);
+  if (!row || !row.pts || row.pts.length < 3) { card.hidden = true; return; }
+  card.hidden = false;
+  const EVENTS = scen.events || ['title', 'ucl', 'releg'];
+  const LABEL = eventLabels();
+  const words = {
+    title: W.isCup ? 'Win it' : (W.isPromotion ? 'Win the title' : 'Win the title'),
+    ucl: W.isPromotion ? 'Go up automatically' : (W.isCup ? W.topN : `Reach the ${W.topWord}`),
+    releg: W.isCup ? 'Go out' : 'Go down',
+    top8: W.topN, qualify: 'Reach the knockout', out: 'Go out',
+  };
+  /* Pick a default worth looking at: the outcome that is genuinely in the
+     balance for this club, not the one that is 0% at every points total. */
+  const live = EVENTS.filter((e) => {
+    const v = row[e] || [];
+    return v.some((p) => p > 0.02) && v.some((p) => p < 0.98);
+  });
+  if (!live.length) { card.hidden = true; return; }
+  if (!live.includes(scenEvent)) scenEvent = live[0];
+
+  document.getElementById('scenchips').innerHTML = live.map((e) => `
+    <button class="chip-btn" data-ev="${e}" role="tab"
+            aria-pressed="${e === scenEvent}">${esc(words[e] || LABEL[e] || e)}</button>`).join('');
+
+  const draw = () => {
+    const vals = row[scenEvent] || [];
+    /* Two trims, both about not drawing rows that say nothing. First, cut the
+       run of flat 0% at the bottom and flat 100% at the top — the interesting
+       part of a curve is where it turns — keeping one row either side so the
+       reader can see it was flat. Then thin what is left, so a 47-bin curve
+       does not become a 47-row wall. */
+    let lo = vals.findIndex((v) => v > 0.005);
+    let hi = vals.length - 1 - [...vals].reverse().findIndex((v) => v < 0.995);
+    if (lo < 0) { lo = 0; hi = vals.length - 1; }
+    lo = Math.max(0, lo - 1);
+    hi = Math.min(vals.length - 1, Math.max(hi + 1, lo + 7));
+    const step = Math.max(1, Math.ceil((hi - lo + 1) / 14));
+    const idx = row.pts.map((_, i) => i)
+      .filter((i) => i >= lo && i <= hi && (i % step === 0 || i === hi));
+    document.getElementById('scenbody').innerHTML = idx.map((i) => `
+      <div class="scen-row">
+        <span class="pts">${row.pts[i]} pts</span>
+        <span class="scen-bar"><i style="width:${(vals[i] * 100).toFixed(1)}%"></i></span>
+        <span class="val">${pct(vals[i], 0)}</span>
+      </div>`).join('');
+    /* The points total at which the outcome first becomes more likely than not. */
+    const flip = row.pts.find((p, i) => vals[i] >= 0.5);
+    const nearly = row.pts.find((p, i) => vals[i] >= 0.9);
+    document.getElementById('scennote').textContent = flip === undefined
+      ? `${t.name} do not reach an even chance of this at any points total the simulations `
+        + 'produced — which is itself the answer.'
+      : `${flip} points is where this becomes more likely than not`
+        + (nearly !== undefined ? `, and ${nearly} makes it near enough certain.` : '.')
+        + ` Read as: across the ${scen.n_sims.toLocaleString()} simulated seasons, this is how `
+        + `often it happened among the seasons ${t.name} finished on that many points.`;
+  };
+  document.getElementById('scensub').textContent =
+    `How often each outcome happened in the simulated seasons where ${t.name} finished on `
+    + 'a given points total. Only totals reached in at least '
+    + `${scen.min_seasons} simulations are shown.`;
+  document.getElementById('scenchips').onclick = (ev) => {
+    const b = ev.target.closest('[data-ev]');
+    if (!b) return;
+    scenEvent = b.dataset.ev;
+    document.querySelectorAll('#scenchips [data-ev]').forEach((x) =>
+      x.setAttribute('aria-pressed', String(x === b)));
+    draw();
+  };
+  draw();
+}
+
+/* ---- either side of the interval ---- */
+function renderState(t) {
+  const card = document.getElementById('statecard');
+  const st = gs && gs.state && gs.state[t.id];
+  const dc = gs && gs.discipline && gs.discipline[t.id];
+  if (!st || !st.n) { card.hidden = true; return; }
+  card.hidden = false;
+  const avg = gs.average || {};
+  const seasons = (gs.seasons || []);
+  document.getElementById('statesub').textContent =
+    `From ${st.n} matches across ${seasons.length} seasons (${seasons[0]}–`
+    + `${seasons[seasons.length - 1]}), using the half-time score the results feed has always `
+    + 'carried and this forecast never read.';
+  const tile = (k, v, note) =>
+    `<div class="s"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div>
+     <div class="n">${esc(note)}</div></div>`;
+  document.getElementById('stategrid').innerHTML = [
+    tile('Ahead at half time', pct(st.led_pct, 0), `${st.led} of ${st.n} matches`),
+    tile('Held on', st.hold_pct === null ? '—' : pct(st.hold_pct, 0),
+         `won ${st.led_won} of the ${st.led} they led`),
+    tile('Behind at half time', pct(st.behind_pct, 0), `${st.behind} matches`),
+    tile('Rescued it', st.recover_pct === null ? '—' : pct(st.recover_pct, 0),
+         `drew or won ${st.behind_saved} of ${st.behind}`),
+    tile('First-half goal difference', signed(st.first_half_gd), 'per match'),
+    tile('Second-half goal difference', signed(st.second_half_gd), 'per match'),
+  ].join('');
+  document.getElementById('discgrid').innerHTML = !dc || !dc.n ? '' : [
+    tile('Yellow cards', dc.yellow_pm.toFixed(2),
+         `per match · league average ${(avg.yellow_pm ?? 0).toFixed(2)}`),
+    tile('Red cards', dc.red_pm.toFixed(2),
+         `per match · league average ${(avg.red_pm ?? 0).toFixed(2)}`),
+    tile('Fouls conceded', dc.fouls_pm.toFixed(1),
+         `per match · league average ${(avg.fouls_pm ?? 0).toFixed(1)}`),
+    tile('Corners', dc.corners_pm.toFixed(1), `per match, ${dc.corners_against_pm.toFixed(1)} against`),
+  ].join('');
+}
+
 function render() {
   const t = meta[current];
   const rank = fc.teams.findIndex((x) => x.id === current) + 1;
   document.title = `${t.name} — ${W.name} ${fc.season} forecast`;
+  setMeta({ image: cardUrl(W.slug, t.id) });
   document.getElementById('title').innerHTML =
     `<span class="chip" style="background:${chipColor(t.primary)};height:.85em;width:6px;display:inline-block;vertical-align:baseline;margin-right:12px"></span>${esc(t.name)}`;
   document.getElementById('lede').textContent = W.isCup
@@ -205,10 +352,24 @@ function render() {
 
   const hist = t.history || [];
   document.getElementById('spark').innerHTML = hist.length > 1
-    ? sparkline(hist.map((h) => h.spi), { w: 420, h: 90 })
+    ? timeline(hist, { color: chipColor(t.primary) })
     : '<p style="color:var(--muted);font-size:13px">Not enough top-flight history to plot.</p>';
-  document.getElementById('sparklab').textContent = hist.length > 1
-    ? hist.map((h) => `${h.season} ${h.spi}`).join('   ·   ') : '';
+  if (hist.length > 1) {
+    const best = hist.reduce((x, y) => (y.spi > x.spi ? y : x));
+    const worst = hist.reduce((x, y) => (y.spi < x.spi ? y : x));
+    document.getElementById('sparklab').textContent =
+      `${hist.length} seasons, ${hist[0].season} to ${hist[hist.length - 1].season}. `
+      + `Strongest ${best.season} (${best.spi}), weakest ${worst.season} (${worst.spi}). `
+      + 'A gap in the line is a season spent outside this division.';
+  } else {
+    document.getElementById('sparklab').textContent = '';
+  }
+
+  renderScenarios(t);
+  renderState(t);
+  const cal = document.getElementById('callink');
+  cal.href = `cal/${W.slug}/${encodeURIComponent(t.id)}.ics`;
+  cal.textContent = `${t.short} fixtures in your calendar →`;
 
   /* One bar per finishing place, with the qualification and relegation cuts
      drawn where this league puts them. */

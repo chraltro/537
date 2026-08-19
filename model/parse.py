@@ -84,6 +84,23 @@ class Match:
     as_: int | None = None
     hst: int | None = None         # shots on target
     ast: int | None = None
+    # -- half time and discipline -------------------------------------------
+    # Present in every football-data mirror CSV and, until now, read by nothing.
+    # Half-time goals are complete from 2000-01 in all five leagues; cards,
+    # corners and fouls likewise. `referee` is, in practice, a Premier League
+    # column: 26 seasons there (2000-01..2025-26) against two in the Bundesliga
+    # files, two in Serie A's and none at all in La Liga's or Ligue 1's.
+    hthg: int | None = None        # half-time goals
+    htag: int | None = None
+    hc: int | None = None          # corners
+    ac: int | None = None
+    hf: int | None = None          # fouls conceded
+    af: int | None = None
+    hy: int | None = None          # yellow cards
+    ay: int | None = None
+    hr: int | None = None          # red cards
+    ar: int | None = None
+    referee: str | None = None
     matchday: int | None = None
     time: str | None = None
     season: str = ""
@@ -140,6 +157,12 @@ def parse_football_data_csv(text: str, season: str, reg: TeamRegistry) -> list[M
             hg=hg, ag=ag,
             hs=_to_int(row.get("HS")), as_=_to_int(row.get("AS")),
             hst=_to_int(row.get("HST")), ast=_to_int(row.get("AST")),
+            hthg=_to_int(row.get("HTHG")), htag=_to_int(row.get("HTAG")),
+            hc=_to_int(row.get("HC")), ac=_to_int(row.get("AC")),
+            hf=_to_int(row.get("HF")), af=_to_int(row.get("AF")),
+            hy=_to_int(row.get("HY")), ay=_to_int(row.get("AY")),
+            hr=_to_int(row.get("HR")), ar=_to_int(row.get("AR")),
+            referee=(row.get("Referee") or "").strip() or None,
             season=season, played=hg is not None and ag is not None,
         ))
     return out
@@ -181,8 +204,8 @@ _TRAIL_SCORE = re.compile(r"\s{2,}" + _RESULT + r"\s*$", re.I | re.X)
 _MID_SCORE = re.compile(r"\s{2,}" + _RESULT + r"\s{2,}", re.I | re.X)
 
 
-def _score_from(m: "re.Match") -> tuple[int, int, bool]:
-    """The 90-minute score, and whether the tie went past it.
+def _score_from(m: "re.Match") -> tuple[int, int, bool, tuple[int, int] | None]:
+    """The 90-minute score, whether the tie went past it, and the half-time score.
 
     When `a.e.t.` is present the leading pair is the score after 120 minutes and
     the FIRST pair inside the parentheses is the score after 90 -- verified
@@ -192,9 +215,16 @@ def _score_from(m: "re.Match") -> tuple[int, int, bool]:
     half-time score, which is the plain domestic layout.
     """
     aet = bool(m.group("aet"))
-    if aet and m.group("p1h") is not None:
-        return int(m.group("p1h")), int(m.group("p1a")), True
-    return int(m.group("h")), int(m.group("a")), aet
+    p1 = ((int(m.group("p1h")), int(m.group("p1a")))
+          if m.group("p1h") is not None else None)
+    p2 = ((int(m.group("p2h")), int(m.group("p2a")))
+          if m.group("p2h") is not None else None)
+    if aet and p1 is not None:
+        # `2-1 a.e.t. (1-1, 0-1)`: the parentheses hold 90 minutes then half time.
+        return p1[0], p1[1], True, p2
+    # `2-1 (1-0)`: the parenthesis is the half-time score, which the mirror
+    # feed gives us as its own column and this feed has been throwing away.
+    return int(m.group("h")), int(m.group("a")), aet, p1
 
 
 def _is_club(s: str) -> bool:
@@ -306,9 +336,10 @@ def parse_openfootball(text: str, season: str, reg: TeamRegistry,
 
         hg = ag = None
         aet = False
+        ht = None
         sm = _TRAIL_SCORE.search(body)
         if sm:
-            hg, ag, aet = _score_from(sm)
+            hg, ag, aet, ht = _score_from(sm)
             body = body[:sm.start()]
 
         if " v " in body:
@@ -317,7 +348,7 @@ def parse_openfootball(text: str, season: str, reg: TeamRegistry,
             sm2 = _MID_SCORE.search(body)
             if not sm2:
                 continue
-            hg, ag, aet = _score_from(sm2)
+            hg, ag, aet, ht = _score_from(sm2)
             home, away = body[:sm2.start()], body[sm2.end():]
 
         home, away = home.strip(), away.strip()
@@ -332,7 +363,9 @@ def parse_openfootball(text: str, season: str, reg: TeamRegistry,
         if not _is_club(home) or not _is_club(away):
             continue
         out.append(Match(date=cur_date, home=reg.resolve(home), away=reg.resolve(away),
-                         hg=hg, ag=ag, matchday=matchday, time=time, season=season,
+                         hg=hg, ag=ag,
+                         hthg=ht[0] if ht else None, htag=ht[1] if ht else None,
+                         matchday=matchday, time=time, season=season,
                          played=hg is not None and ag is not None,
                          stage=stage, leg=leg, home_assoc=h_assoc, away_assoc=a_assoc,
                          comp=comp, aet=aet))

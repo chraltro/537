@@ -5,7 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Method and accuracy — Premier League 2026/27 Forecast</title>
 <meta name="description" content="How the forecast works: Dixon-Coles ratings on a shots-and-goals blend, measured promotion priors, a decaying market anchor, and a walk-forward backtest against three baselines.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="og/premier-league.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="og/premier-league.png">
 <link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
 <style>
   .barrow { display: grid; grid-template-columns: 190px 1fr 74px; gap: 12px; align-items: center; margin-bottom: 7px; font-size: 13.5px; }
@@ -26,6 +31,50 @@
       match results to a simulated league table. This page explains each step and then shows
       what happens when the model is made to predict the past without being allowed to see it.</p>
   </div>
+
+  <section class="card" id="freshcard">
+    <h2>How current is this?</h2>
+    <p class="sub">The build stamp on every page says when the pipeline last ran. That is not
+      the same as how fresh the data is, and on this site the two are routinely weeks apart:
+      the results mirror does not create a season's file until months into it — it added
+      2025-26 on 17 February 2026 — and openfootball's own in-season commits come roughly
+      weekly with multi-week gaps. So this says what the pipeline could actually see.</p>
+    <div class="statgrid" id="freshgrid"></div>
+    <p class="hint" id="freshnote" style="margin-top:14px"></p>
+  </section>
+
+  <section class="card" id="extcard" hidden>
+    <h2>Against the market, and against ClubElo</h2>
+    <p class="sub" id="extsub"></p>
+    <div id="extbody"></div>
+    <p class="hint" id="extnote" style="margin-top:16px"></p>
+  </section>
+
+  <section class="card" id="refcard" hidden>
+    <h2>Who is in the middle</h2>
+    <p class="sub" id="refsub"></p>
+    <div class="scroller">
+      <table id="reftbl">
+        <thead><tr>
+          <th class="l" data-k="name">Referee</th>
+          <th data-k="n">Matches</th>
+          <th data-k="yellow_pm">Yellows</th>
+          <th data-k="red_pm">Reds</th>
+          <th data-k="fouls_pm">Fouls</th>
+          <th data-k="goals_pm">Goals</th>
+          <th data-k="home_win_pct">Home wins</th>
+          <th data-k="draw_pct">Draws</th>
+        </tr></thead>
+        <tbody id="refbody"></tbody>
+      </table>
+    </div>
+    <p class="hint" style="margin-top:14px">All per match, against the league average in the
+      header row. This is a record of what happened in these officials' matches and nothing
+      more: a referee is appointed to fixtures rather than drawn at random, so a high card
+      rate may be a hard beat rather than a strict official — and no source the build can
+      reach names the referee before kick-off, so none of this could be applied to a match
+      that has not been played. It is not an input to any forecast on this site.</p>
+  </section>
 
   <section class="card" id="seasoncard" hidden>
     <h2>How it is doing this season</h2>
@@ -173,6 +222,47 @@
       play for score near zero however famous they are; a relegation six-pointer between two
       poor teams scores near the top.</p>
 
+    <h3>Half time, and the columns nobody read</h3>
+    <p>Every row of the results feed has carried a half-time score, the referee's name, cards,
+      corners and fouls since 2000-01, and until recently this project read none of them. The
+      half-time score now gets its own Dixon–Coles fit — the same model on a different target
+      — which is where the interval probabilities on each match page and the game-state
+      figures on each club page come from. Goals only there: shot counts are full-match totals
+      and cannot be split across the break.</p>
+    <p>Cards and fouls are published as a club's record, not as a model input. The referee is
+      published the same way and deliberately does no work: no source reachable from the build
+      names the official <em>before</em> kick-off, so a referee term could never be applied to
+      a match that has not been played, and a referee who books more is usually working
+      harder fixtures rather than being stricter. The column is also, in practice, a Premier
+      League one — twenty-six seasons carry it there against two in the Bundesliga files, two
+      in Serie A's and none at all in La Liga's or Ligue 1's — so the referee section below
+      appears for the Premier League and nowhere else.</p>
+
+    <h3>One scale for every club</h3>
+    <p>The <a href="rankings.html">global ranking</a> is a second, separate fit: one
+      Dixon–Coles model over fifteen seasons of UEFA competition, the big five, every
+      non-big-five top flight with a feed, and the Championship — about sixty-six thousand
+      matches and eight hundred clubs. The continental matches are the only edges joining one
+      league to another, and they are what identify each league's offset. It carries a home
+      term per competition and shrinks each club toward its own league's mean rather than
+      toward the global one, without which a pooled fit drags Real Madrid down and Lincoln Red
+      Imps up in equal measure and calls the result a rating.</p>
+    <p>That rating is published on its own page and on its own scale, and it does
+      <em>not</em> feed the league forecasts here. SPI means "share of points against an
+      average opponent", and pooling redefines the average as the average of eight hundred
+      clubs across fifty-three leagues; swapping one for the other would move every number on
+      this site without a single new result behind it.</p>
+
+    <h3>Competitions with only one feed</h3>
+    <p>Five of the eight competitions on this site come from the football-datasets mirror,
+      which carries shots, cards and half-time scores. The mirror has exactly five league
+      directories, so the Eredivisie, the Primeira Liga and the Championship are read from
+      openfootball alone: goals and half-time scores, no shots, no cards, no referee, and no
+      second source if that feed goes quiet. The shot-and-goals blend already handles a club
+      with no shot data — it is the same mechanism that rates a promoted club — but those
+      three forecasts lean entirely on goals, and the freshness panel at the top of this page
+      is where you would notice a stalled feed.</p>
+
     <h3>Marking its own homework, carefully</h3>
     <p>Scoring a forecast against results it has already absorbed is meaningless. So each
       match's probabilities are archived the last time the model saw it as unplayed, and that
@@ -185,6 +275,10 @@
         looks the same to this model as one at full strength. This is the largest single gap.</li>
       <li><b>No true expected goals.</b> Shot locations are not in any free feed, so shot
         quality is approximated by whether a shot was on target.</li>
+      <li><b>No live anything.</b> The pipeline runs every six hours, so there is no in-play
+        win probability and there never will be from these sources.</li>
+      <li><b>No referee effect.</b> Referee appointments are not published anywhere the build
+        can reach before kick-off, so the referee page is a record and not a prediction.</li>
       <li><b>No fixture congestion or European commitments.</b> A Thursday night in Baku
         followed by a Sunday lunchtime kick-off is not modelled.</li>
       <li><b>Promoted clubs carry real uncertainty.</b> The correction is measured across 39
@@ -207,7 +301,7 @@
 
 <script type="module">
 import { data, pct, esc, initChrome, tip, tipRows, initPalette, lineChart, chipColor,
-         probBar, lg, ord, setMeta } from './assets/app.js';
+         probBar, lg, ord, setMeta, cardUrl } from './assets/app.js';
 initChrome('method');
 
 const fc = await data('forecast');
@@ -219,7 +313,8 @@ setMeta({
   title: `Method and accuracy — ${W.name} ${fc.season} Forecast`,
   description: `How the ${W.name} forecast works: Dixon-Coles ratings on a shots-and-goals `
     + 'blend, measured promotion priors, a decaying market anchor, and a walk-forward '
-    + 'backtest against three baselines.',
+    + 'backtest against the closing odds, ClubElo and three simpler baselines.',
+  image: cardUrl(W.slug),
 });
 
 /* Each league is fitted, backtested and calibrated on its own history, so the
@@ -309,6 +404,82 @@ if (sr && sr.n > 0) {
     `<div id="tipish">${sr.confident.map((r) => line(r, 'accent')).join('')}</div>
      <p class="hint" style="margin-top:8px">Correct calls where it was most sure.</p>`;
 }
+/* ---- data freshness ---- */
+const src = fc.sources || {};
+(() => {
+  const grid = document.getElementById('freshgrid');
+  const daysSince = (iso) => (iso
+    ? Math.round((Date.now() - new Date(`${iso}T12:00:00`)) / 86400000) : null);
+  const gap = daysSince(src.results_to);
+  const tile = (k, v, note) =>
+    `<div class="s"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div>
+     <div class="n">${esc(note)}</div></div>`;
+  const shots = src.played ? Math.round((src.with_shots / src.played) * 100) : null;
+  grid.innerHTML = [
+    tile('Results current to', src.results_to || 'no matches yet',
+         gap === null ? 'The season has not started' : `${gap} days ago`),
+    tile('Matches played', `${src.played ?? 0} of ${fc.matches_total}`,
+         `${src.mirror?.played ?? 0} from the results mirror, `
+         + `${src.fixtures?.played ?? 0} from openfootball`),
+    tile('Next fixture', src.next_fixture || '—',
+         src.next_fixture ? 'First unplayed match in the list' : 'Season complete'),
+    tile('With shot data', shots === null ? '—' : `${shots}%`,
+         src.kind === 'mirror'
+           ? 'Shots come from the mirror only, which lags the season'
+           : 'This competition has no shot feed at all — goals only'),
+  ].join('');
+  const note = document.getElementById('freshnote');
+  if (src.kind === 'openfootball') {
+    note.innerHTML = `${esc(W.name)} has no football-datasets directory — the mirror carries `
+      + 'five leagues and no more — so its history, results and fixtures all come from a '
+      + `<a href="${esc(src.fixtures?.url || 'https://github.com/openfootball')}">single `
+      + 'openfootball file</a>, with no shots, no cards and no second source to fall back on. '
+      + 'If that file goes quiet, this table freezes, and the date above is how you would know.';
+  } else {
+    note.innerHTML = 'The results mirror is primary and openfootball is the fallback. Early in '
+      + 'a season the mirror has no file at all, so results arrive from openfootball without '
+      + 'shot counts and the ratings lean further on goals until the mirror catches up. '
+      + `<a href="${esc(src.mirror?.url || '')}">Mirror file</a> · `
+      + `<a href="${esc(src.fixtures?.url || '')}">fixture file</a>.`;
+  }
+})();
+
+/* ---- referees ---- */
+try {
+  const gs = await data('gamestate');
+  const refs = gs.referees || [];
+  const avg = gs.average || {};
+  if (refs.length) {
+    document.getElementById('refcard').hidden = false;
+    const seasons = gs.seasons || [];
+    document.getElementById('refsub').textContent =
+      `The ${refs.length} officials with at least thirty matches in the record, busiest `
+      + `first, over ${seasons.length} seasons`
+      + (seasons.length ? ` (${seasons[0]}–${seasons[seasons.length - 1]})` : '') + '.';
+    const cell = (v, base, digits, higherIsMore = true) => {
+      const off = base ? v - base : 0;
+      const strong = base && Math.abs(off) / base > 0.12;
+      return `<td class="${strong ? 'p-hi' : 'p-lo'}"
+        title="${base ? `league average ${base.toFixed(digits)}` : ''}">${v.toFixed(digits)}</td>`;
+    };
+    document.getElementById('refbody').innerHTML =
+      `<tr style="color:var(--muted)"><td class="l">League average</td><td>${avg.n ?? 0}</td>
+        <td>${(avg.yellow_pm ?? 0).toFixed(2)}</td><td>${(avg.red_pm ?? 0).toFixed(2)}</td>
+        <td>${(avg.fouls_pm ?? 0).toFixed(1)}</td><td>${(avg.goals_pm ?? 0).toFixed(2)}</td>
+        <td>${((avg.home_win_pct ?? 0) * 100).toFixed(1)}%</td>
+        <td>${((avg.draw_pct ?? 0) * 100).toFixed(1)}%</td></tr>`
+      + refs.map((r) => `<tr>
+          <td class="l">${esc(r.name)}</td><td>${r.n}</td>
+          ${cell(r.yellow_pm, avg.yellow_pm, 2)}
+          ${cell(r.red_pm, avg.red_pm, 2)}
+          ${cell(r.fouls_pm, avg.fouls_pm, 1)}
+          ${cell(r.goals_pm, avg.goals_pm, 2)}
+          <td>${(r.home_win_pct * 100).toFixed(1)}%</td>
+          <td>${(r.draw_pct * 100).toFixed(1)}%</td>
+        </tr>`).join('');
+  }
+} catch { /* a competition whose feed carries no referee column */ }
+
 document.getElementById('mw').textContent = fc.market_weight
   ? `Current market weight: ${(fc.market_weight * 100).toFixed(0)}%.`
   : `Current market weight: 0% — ${W.name} runs on results alone.`;
@@ -323,7 +494,13 @@ if (!bt) {
   /* Lead with the seasons that had no hand in choosing the hyperparameters. */
   const useHeld = !!bt.held_out;
   const m = useHeld ? bt.held_out : bt.model;
-  const bl = (useHeld && bt.baselines_held_out) ? bt.baselines_held_out : bt.baselines;
+  const allBl = (useHeld && bt.baselines_held_out) ? bt.baselines_held_out : bt.baselines;
+  /* The market and ClubElo come from a frozen external snapshot that does not
+     cover every season, so they are scored on a subset and get their own card
+     below. Putting them in this chart would compare two different samples. */
+  const EXTERNAL = ['market', 'clubelo'];
+  const bl = Object.fromEntries(
+    Object.entries(allBl).filter(([k]) => !EXTERNAL.includes(k)));
   const entries = [['model', 'This model', m], ...Object.entries(bl)
     .map(([k, v]) => [k, bt.names[k], v])];
   entries.sort((a, b) => a[2].log_loss - b[2].log_loss);
@@ -342,6 +519,46 @@ if (!bt) {
      The model calls the right result <b>${(m.accuracy * 100).toFixed(1)}%</b> of the time
      and ${beatsAll ? 'beats all three baselines on every metric'
                     : 'is compared against three baselines'}.`;
+
+  /* ---- the two baselines worth losing to ---- */
+  const ext = EXTERNAL.map((k) => [k, bt.baselines[k]]).filter(([, v]) => v);
+  if (ext.length) {
+    document.getElementById('extcard').hidden = false;
+    document.getElementById('extsub').innerHTML =
+      `Three baselines the model builds for itself are a floor, not a test. These two are not:
+       the <b>closing bookmaker price</b>, which is priced with injuries, lineups and money at
+       stake, and <b>ClubElo</b>, an independently published rating. Both come from a frozen
+       snapshot that stops in June 2025, so each is scored only on the matches it actually
+       covers — and the model is re-scored on exactly those matches beside it, because
+       comparing two different samples would prove nothing.`;
+    document.getElementById('extbody').innerHTML = ext.map(([k, v]) => {
+      const mh = v.model_here || bt.model;
+      const diff = v.log_loss - mh.log_loss;
+      const verdict = Math.abs(diff) < 0.002
+        ? 'level with this model'
+        : (diff > 0 ? `behind this model by ${diff.toFixed(4)}`
+                    : `ahead of this model by ${(-diff).toFixed(4)}`);
+      return `<div class="cmp-row">
+        <span class="a${diff > 0 ? ' lead' : ''}">${v.log_loss.toFixed(4)}</span>
+        <span class="lab">${esc(bt.names[k])}<br>
+          <span class="hint">${v.n.toLocaleString()} matches · log-loss</span></span>
+        <span class="b${diff < 0 ? ' lead' : ''}">${mh.log_loss.toFixed(4)}</span>
+      </div>
+      <div class="cmp-row" style="border-bottom:1px solid var(--rule)">
+        <span class="a">${(v.accuracy * 100).toFixed(1)}% · ${v.rps.toFixed(4)}</span>
+        <span class="lab">right result · RPS<br>
+          <span class="hint">${esc(verdict)}</span></span>
+        <span class="b">${(mh.accuracy * 100).toFixed(1)}% · ${mh.rps.toFixed(4)}</span>
+      </div>`;
+    }).join('');
+    document.getElementById('extnote').innerHTML =
+      `Left column is the baseline, right column is this model over the same matches. Lower
+       log-loss and lower ranked probability score are better; higher accuracy is better.
+       Odds and ratings from
+       <a href="${esc(bt.external?.url || '')}">${esc(bt.external?.source || 'the snapshot')}</a>,
+       extracted once and committed rather than fetched each build — a benchmark that moves
+       under you is not a benchmark. Closing prices are de-vigged proportionally.`;
+  }
 
   document.getElementById('bars').innerHTML = entries.map(([k, name, v]) => `
     <div class="barrow ${k === 'model' ? 'me' : ''}" data-k="${k}">

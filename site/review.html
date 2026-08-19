@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How wrong were we?</title>
+<meta name="description" content="The season's post-mortem: the preseason projection against what actually happened, club by club, and the results the model liked least.">
+<meta property="og:title" content="How wrong were we?">
+<meta property="og:description" content="The preseason projection against what actually happened, club by club.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="og/premier-league.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="og/premier-league.png">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
+</head>
+<body>
+<main class="wrap" id="main">
+  <div class="pagehead">
+    <h1>How wrong were we?</h1>
+    <p class="lede" id="lede">Loading the season…</p>
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section class="card" id="tablecard">
+    <h2>What we said in August, and what happened</h2>
+    <p class="sub" id="tablesub"></p>
+    <div id="errrows"></div>
+    <p class="hint" id="tablenote" style="margin-top:16px"></p>
+  </section>
+
+  <section class="card" id="shockcard">
+    <h2>The results it liked least</h2>
+    <p class="sub">Ranked by the probability the model gave, before kick-off, to the result
+      that actually happened. A forecast with no entries here would be a forecast that had
+      never been surprised, which is not a forecast.</p>
+    <div id="shocks"></div>
+  </section>
+
+  <section class="card" id="luckcard">
+    <h2>Where the points came from</h2>
+    <p class="sub">Points taken against points the pre-kick-off forecasts said those matches
+      were worth. A club far above the line took results its own fixtures did not promise.</p>
+    <div id="luck"></div>
+  </section>
+
+  <nav class="deeper" aria-label="Go deeper">
+    <a href="method.html"><b>The full accuracy record</b>
+      <span>The walk-forward backtest, the calibration curve, and the two baselines worth
+        losing to.</span></a>
+    <a href="index.html"><b>Back to the table</b>
+      <span>The projected table, the position distribution and the fixtures.</span></a>
+  </nav>
+</main>
+
+<script type="module">
+import { data, pct, esc, ord, signed, initChrome, initPalette, chipColor, probBar,
+         lg, url, setMeta, roundLabel, cardUrl } from './assets/app.js';
+initChrome('review');
+
+const fc = await data('forecast');
+const W = lg();
+document.documentElement.setAttribute('data-kind', W.kind);
+initPalette(fc.teams);
+
+setMeta({
+  title: `How wrong were we? — ${W.name} ${fc.season}`,
+  description: `The ${W.name} ${fc.season} post-mortem: the preseason projection against `
+    + 'what actually happened, club by club.',
+  image: cardUrl(W.slug),
+});
+
+const soft = async (n) => { try { return await data(n); } catch { return null; } };
+const [hist, sr] = [await soft('history'), await soft('season_report')];
+const snaps = hist?.snapshots || [];
+const played = fc.matches_played || 0;
+const total = fc.matches_total || W.nMatches;
+const done = played >= total && total > 0;
+
+document.getElementById('stamp').innerHTML = `
+  <span>Season <b>${esc(fc.season)}</b></span>
+  <span><b>${played}</b> of ${total} matches played</span>
+  <span><b>${snaps.length}</b> daily snapshots on record</span>`;
+
+/* The page is honest about being early: a post-mortem written in October is a
+   half-time report, and it says so rather than pretending the season is over. */
+document.getElementById('lede').innerHTML = done
+  ? `The ${esc(fc.season)} season is complete. This is the forecast marked against it: the `
+    + 'table it projected before a ball was kicked, the table that actually happened, and '
+    + 'the distance between the two.'
+  : `The season is <b>${Math.round((played / total) * 100)}%</b> played, so this is an `
+    + 'interim report rather than a post-mortem — the same numbers, measured so far. The '
+    + 'preseason column is the first snapshot on record and never changes.';
+
+/* The preseason projection is the first daily snapshot, which is written before
+   any result exists. Nothing later can rewrite it: the file is append-only and
+   the pipeline never overwrites a day it has already stored. */
+const first = snaps[0] || null;
+const baseline = first ? first.teams : null;
+const table = [...fc.teams]
+  .map((t) => ({ ...t, actual_pts: t.cur_pts, gd: t.gf - t.ga }))
+  .sort((a, b) => b.actual_pts - a.actual_pts || b.gd - a.gd);
+const actualRank = Object.fromEntries(table.map((t, i) => [t.id, i + 1]));
+
+/* Projected order: the ranking implied by the very first snapshot's projected
+   points, so it is genuinely what the model said in August. */
+const projected = baseline
+  ? [...fc.teams].sort((a, b) => (baseline[b.id]?.pts ?? 0) - (baseline[a.id]?.pts ?? 0))
+  : [...fc.teams].sort((a, b) => b.pts - a.pts);
+const projRank = Object.fromEntries(projected.map((t, i) => [t.id, i + 1]));
+
+const rows = table.map((t) => ({
+  ...t,
+  proj: projRank[t.id],
+  real: actualRank[t.id],
+  err: projRank[t.id] - actualRank[t.id],       // positive = did better than projected
+  projPts: baseline ? baseline[t.id]?.pts : t.pts,
+}));
+
+if (!played) {
+  document.getElementById('tablesub').textContent =
+    'Nothing has been played yet, so there is nothing to mark. Come back once the season '
+    + 'is under way.';
+  document.getElementById('errrows').innerHTML = '';
+  document.getElementById('shockcard').hidden = true;
+  document.getElementById('luckcard').hidden = true;
+} else {
+  const mae = rows.reduce((s, r) => s + Math.abs(r.err), 0) / rows.length;
+  const best = [...rows].sort((a, b) => b.err - a.err)[0];
+  const worstMiss = [...rows].sort((a, b) => a.err - b.err)[0];
+  const exact = rows.filter((r) => r.err === 0).length;
+
+  document.getElementById('tiles').innerHTML = [
+    ['Average place missed by', mae.toFixed(1),
+      `${exact} club${exact === 1 ? '' : 's'} landed exactly where projected`],
+    ['Most underrated', esc(best.name),
+      `projected ${ord(best.proj)}, ${done ? 'finished' : 'currently'} ${ord(best.real)}`],
+    ['Most overrated', esc(worstMiss.name),
+      `projected ${ord(worstMiss.proj)}, ${done ? 'finished' : 'currently'} ${ord(worstMiss.real)}`],
+    ['Log-loss so far', sr && sr.n ? sr.log_loss.toFixed(4) : '—',
+      sr && sr.n ? `over ${sr.n} matches with a frozen forecast` : 'no scored matches yet'],
+  ].map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div>
+      <div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
+
+  document.getElementById('tablesub').textContent =
+    'Projected place is the ranking implied by the first daily snapshot of the season — '
+    + 'written before any result existed and never rewritten. Sorted by how far the model '
+    + 'was out, worst first.';
+
+  const byErr = [...rows].sort((a, b) => Math.abs(b.err) - Math.abs(a.err));
+  document.getElementById('errrows').innerHTML =
+    `<div class="errrow"><span class="h">Club</span><span class="h">Projected</span>
+       <span class="h">${done ? 'Finished' : 'Now'}</span><span class="h">Out by</span></div>`
+    + byErr.map((t) => `
+      <div class="errrow">
+        <span class="club"><span class="chip" style="background:${chipColor(t.primary)}"></span>
+          <a href="${url(`team.html?t=${t.id}`)}">${esc(t.name)}</a></span>
+        <span>${ord(t.proj)}<span class="hint"> · ${Math.round(t.projPts)} pts</span></span>
+        <span>${ord(t.real)}<span class="hint"> · ${t.actual_pts} pts</span></span>
+        <span class="${Math.abs(t.err) >= 4 ? 'p-hi' : 'p-lo'}">${
+          t.err === 0 ? 'spot on' : `${Math.abs(t.err)} ${t.err > 0 ? 'better' : 'worse'}`}</span>
+      </div>`).join('');
+  document.getElementById('tablenote').textContent =
+    'A projection is a distribution, not a prediction: the model gave every one of these '
+    + 'clubs a spread of finishing places, and the spread is on the club pages. This table '
+    + 'collapses that spread to its middle, which is the least generous way to read it and '
+    + 'therefore the fair one.';
+
+  /* shocks */
+  const shocks = (sr && sr.surprises) || [];
+  document.getElementById('shockcard').hidden = !shocks.length;
+  document.getElementById('shocks').innerHTML = `<div id="tipish">${shocks.map((r) => `
+    <div class="r rb"><span>${esc(r.label)}
+      <span class="hint">${esc(roundLabel(r.md))} · ${esc(r.date)}</span>
+      ${probBar(r.p, 'away')}</span><b>${pct(r.p, 1)}</b></div>`).join('')}</div>`;
+
+  /* luck */
+  const luck = rows.filter((r) => (r.xp_played || 0) > 0)
+    .sort((a, b) => b.xp_diff - a.xp_diff);
+  document.getElementById('luckcard').hidden = !luck.length;
+  if (luck.length) {
+    const worst = Math.max(1, ...luck.map((t) => Math.abs(t.xp_diff)));
+    document.getElementById('luck').innerHTML =
+      `<div class="errrow"><span class="h">Club</span><span class="h">Points</span>
+         <span class="h">Expected</span><span class="h">Gap</span></div>`
+      + luck.map((t) => `
+        <div class="errrow">
+          <span class="club"><span class="chip" style="background:${chipColor(t.primary)}"></span>
+            <a href="${url(`team.html?t=${t.id}`)}">${esc(t.name)}</a></span>
+          <span>${t.cur_pts}</span>
+          <span>${t.xp.toFixed(1)}</span>
+          <span class="${Math.abs(t.xp_diff) >= 4 ? 'p-hi' : 'p-lo'}">${signed(t.xp_diff.toFixed(1))}</span>
+        </div>`).join('');
+  }
+}
+</script>
+</body>
+</html>

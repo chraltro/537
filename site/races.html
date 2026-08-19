@@ -8,7 +8,12 @@
 <meta property="og:title" content="The races — season forecast">
 <meta property="og:description" content="Who is winning the title, the European places and the relegation fight — and how the forecast has moved this week.">
 <meta property="og:type" content="website">
+<meta property="og:type" content="website">
+<meta property="og:image" content="og/premier-league.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="og/premier-league.png">
 <link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
 <style>
   /* The chip row is a jump list, so the browser does the scrolling; the offset
@@ -113,6 +118,8 @@
     <a class="chip-btn" href="#relegation" id="relchip">Relegation</a>
   </nav>
 
+  <div class="narr" id="narrative"></div>
+
   <section class="card" id="week">
     <div class="cardbar">
       <h2 id="weekhead">This week</h2>
@@ -162,7 +169,7 @@
 
 <script type="module">
 import { data, pct, esc, ord, initChrome, initPalette, chipColor, roundLabel,
-         lineChart, probBar, lg, url, setMeta } from './assets/app.js';
+         lineChart, probBar, lg, url, setMeta, cardUrl } from './assets/app.js';
 initChrome('races');
 
 const fc = await data('forecast');
@@ -201,6 +208,7 @@ setMeta({
   description: `${W.The} ${fc.season} ${W.winRace}, the fight for the ${W.topWord} and `
     + `${W.downRace} — with the week's biggest forecast movers and the run of fixtures `
     + 'each contender faces.',
+  image: cardUrl(W.slug),
 });
 document.getElementById('titlechip').textContent = W.isCup ? 'The trophy' : 'The title';
 document.getElementById('titlehead').textContent =
@@ -308,6 +316,17 @@ function raceChart(list, key, what) {
        ${esc(snaps[snaps.length - 1].date)}</div>`;
 }
 
+/* ---- the week in words ----
+   Every sentence is built from a number already on this page, and there are
+   four shapes in total: templated prose stops reading like prose the moment it
+   has more variations than a reader can hold. Nothing here is editorialised. */
+function narrative() {
+  const lines = recap.narrative || [];
+  const el = document.getElementById('narrative');
+  if (!lines.length) { el.hidden = true; return; }
+  el.innerHTML = lines.map((t) => `<p>${esc(t)}</p>`).join('');
+}
+
 /* ---- this week ---- */
 function weekly() {
   const head = document.getElementById('weekhead');
@@ -384,6 +403,7 @@ function weekly() {
 
 /* ---- render everything that depends on club colours ---- */
 function render() {
+  narrative();
   weekly();
 
   const top = byTitle.slice(0, 5);

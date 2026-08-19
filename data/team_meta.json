@@ -2332,7 +2332,9 @@
   "secondary": "#FFFFFF",
   "aliases": [
    "FC Twente Enschede",
-   "Twente Enschede"
+   "Twente Enschede",
+   "FC Twente '65",
+   "Twente '65"
   ]
  },
  "benfica": {
@@ -3054,6 +3056,372 @@
   "aliases": [
    "Hapoel Be'er Sheva FC",
    "Hapoel Beer Sheva"
+  ]
+ },
+ "academico-de-viseu": {
+  "id": "academico-de-viseu",
+  "name": "Académico de Viseu",
+  "short": "AVI",
+  "primary": "#0A3D91",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Académico de Viseu FC",
+   "Academico de Viseu",
+   "Ac. Viseu"
+  ]
+ },
+ "ado-den-haag": {
+  "id": "ado-den-haag",
+  "name": "ADO Den Haag",
+  "short": "ADO",
+  "primary": "#009540",
+  "secondary": "#FFDD00",
+  "aliases": [
+   "ADO Den Haag",
+   "Den Haag"
+  ]
+ },
+ "alverca": {
+  "id": "alverca",
+  "name": "FC Alverca",
+  "short": "ALV",
+  "primary": "#D50032",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FC Alverca",
+   "Alverca"
+  ]
+ },
+ "arouca": {
+  "id": "arouca",
+  "name": "FC Arouca",
+  "short": "ARO",
+  "primary": "#FFD100",
+  "secondary": "#003DA5",
+  "aliases": [
+   "FC Arouca",
+   "Arouca"
+  ]
+ },
+ "bristol-city": {
+  "id": "bristol-city",
+  "name": "Bristol City",
+  "short": "BRC",
+  "primary": "#E21C38",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Bristol City FC",
+   "Bristol City"
+  ]
+ },
+ "casa-pia-ac": {
+  "id": "casa-pia-ac",
+  "name": "Casa Pia",
+  "short": "CAS",
+  "primary": "#111111",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Casa Pia AC",
+   "Casa Pia"
+  ]
+ },
+ "cd-nacional": {
+  "id": "cd-nacional",
+  "name": "Nacional",
+  "short": "NAC",
+  "primary": "#111111",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "CD Nacional",
+   "Nacional",
+   "Nacional da Madeira"
+  ]
+ },
+ "cd-santa-clara": {
+  "id": "cd-santa-clara",
+  "name": "Santa Clara",
+  "short": "SCL",
+  "primary": "#D50032",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "CD Santa Clara",
+   "Santa Clara"
+  ]
+ },
+ "cf-estrela-da-amadora": {
+  "id": "cf-estrela-da-amadora",
+  "name": "Estrela da Amadora",
+  "short": "EDA",
+  "primary": "#009639",
+  "secondary": "#D50032",
+  "aliases": [
+   "CF Estrela da Amadora",
+   "Estrela da Amadora",
+   "Estrela Amadora"
+  ]
+ },
+ "cs-maritimo": {
+  "id": "cs-maritimo",
+  "name": "Marítimo",
+  "short": "MAR",
+  "primary": "#009639",
+  "secondary": "#D50032",
+  "aliases": [
+   "CS Marítimo",
+   "Maritimo",
+   "Marítimo"
+  ]
+ },
+ "famalicao": {
+  "id": "famalicao",
+  "name": "Famalicão",
+  "short": "FAM",
+  "primary": "#0A3D91",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FC Famalicão",
+   "Famalicao",
+   "Famalicão"
+  ]
+ },
+ "fortuna-sittard": {
+  "id": "fortuna-sittard",
+  "name": "Fortuna Sittard",
+  "short": "FOR",
+  "primary": "#FFD200",
+  "secondary": "#009639",
+  "aliases": [
+   "Fortuna Sittard",
+   "Fortuna"
+  ]
+ },
+ "gd-estoril-praia": {
+  "id": "gd-estoril-praia",
+  "name": "Estoril Praia",
+  "short": "ETL",
+  "primary": "#FFD100",
+  "secondary": "#003DA5",
+  "aliases": [
+   "GD Estoril Praia",
+   "Estoril Praia",
+   "Estoril"
+  ]
+ },
+ "gil-vicente": {
+  "id": "gil-vicente",
+  "name": "Gil Vicente",
+  "short": "GIL",
+  "primary": "#D50032",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Gil Vicente FC",
+   "Gil Vicente"
+  ]
+ },
+ "go-ahead-eagles": {
+  "id": "go-ahead-eagles",
+  "name": "Go Ahead Eagles",
+  "short": "GAE",
+  "primary": "#E30613",
+  "secondary": "#FFE500",
+  "aliases": [
+   "Go Ahead Eagles",
+   "Go Ahead"
+  ]
+ },
+ "groningen": {
+  "id": "groningen",
+  "name": "FC Groningen",
+  "short": "GRO",
+  "primary": "#007A33",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FC Groningen",
+   "Groningen"
+  ]
+ },
+ "lincoln-city": {
+  "id": "lincoln-city",
+  "name": "Lincoln City",
+  "short": "LIN",
+  "primary": "#E1231D",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Lincoln City FC",
+   "Lincoln City",
+   "Lincoln"
+  ]
+ },
+ "millwall": {
+  "id": "millwall",
+  "name": "Millwall",
+  "short": "MIL",
+  "primary": "#001D5E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Millwall FC",
+   "Millwall"
+  ]
+ },
+ "moreirense": {
+  "id": "moreirense",
+  "name": "Moreirense",
+  "short": "MOR",
+  "primary": "#009639",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Moreirense FC",
+   "Moreirense"
+  ]
+ },
+ "nec": {
+  "id": "nec",
+  "name": "NEC Nijmegen",
+  "short": "NEC",
+  "primary": "#C8102E",
+  "secondary": "#007A33",
+  "aliases": [
+   "NEC",
+   "NEC Nijmegen",
+   "N.E.C."
+  ]
+ },
+ "pec-zwolle": {
+  "id": "pec-zwolle",
+  "name": "PEC Zwolle",
+  "short": "ZWO",
+  "primary": "#005BAA",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "PEC Zwolle",
+   "Zwolle"
+  ]
+ },
+ "preston-north-end": {
+  "id": "preston-north-end",
+  "name": "Preston North End",
+  "short": "PNE",
+  "primary": "#1B1F4B",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Preston North End FC",
+   "Preston North End",
+   "Preston"
+  ]
+ },
+ "rio-ave": {
+  "id": "rio-ave",
+  "name": "Rio Ave",
+  "short": "RIO",
+  "primary": "#009639",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Rio Ave FC",
+   "Rio Ave"
+  ]
+ },
+ "sbv-excelsior": {
+  "id": "sbv-excelsior",
+  "name": "Excelsior",
+  "short": "EXC",
+  "primary": "#E30613",
+  "secondary": "#000000",
+  "aliases": [
+   "SBV Excelsior",
+   "Excelsior",
+   "Excelsior Rotterdam"
+  ]
+ },
+ "sc-cambuur-leeuwarden": {
+  "id": "sc-cambuur-leeuwarden",
+  "name": "SC Cambuur",
+  "short": "CAM",
+  "primary": "#FFCC00",
+  "secondary": "#003DA5",
+  "aliases": [
+   "SC Cambuur-Leeuwarden",
+   "SC Cambuur",
+   "Cambuur"
+  ]
+ },
+ "sc-heerenveen": {
+  "id": "sc-heerenveen",
+  "name": "SC Heerenveen",
+  "short": "HEE",
+  "primary": "#005BAA",
+  "secondary": "#E30613",
+  "aliases": [
+   "SC Heerenveen",
+   "Heerenveen"
+  ]
+ },
+ "sparta-rotterdam": {
+  "id": "sparta-rotterdam",
+  "name": "Sparta Rotterdam",
+  "short": "SPR",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Sparta Rotterdam",
+   "Sparta"
+  ]
+ },
+ "telstar-1963": {
+  "id": "telstar-1963",
+  "name": "Telstar",
+  "short": "TEL",
+  "primary": "#003DA5",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Telstar 1963",
+   "Telstar",
+   "SC Telstar"
+  ]
+ },
+ "utrecht": {
+  "id": "utrecht",
+  "name": "FC Utrecht",
+  "short": "UTR",
+  "primary": "#E2001A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FC Utrecht",
+   "Utrecht"
+  ]
+ },
+ "vitoria-guimaraes": {
+  "id": "vitoria-guimaraes",
+  "name": "Vitória Guimarães",
+  "short": "VIT",
+  "primary": "#FFFFFF",
+  "secondary": "#111111",
+  "aliases": [
+   "Vitória Guimarães",
+   "Vitoria Guimaraes",
+   "Vitória SC",
+   "Guimaraes"
+  ]
+ },
+ "willem-ii-tilburg": {
+  "id": "willem-ii-tilburg",
+  "name": "Willem II",
+  "short": "WIL",
+  "primary": "#E2001A",
+  "secondary": "#003DA5",
+  "aliases": [
+   "Willem II Tilburg",
+   "Willem II"
+  ]
+ },
+ "wrexham": {
+  "id": "wrexham",
+  "name": "Wrexham",
+  "short": "WRE",
+  "primary": "#D0021B",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Wrexham AFC",
+   "Wrexham"
   ]
  }
 }

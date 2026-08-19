@@ -9,7 +9,10 @@
 <meta property="og:description" content="A rating for every club, a probability for every match, and 50,000 simulations of the season.">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
+<meta property="og:image" content="og/premier-league.png">
+<meta name="twitter:image" content="og/premier-league.png">
 <link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
 </head>
 <body>
@@ -28,6 +31,7 @@
       <div class="chips" role="tablist" aria-label="View">
         <button class="chip-btn" data-view="table" aria-pressed="true" role="tab">Table</button>
         <button class="chip-btn" data-view="dist" aria-pressed="false" role="tab">Every finish</button>
+        <button class="chip-btn" data-view="luck" aria-pressed="false" role="tab" id="luckchip">Luck</button>
       </div>
     </div>
     <p class="sub" id="viewsub">Average outcome across 50,000 simulated seasons.
@@ -56,6 +60,23 @@
       </div>
       <button class="chip-btn" id="morecols" aria-pressed="false"
               style="margin-top:14px">Show ratings and schedule</button>
+    </div>
+
+    <div id="luckview" hidden>
+      <div class="scroller">
+        <table id="lucktbl">
+          <thead><tr>
+            <th class="l">#</th><th class="l">Club</th>
+            <th title="Points actually taken">Points</th>
+            <th title="Points the pre-kick-off forecasts said those matches were worth">Expected</th>
+            <th title="Points minus expected points">Gap</th>
+            <th class="l"></th>
+            <th title="Matches with a pre-kick-off forecast on record">Played</th>
+          </tr></thead>
+          <tbody id="luckbody"></tbody>
+        </table>
+      </div>
+      <p class="hint" id="lucknote" style="margin-top:16px"></p>
     </div>
 
     <div id="distview" hidden>
@@ -90,16 +111,22 @@
       <span id="deepermatches">Win, draw and loss probabilities for every fixture,
         sorted by what is at stake.</span></a>
     <a href="team.html"><b>Club by club</b>
-      <span>Rating trends, finishing positions and the difficulty of the run ahead.</span></a>
+      <span>Rating trends back to the nineties, finishing positions, and what each club
+        still needs.</span></a>
+    <a href="rankings.html"><b>Every club in Europe</b>
+      <span>One rating scale across fifty-two leagues, so a Dutch club and an Italian one
+        are finally comparable.</span></a>
+    <a href="review.html"><b>How wrong were we?</b>
+      <span>August's projection marked against what actually happened, club by club.</span></a>
     <a href="method.html"><b>How it works, and how well</b>
-      <span>The model, the backtest against three baselines, and what it gets wrong.</span></a>
+      <span>The model, and the backtest against the closing odds and ClubElo.</span></a>
   </nav>
 </main>
 
 <script type="module">
 import { data, pct, signed, esc, ord, initChrome, tip, tipRows, rampColor,
          makeSortable, chipColor, initPalette, matchModal, roundLabel,
-         lg, url, setMeta } from './assets/app.js';
+         lg, url, setMeta, cardUrl } from './assets/app.js';
 initChrome('table');
 
 /* forecast.json is 28KB and paints the whole page; matches.json is 350KB and
@@ -123,6 +150,7 @@ setMeta({
   ogTitle: `Who wins ${W.the}? — ${fc.season} forecast`,
   description: `Who wins ${W.the}? A rating for every club, a probability for all `
     + `${nMatches} matches, and ${fc.n_sims.toLocaleString()} simulations of the ${fc.season} season.`,
+  image: cardUrl(W.slug),
 });
 document.getElementById('h1').textContent = `Who wins ${W.the}?`;
 document.getElementById('winhead').textContent = W.winN;
@@ -289,16 +317,58 @@ document.getElementById('strip').addEventListener('mousemove', (e) => {
 });
 document.getElementById('strip').addEventListener('mouseleave', () => tip(null));
 
+const VIEWSUB = {
+  table: 'Average outcome across 50,000 simulated seasons. Click a column to sort, or a club for its own page.',
+  dist: 'Each row is one club’s full spread of finishing positions. A tight band means the model is confident; a smear across ten places means it is not.',
+  luck: 'Points taken against points the pre-kick-off forecasts said those matches were worth. '
+      + 'The expectation uses the probabilities frozen before each kick-off, never the ones computed today.',
+};
 document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => {
   const v = b.dataset.view;
   document.querySelectorAll('[data-view]').forEach((x) =>
     x.setAttribute('aria-pressed', String(x === b)));
   document.getElementById('tableview').hidden = v !== 'table';
   document.getElementById('distview').hidden = v !== 'dist';
-  document.getElementById('viewsub').textContent = v === 'table'
-    ? 'Average outcome across 50,000 simulated seasons. Click a column to sort, or a club for its own page.'
-    : 'Each row is one club’s full spread of finishing positions. A tight band means the model is confident; a smear across ten places means it is not.';
+  document.getElementById('luckview').hidden = v !== 'luck';
+  document.getElementById('viewsub').textContent = VIEWSUB[v] || VIEWSUB.table;
 }));
+
+/* ---- form against expectation ----
+   Nothing to show until matches have been played AND frozen forecasts exist for
+   them, so the chip hides itself rather than offering an empty table. */
+const luckRows = rows.filter((t) => (t.xp_played || 0) > 0);
+const luckChip = document.getElementById('luckchip');
+if (!luckRows.length) {
+  luckChip.hidden = true;
+} else {
+  const worst = Math.max(1, ...luckRows.map((t) => Math.abs(t.xp_diff)));
+  const ranked = [...luckRows].sort((a, b) => b.xp_diff - a.xp_diff);
+  document.getElementById('luckbody').innerHTML = ranked.map((t, i) => {
+    const f = Math.min(1, Math.abs(t.xp_diff) / worst) * 50;
+    const over = t.xp_diff >= 0;
+    return `<tr>
+      <td class="l rank">${i + 1}</td>
+      <td class="l"><span class="club">
+        <span class="chip" style="background:${chipColor(t.primary)}"></span>
+        <a href="${url(`team.html?t=${t.id}`)}">${esc(t.name)}</a></span></td>
+      <td><b>${t.cur_pts}</b></td>
+      <td>${t.xp.toFixed(1)}</td>
+      <td class="${Math.abs(t.xp_diff) >= 3 ? 'p-hi' : 'p-lo'}">${signed(t.xp_diff.toFixed(1))}</td>
+      <td class="l"><span class="luck"><span class="luck-track">
+        <i class="${over ? 'over' : 'under'}" style="left:${over ? 50 : 50 - f}%;width:${f}%"></i>
+      </span></span></td>
+      <td>${t.xp_played}</td>
+    </tr>`;
+  }).join('');
+  const top = ranked[0], bot = ranked[ranked.length - 1];
+  document.getElementById('lucknote').innerHTML =
+    `<b>${esc(top.name)}</b> are ${Math.abs(top.xp_diff).toFixed(1)} points above what their `
+    + `matches were worth; <b>${esc(bot.name)}</b> are ${Math.abs(bot.xp_diff).toFixed(1)} below. `
+    + 'Over a handful of matches this is mostly finishing and goalkeeping; over a season it is '
+    + 'the part of a table the ratings do not believe. A club is only counted for matches that '
+    + 'had a forecast on record before kick-off, so early-season rows can cover fewer games '
+    + 'than the table shows.';
+}
 
 /* ---- next up (needs matches.json; the page above is already painted) ---- */
 initPalette(fc.teams);

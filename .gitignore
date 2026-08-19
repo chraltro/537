@@ -2,3 +2,11 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Build artefacts, not state. Both are regenerated on every run and uploaded to
+# Pages from the working tree, so the deployed site always has them; committing
+# them would add megabytes of churn and, worse, leave a stale copy in the
+# repository that looks current. Anything the pipeline needs to *remember*
+# between runs -- history.json, predictions.json -- is committed, and is not here.
+site/og/
+site/cal/

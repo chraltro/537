@@ -21,6 +21,7 @@ domestic pipeline does, so a warm run costs no network at all.
 """
 from __future__ import annotations
 
+import datetime as dt
 import os
 from dataclasses import dataclass
 
@@ -248,26 +249,46 @@ def group_key(m: Match, default: str = "") -> str:
     return m.comp or default
 
 
+#: How far back "which league does this club play in" is allowed to look. A club
+#: plays in one division at a time and the answer that matters is the current
+#: one, so recent matches decide it and older ones only break ties.
+CURRENT_WINDOW_DAYS = 550
+
+
 def club_leagues(matches: list[Match], default: str = "other") -> dict[str, str]:
     """Which league each club belongs to, for the hierarchical ridge centre.
 
-    A club plays for exactly one league at a time, so the answer is simply the
-    domestic group it appears in most. Clubs seen only in European matches --
-    Israeli and Kazakh sides, for which no domestic feed exists anywhere -- fall
-    back to a shared 'other' pool: with no league-mates to borrow from, shrinking
-    them toward the global mean is the honest default and the one the old
-    zero-centred ridge always used.
+    A club plays for exactly one league at a time, so what is wanted is the
+    division it is in *now* -- not the one it has spent the most matches in.
+    Counting the whole record would file Brentford under the Championship, where
+    it played for twenty seasons, rather than the Premier League, where it plays
+    today; the ridge would then shrink its rating toward the wrong mean and the
+    global ranking would print the wrong league beside its name.
+
+    So: the most common domestic group inside the last eighteen months, with the
+    whole record as a tie-break for a club that has not played recently. Clubs
+    seen only in European matches -- Israeli and Kazakh sides, for which no
+    domestic feed exists anywhere -- fall back to a shared 'other' pool: with no
+    league-mates to borrow from, shrinking them toward the global mean is the
+    honest default and the one the old zero-centred ridge always used.
     """
-    tally: dict[str, dict[str, int]] = {}
+    latest = max((m.date for m in matches), default=None)
+    cutoff = (latest - dt.timedelta(days=CURRENT_WINDOW_DAYS)) if latest else None
+
+    recent: dict[str, dict[str, int]] = {}
+    ever: dict[str, dict[str, int]] = {}
     for m in matches:
         g = group_key(m)
         if g in ("", EUROPE):
             continue
         for t in (m.home, m.away):
-            tally.setdefault(t, {})[g] = tally.setdefault(t, {}).get(g, 0) + 1
+            ever.setdefault(t, {})[g] = ever.setdefault(t, {}).get(g, 0) + 1
+            if cutoff is not None and m.date >= cutoff:
+                recent.setdefault(t, {})[g] = recent.setdefault(t, {}).get(g, 0) + 1
     out: dict[str, str] = {}
-    for t, counts in tally.items():
-        out[t] = max(counts.items(), key=lambda kv: kv[1])[0]
+    for t, counts in ever.items():
+        pick = recent.get(t) or counts
+        out[t] = max(pick.items(), key=lambda kv: kv[1])[0]
     for m in matches:
         for t in (m.home, m.away):
             out.setdefault(t, default)
@@ -372,7 +393,7 @@ def load_big_five(reg: TeamRegistry, *, from_year: int = 2015,
 
     out: list[Match] = []
     season = season or config.SEASON
-    for lg in _lg.LEAGUES:
+    for lg in _lg.BIG_FIVE:
         for code in lg.fd_season_codes(season):
             label = _season_label(code)
             if int(label.split("-")[0]) < from_year:

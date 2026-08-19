@@ -87,8 +87,12 @@ export function lg() {
   const ucl = LG.ucl_places || 5;
   const rel = LG.releg_places || 3;
   const cup = LG.kind === 'cup';
-  const adv = LG.advance_direct || ucl;       // straight into the last 16
-  const pla = LG.advance_playoff || 0;        // in via the two-legged play-off
+  /* A second tier is the same table read against different stakes again: the
+     top line is automatic promotion and a band under it plays off for one more
+     place. Same two counts, same machinery, different words. */
+  const promo = LG.kind === 'promotion';
+  const adv = LG.advance_direct || ucl;       // straight into the last 16 / straight up
+  const pla = LG.advance_playoff || 0;        // in via the play-off
   const the = withArticle(LG.name);
   /* A double round robin unless the data says otherwise; a cup's league phase
      is a partial one, so its own fixture count is the only honest source. */
@@ -99,8 +103,10 @@ export function lg() {
     the,                                      // "the Premier League" / "La Liga"
     The: the.charAt(0).toUpperCase() + the.slice(1),   // sentence-initial
     country: LG.country || '',
-    kind: cup ? 'cup' : 'league',
+    kind: cup ? 'cup' : (promo ? 'promotion' : 'league'),
     isCup: cup,
+    isPromotion: promo,
+    hasPlayoff: cup || promo,
     nTeams: n,
     uclPlaces: ucl,
     relegPlaces: rel,
@@ -113,19 +119,21 @@ export function lg() {
     roundWord: cup ? 'Matchday' : 'Matchweek',
     roundWords: cup ? 'matchdays' : 'matchweeks',
     roundAbbr: cup ? 'MD' : 'MW',
-    topN: `Top ${adv}`,                       // column header
+    topN: promo ? 'Up' : `Top ${adv}`,        // column header
     topWord: `top ${numWord(adv)}`,           // "the top five"
     topAdj: `top-${numWord(adv)}`,            // "top-five race"
-    topFinish: `a top-${numWord(adv)} finish`,
-    topMeans: cup ? 'a direct place in the last 16' : 'a Champions League place',
-    topRace: cup ? `the race for the top ${numWord(adv)}` : `the top-${numWord(adv)} race`,
+    topFinish: promo ? 'automatic promotion' : `a top-${numWord(adv)} finish`,
+    topMeans: cup ? 'a direct place in the last 16'
+                  : (promo ? 'automatic promotion' : 'a Champions League place'),
+    topRace: cup ? `the race for the top ${numWord(adv)}`
+                 : (promo ? 'the promotion race' : `the top-${numWord(adv)} race`),
     winN: cup ? 'Trophy' : 'Title',           // column header
     winWord: cup ? 'the trophy' : 'the title',
     winRace: cup ? 'the race for the trophy' : 'the title race',
     /* What "first place" means: the line files measure the top of the table,
        which in a cup is the top of the league phase and not the trophy. */
     firstWord: cup ? 'first place in the league phase' : 'the title',
-    playoffWord: 'the knockout play-off',
+    playoffWord: cup ? 'the knockout play-off' : 'the promotion play-offs',
     downN: cup ? 'Out' : 'Down',
     downWord: cup ? 'elimination' : 'relegation',
     downVerb: cup ? 'go out' : 'go down',
@@ -145,6 +153,7 @@ export function lg() {
 export function eventLabels() {
   const W = lg();
   const base = { title: W.winWord, ucl: W.topFinish, releg: W.downWord };
+  if (W.isPromotion) return { ...base, ucl: 'automatic promotion' };
   return W.isCup
     ? { ...base, top8: W.topFinish, qualify: 'reaching the knockout stage', out: 'elimination' }
     : base;
@@ -216,6 +225,20 @@ export async function data(name) {
   return store[name];
 }
 
+/* Files that belong to the whole site rather than to one competition: the
+   cross-league ranking and the head-to-head record behind the comparison tool.
+   They deliberately do not take a league slug, because their entire point is
+   that they are not scoped to one. */
+export async function siteData(name) {
+  const key = `::${name}`;
+  if (!store[key]) {
+    const r = await fetch(`${DATA}${name}.json`, { cache: 'no-cache' });
+    if (!r.ok) throw new Error(`${name}.json ${r.status}`);
+    store[key] = await r.json();
+  }
+  return store[key];
+}
+
 /* A league's own files know more about it than the manifest does. Take what
    they carry and leave the manifest value standing where they do not — the
    first build of a league predates these fields. */
@@ -269,7 +292,7 @@ export async function ensureReplayBanner() {
 
 /* ================= page metadata =================
    Titles and descriptions name the league, so a shared link says which one. */
-export function setMeta({ title, ogTitle, description }) {
+export function setMeta({ title, ogTitle, description, image }) {
   const set = (sel, v) => {
     const el = document.querySelector(sel);
     if (el && v) el.setAttribute('content', v);
@@ -278,7 +301,19 @@ export function setMeta({ title, ogTitle, description }) {
   set('meta[property="og:title"]', ogTitle || title);
   set('meta[name="description"]', description);
   set('meta[property="og:description"]', description);
+  /* Share-card images are drawn at build time into site/og/. Note that link
+     scrapers do not run JavaScript, so setting og:image here only helps clients
+     that do; the per-page default in the HTML is what most of them read. */
+  if (image) {
+    const abs = new URL(image, `${location.origin}${ROOT}`).href;
+    set('meta[property="og:image"]', abs);
+    set('meta[name="twitter:image"]', abs);
+  }
 }
+
+/* The build writes one card per competition and one per club. */
+export const cardUrl = (slug, team) =>
+  `${ROOT}og/${slug}${team ? `/${team}` : ''}.png`;
 
 export const pct = (x, d = 0) =>
   x >= 0.9995 ? '>99%' : (x > 0 && x < 0.005 ? '<1%' : `${(x * 100).toFixed(d)}%`);
@@ -344,6 +379,8 @@ export function initChrome(page) {
         <a href="${url('matches.html')}"${page === 'matches' ? ' aria-current="page"' : ''}>Matches</a>
         <a href="${url('team.html')}"${page === 'team' ? ' aria-current="page"' : ''}>Clubs</a>
         <a href="${url('races.html')}"${page === 'races' ? ' aria-current="page"' : ''}>Races</a>
+        <a href="${ROOT}rankings.html"${page === 'rankings' ? ' aria-current="page"' : ''}>Rankings</a>
+        <a href="${ROOT}compare.html"${page === 'compare' ? ' aria-current="page"' : ''}>Compare</a>
         <a href="${url('simulator.html')}"${page === 'sim' ? ' aria-current="page"' : ''}>What&nbsp;if</a>
         <a href="${url('method.html')}"${page === 'method' ? ' aria-current="page"' : ''}>Method</a>
         <button class="searchbtn" data-open-palette aria-label="Search (press slash)">
@@ -387,10 +424,27 @@ export function initChrome(page) {
       <p>Match data: <a href="https://github.com/datasets/football-datasets">football-datasets</a>
       (mirroring football-data.co.uk) and <a href="https://github.com/openfootball">openfootball</a>.
       Not affiliated with ${esc(W.the)}. Not betting advice.</p>
+      <p>Take it with you:
+      <a href="${ROOT}cal/${esc(LG.slug)}.ics">fixtures in your calendar</a> ·
+      <a href="${ROOT}feed.json">JSON feed</a> ·
+      <a href="${ROOT}feed.xml">RSS</a> ·
+      <a href="${ROOT}embed.html?lg=${esc(LG.slug)}">embeddable widget</a>. Each is a static
+      file this build writes, refreshed every six hours.</p>
     </div></footer>`);
   document.body.insertAdjacentHTML('beforeend', '<div id="tip" role="tooltip"></div>');
 
   lgifyLinks(document);
+  registerWorker();
+}
+
+/* Offline. Network-first with a cache fallback, never the other way round: the
+   forecast is rebuilt every six hours and a cache-first worker would happily
+   serve April's numbers in May. The page says when its data is from, so a
+   fallback read is visible rather than silent. */
+function registerWorker() {
+  if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
+  navigator.serviceWorker.register(`${ROOT}sw.js`, { scope: ROOT })
+    .catch((e) => console.warn('offline support unavailable:', e.message));
 }
 
 /* ---------------- tooltip ---------------- */
@@ -575,6 +629,9 @@ export function initPalette(teams) {
       kind: 'Page', href: url('matches.html') },
     { label: 'The races', kind: 'Page', href: url('races.html') },
     { label: 'What if? simulator', kind: 'Page', href: url('simulator.html') },
+    { label: 'How wrong were we?', kind: 'Page', href: url('review.html') },
+    { label: 'Global club rankings', kind: 'Page', href: `${ROOT}rankings.html` },
+    { label: 'Compare two clubs', kind: 'Page', href: `${ROOT}compare.html` },
     { label: 'Method and accuracy', kind: 'Page', href: url('method.html') },
     ...teams.map((t) => ({ label: t.name, kind: 'Club', href: url(`team.html?t=${t.id}`), hint: t.short })),
     ...Array.from({ length: W.nWeeks }, (_, i) => ({
@@ -693,6 +750,64 @@ export function closeModal() {
   unlockScroll();
 }
 
+/* ================= a scoreline grid from published parameters =================
+   The pipeline deliberately ships fitted expectations rather than ratings, so
+   the browser can never drift away from the published forecast by reimplementing
+   the model (see model/siminput.py). This is the one exception, and it is not a
+   reimplementation: the global ranking publishes each club's attack and defence
+   plus the fit's intercept, home term and rho, and lambda_home is
+   `off_h x def_a x exp(home - mu)`. That is arithmetic on numbers already on the
+   page, which is what makes "these two clubs, on neutral ground" answerable at
+   all — there is no fixture between them for the pipeline to have precomputed. */
+const _lgam = (() => {
+  const g = [0];
+  for (let k = 1; k <= 12; k++) g[k] = g[k - 1] + Math.log(k);
+  return g;
+})();
+
+function _tau(h, a, lh, la, rho) {
+  if (h === 0 && a === 0) return Math.max(1 - lh * la * rho, 1e-9);
+  if (h === 0 && a === 1) return Math.max(1 + lh * rho, 1e-9);
+  if (h === 1 && a === 0) return Math.max(1 + la * rho, 1e-9);
+  if (h === 1 && a === 1) return Math.max(1 - rho, 1e-9);
+  return 1;
+}
+
+export function dcGrid(lh, la, rho, maxg = 6) {
+  const n = maxg + 1;
+  const ph = [], pa = [];
+  for (let k = 0; k < n; k++) {
+    ph[k] = Math.exp(-lh + k * Math.log(lh) - _lgam[k]);
+    pa[k] = Math.exp(-la + k * Math.log(la) - _lgam[k]);
+  }
+  const g = [];
+  let s = 0;
+  for (let h = 0; h < n; h++) {
+    g[h] = [];
+    for (let a = 0; a < n; a++) {
+      const v = ph[h] * pa[a] * _tau(h, a, lh, la, rho);
+      g[h][a] = v;
+      s += v;
+    }
+  }
+  for (let h = 0; h < n; h++) for (let a = 0; a < n; a++) g[h][a] /= s;
+  return g;
+}
+
+export function dcOutcome(g) {
+  let h = 0, d = 0, a = 0;
+  g.forEach((row, i) => row.forEach((p, j) => {
+    if (i > j) h += p; else if (i === j) d += p; else a += p;
+  }));
+  return [h, d, a];
+}
+
+/* Both clubs' lambdas for a neutral-ground match, from a global.json row. */
+export function neutralLambdas(A, B, g) {
+  const k = Math.exp(-g.mu);
+  return [A.off * B.def * k, B.off * A.def * k];
+}
+
 /* ================= score heatmap =================
    The exact scoreline distribution, which is the honest answer to "what will
    the score be": not one number but a cloud, usually a fairly flat one.
@@ -712,21 +827,34 @@ export function scoreGrid(grid, homeShort, awayShort, best) {
       const t = Math.min(1, (p / max) ** 0.55);
       const step = p < 0.002 ? 0 : Math.min(6, Math.max(1, Math.ceil(t * 6)));
       const isBest = best && best[0] === h && best[1] === a;
+      /* No tabindex. 121 focus stops inside a dialog is a trap, not access:
+         the whole grid is one labelled figure below, and the numbers are also
+         written out in the caption for a reader that cannot hover. */
       return `<div class="gcell${isBest ? ' best' : ''}" style="background:var(--ramp-${step})"
-        tabindex="0" role="img"
-        aria-label="${homeShort} ${h}, ${awayShort} ${a}: ${(p * 100).toFixed(1)} percent"
         title="${homeShort} ${h}–${a} ${awayShort} · ${(p * 100).toFixed(1)}%"
         >${p >= 0.04 ? Math.round(p * 100) : ''}</div>`;
     }).join('')).join('');
+
+  /* Spoken form of the same picture: the six likeliest scorelines, in words,
+     so the grid is not the only way to read it. */
+  const flat = [];
+  grid.forEach((row, h) => row.forEach((p, a) => flat.push([h, a, p])));
+  flat.sort((x, y) => y[2] - x[2]);
+  const spoken = flat.slice(0, 6)
+    .map(([h, a, p]) => `${homeShort} ${h}–${a} ${awayShort} ${(p * 100).toFixed(1)}%`)
+    .join(', ');
 
   return `
     <div class="gwrap">
       <div class="gaxis-y">${esc(homeShort)} goals</div>
       <div class="gmain">
-        <div class="ggrid" style="--n:${n}">${head}${body}</div>
+        <div class="ggrid" style="--n:${n}" role="img" tabindex="0"
+             aria-label="Scoreline probabilities. Likeliest: ${esc(spoken)}."
+             >${head}${body}</div>
         <div class="gaxis-x">${esc(awayShort)} goals</div>
       </div>
-    </div>`;
+    </div>
+    <p class="hint gspoken">Likeliest scorelines: ${esc(spoken)}.</p>`;
 }
 
 /* ================= swing bar =================
@@ -754,6 +882,57 @@ export function probBar(p, tone = 'accent') {
     <span style="width:${Math.max(p * 100, 1.5)}%;background:var(--${tone})"></span></span>`;
 }
 
+/* ================= rating timeline =================
+   One club, every season on record. The old sparkline showed four points with
+   no axis, which is a shape rather than a history; this is the same series with
+   the years written under it and the peak and trough called out, because the
+   question people actually ask of a rating chart is "when were they good".  */
+export function timeline(points, { w = 860, h = 240, pad = 38, color = 'var(--accent)' } = {}) {
+  if (!points || points.length < 2) return '';
+  const vals = points.map((p) => p.spi);
+  const lo = Math.floor(Math.min(...vals) / 5) * 5;
+  const hi = Math.ceil(Math.max(...vals) / 5) * 5;
+  const span = (hi - lo) || 1;
+  const x = (i) => pad + (i * (w - pad - 16)) / (points.length - 1);
+  const y = (v) => h - pad - ((v - lo) / span) * (h - pad - 20);
+  const d = points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p.spi).toFixed(1)}`).join(' ');
+  const area = `${d} L${x(points.length - 1).toFixed(1)} ${h - pad} L${x(0).toFixed(1)} ${h - pad} Z`;
+
+  const ticks = [lo, lo + span / 2, hi];
+  const iMax = vals.indexOf(Math.max(...vals));
+  const iMin = vals.indexOf(Math.min(...vals));
+  const last = points.length - 1;
+  /* Label roughly six seasons, always including the first and the last. */
+  const every = Math.max(1, Math.round(points.length / 6));
+  const xlab = points.map((p, i) =>
+    (i === 0 || i === last || i % every === 0)
+      ? `<text class="tl-axis" x="${x(i).toFixed(1)}" y="${h - pad + 16}"
+              text-anchor="${i === 0 ? 'start' : (i === last ? 'end' : 'middle')}"
+              >${esc(p.season.slice(2))}</text>` : '').join('');
+
+  const mark = (i, anchor) => (i === last ? '' : `
+    <circle cx="${x(i).toFixed(1)}" cy="${y(vals[i]).toFixed(1)}" r="3" fill="${color}"/>
+    <text class="tl-peak" x="${x(i).toFixed(1)}" y="${(y(vals[i]) + (anchor === 'top' ? -9 : 17)).toFixed(1)}"
+          text-anchor="middle">${vals[i].toFixed(1)}</text>`);
+
+  return `<div class="timeline"><svg viewBox="0 0 ${w} ${h}" role="img"
+      aria-label="Rating by season from ${esc(points[0].season)} to ${esc(points[last].season)}, ${
+        points.map((p) => `${p.season} ${p.spi}`).join('; ')}">
+    ${ticks.map((t) => `
+      <line x1="${pad}" y1="${y(t)}" x2="${w - 8}" y2="${y(t)}" stroke="var(--grid)" stroke-width="1"/>
+      <text class="tl-axis" x="${pad - 6}" y="${y(t) + 4}" text-anchor="end">${t}</text>`).join('')}
+    <path d="${area}" fill="${color}" opacity="0.10"/>
+    <path d="${d}" fill="none" stroke="${color}" stroke-width="2.2"
+          stroke-linejoin="round" stroke-linecap="round"/>
+    ${mark(iMax, 'top')}${mark(iMin, 'bottom')}
+    <circle cx="${x(last).toFixed(1)}" cy="${y(vals[last]).toFixed(1)}" r="4.5"
+            fill="${color}" stroke="var(--surface)" stroke-width="2"/>
+    <text class="tl-peak" x="${x(last).toFixed(1)}" y="${(y(vals[last]) - 11).toFixed(1)}"
+          text-anchor="end">${vals[last].toFixed(1)}</text>
+    ${xlab}
+  </svg></div>`;
+}
+
 /* ================= multi-series line chart =================
    Used for the forecast's own movement over time. Series are direct-labelled
    at their endpoint, so identity never rests on colour alone.             */
@@ -776,6 +955,30 @@ export function lineChart(series, { w = 720, h = 260, pad = 34, fmt = (v) => v,
         fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>
       <text x="${w - 86}" y="${y(s.points[n - 1]) + 4}" fill="var(--ink2)" font-size="11">${esc(s.label)}</text>`).join('')}
   </svg>`;
+}
+
+/* ================= half time =================
+   The results feed has carried a half-time score in every row since 2000-01 and
+   the forecast never read it. A second Dixon-Coles fit on those goals answers a
+   question the full-time model cannot: who is likely to be ahead at the break,
+   and how often that survives. Shown as a bar rather than a second 7x7 grid —
+   the interval is a smaller question than the result and should take less room.
+
+   Absent for a competition whose feed has no half-time scores, in which case
+   nothing is drawn rather than something being guessed. */
+export function halfTime(m, h, a) {
+  if (!Array.isArray(m.ht)) return '';
+  const [ph, pd, pa] = m.ht;
+  return `<h4>At half time</h4>
+    <div class="wdl" style="height:20px;margin:8px 0 6px">
+      <i class="h" style="flex:${Math.max(ph, .02)}">${ph >= .16 ? `<b>${Math.round(ph * 100)}</b>` : ''}</i>
+      <i class="d" style="flex:${Math.max(pd, .02)}">${pd >= .16 ? `<b>${Math.round(pd * 100)}</b>` : ''}</i>
+      <i class="a" style="flex:${Math.max(pa, .02)}">${pa >= .16 ? `<b>${Math.round(pa * 100)}</b>` : ''}</i>
+    </div>
+    <div class="hint" style="margin-bottom:20px">${esc(h.short)} ahead ${pct(ph)} ·
+      level ${pct(pd)} · ${esc(a.short)} ahead ${pct(pa)}${
+      m.htsc ? ` &nbsp;·&nbsp; likeliest half-time score ${m.htsc[0]}–${m.htsc[1]} (${pct(m.htscp)})` : ''}
+      &nbsp;·&nbsp; fitted on half-time goals, which the results feed has always carried.</div>`;
 }
 
 /* ================= match dialog =================
@@ -807,7 +1010,10 @@ export function matchModal(m, meta, opts = {}) {
     <div class="hint" style="margin-bottom:20px">
       ${esc(h.short)} win · draw · ${esc(a.short)} win &nbsp;·&nbsp;
       expected goals ${m.xgh} – ${m.xga} &nbsp;·&nbsp; over 2.5 goals ${pct(m.o25)}
-      &nbsp;·&nbsp; both score ${pct(m.btts)}</div>
+      &nbsp;·&nbsp; both score ${pct(m.btts)}
+      ${typeof m.csh === 'number' ? `&nbsp;·&nbsp; clean sheet
+        ${esc(h.short)} ${pct(m.csh)} / ${esc(a.short)} ${pct(m.csa)}` : ''}</div>
+    ${halfTime(m, h, a)}
     <h4>Every plausible scoreline</h4>
     <p class="hint" style="margin:0 0 12px">The likeliest single score is ${m.sc[0]}–${m.sc[1]},
       and even that lands only ${pct(m.scp)} of the time.</p>

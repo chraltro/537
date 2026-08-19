@@ -84,9 +84,10 @@ def write_sim_input(fit, fixtures, teams, adj, meta, path, *,
         "fixtures": out_fixtures,
     }
     # A cup's league phase has no European or relegation line; it has an
-    # advancement line and a cut. The worker reads whichever pair its manifest
-    # entry names, so both can live here without either page guessing.
-    if lg.kind == "cup":
+    # advancement line and a cut, and a second tier has a promotion line with a
+    # play-off band under it. The worker reads whichever pair its manifest entry
+    # names, so both can live here without either page guessing.
+    if lg.kind in ("cup", "promotion"):
         payload["kind"] = lg.kind
         payload["advance_direct"] = lg.advance_direct
         payload["advance_playoff"] = lg.advance_playoff

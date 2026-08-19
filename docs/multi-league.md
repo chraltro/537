@@ -50,3 +50,50 @@ agent edits the other's files.
   relegation spots, play-off note). No hardcoded "top 5" or "bottom 3".
 - The sim worker takes ucl_places/releg_places/n_teams from sim_input.json
   instead of constants.
+
+---
+
+## Amendment — beyond the big five (2026-08-19)
+
+Three competitions were added after this contract was written, and one thing about
+them breaks an assumption above: **`datasets/football-datasets` has exactly five
+league directories**, so nothing outside the big five can be read from the mirror.
+
+| slug | source | fixtures / history | shape |
+|---|---|---|---|
+| eredivisie | openfootball only | `europe/netherlands/{season}_nl1.txt`, 2018-19 → 2026-27 (9 seasons); `_nl2` 2020-21 → 2024-25 | 18 clubs, 306 matches |
+| primeira-liga | openfootball only | `europe/portugal/{season}_pt1.txt`, same span; `_pt2` 2020-21 → 2024-25 | 18 clubs, 306 matches |
+| championship | openfootball only | `england/{season}/2-championship.txt`, 2004-05 → 2026-27; `3-league1` alongside | 24 clubs, 552 matches, `kind: "promotion"` |
+
+Consequences, all of them deliberate and all of them stated on the method page:
+
+- **Goals only.** No shots, no cards, no referee. `ratings.fit`'s coverage-weighted
+  blend already handles a club with no shot data — it is what rates promoted clubs —
+  so nothing had to change in the fit.
+- **One feed, no fallback.** The big five have the mirror as primary and openfootball
+  as backup. These three have openfootball or nothing, and its in-season commits come
+  roughly weekly with multi-week gaps (measured on 2025-26: 2025-11-11 → 2025-12-31 →
+  2026-02-10). `Dataset.sources` now records what the build could actually see, and the
+  method page publishes it, so a stalled feed is visible rather than silent.
+- **A third `kind`.** `promotion` reads the table against an automatic-promotion line
+  (`advance_direct`) with a play-off band under it (`advance_playoff`), exactly as `cup`
+  reads it against advancement lines. `ucl_places` is reused as the promotion line so
+  every downstream computation — `_lines`, leverage, validation — is unchanged.
+- **Thin promotion calibration.** Five seasons of Eerste Divisie / Liga Portugal 2 can
+  fit a promoted-club slope above 1, which would amplify a promoted club's rating gap
+  instead of shrinking it. `priors.regress` now falls back to the measured Premier
+  League constants for an implausible slope as well as for too few pairs, and says which
+  in the output.
+
+The manifest gained nothing new: `manifest_entry()` already emits `advance_direct` /
+`advance_playoff` for any non-league kind, and the front end takes every league-dependent
+word from it, which is what made a 24-club second tier a registry entry rather than a fork.
+
+### The cross-league rating
+
+`site/data/global.json` and `site/data/h2h.json` are written once per run, after every
+league, and are **not** league-scoped — that is their whole point. They come from
+`ratings.fit_pooled` over `europe.Corpus` plus the Championship, re-centred on the big
+five so that 50 keeps meaning "an average big-five club" however many competitions the
+registry grows to. `run.POOLED_DOMESTIC` stays off: the league forecasts keep their own
+scale, and the Phase 2 gate that shelved pooled domestic fits still applies.

@@ -34,7 +34,10 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install numpy scipy pytest
+        # Pillow draws the share cards (model/social.py); DejaVu, the font
+        # they use, ships with ubuntu-latest. A missing Pillow is survivable --
+        # the build prints a line and skips the cards -- but not desirable.
+        run: pip install numpy scipy pytest Pillow
 
       - name: Cache source downloads
         uses: actions/cache@v4

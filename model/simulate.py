@@ -90,7 +90,8 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
                     scenarios: int = 200,
                     leverage: bool = False,
                     events: tuple[str, ...] | None = None,
-                    keep_orders: bool = False) -> dict:
+                    keep_orders: bool = False,
+                    curves: bool = True) -> dict:
     """Play the rest of the season `n_sims` times.
 
     Results already on the board are carried in as fact; only the remaining
@@ -101,6 +102,11 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
     freshest result is fifteen months old gets a wider interval than one playing
     every week. `events` names the three leverage events; a cup's league phase
     swings qualification rather than the title, so it passes `CUP_EVENTS`.
+
+    `curves` additionally tallies, for every club, how often each of the three
+    events happened *conditional on the club's own final points total*. That is
+    the "how many do we need" question, and counting it inside the loop that
+    already sorts every table costs four bincounts per scenario.
     """
     lg = league or leagues.DEFAULT
     ucl, europa, releg = lg.ucl_places, lg.europa_places, lg.releg_places
@@ -164,6 +170,15 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
     n_ev = 3
     lev_hits = np.zeros((3, len(remaining), n * n_ev), dtype=np.float64) if leverage else None
     lev_n = np.zeros((3, len(remaining)), dtype=np.float64) if leverage else None
+    # Points-conditional tallies: how often each club ends up champion / in the
+    # qualifying places / relegated, given the points it finished on. Same idea
+    # as leverage -- the counting is nearly free next to the sort that is
+    # already happening, and it answers a question no average can.
+    per_team_games = (2 * len(fixtures)) // n if n else 0
+    n_pts = 3 * per_team_games + 1
+    cur_hits = np.zeros((n * n_pts, n_ev)) if curves else None
+    cur_n = np.zeros(n * n_pts) if curves else None
+    team_off = np.arange(n) * n_pts
     kk = np.arange(MAXG + 1)
     lgam = np.array([0.0] + list(np.cumsum(np.log(np.arange(1, MAXG + 1)))))
     cursor = 0
@@ -228,12 +243,22 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
         gd_sum += gd.sum(axis=0)
         cursor += per
 
-        if leverage and len(remaining):
+        if curves or (leverage and len(remaining)):
             rank = np.argsort(order, axis=1)            # rank[s, t] = finish (0-based)
             ev = np.empty((per, n, n_ev), dtype=np.float32)
             ev[:, :, 0] = rank < lev_top
             ev[:, :, 1] = rank < lev_qual
             ev[:, :, 2] = rank >= n - lev_out
+
+        if curves:
+            # bin index = team * n_pts + that team's final points
+            bins = (team_off[None, :] + np.clip(pts, 0, n_pts - 1).astype(np.int64)).ravel()
+            cur_n += np.bincount(bins, minlength=n * n_pts)
+            for e in range(n_ev):
+                cur_hits[:, e] += np.bincount(bins, weights=ev[:, :, e].ravel(),
+                                              minlength=n * n_pts)
+
+        if leverage and len(remaining):
             ev_flat = ev.reshape(per, n * n_ev)
             res = np.where(hg > ag, 0, np.where(hg == ag, 1, 2))     # (per, n_rem)
             for k in range(3):
@@ -258,6 +283,8 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
         "relegation": p[:, -releg:].sum(axis=1),
         "n_sims": total,
         "lines": _lines(pos_pts[:total], lg),
+        "curves": (_curves(cur_hits, cur_n, teams, n_pts, total, events)
+                   if curves else None),
         "orders": orders_out[:total] if orders_out is not None else None,
         "leverage": (_leverage(lev_hits, lev_n, remaining, teams, events)
                      if leverage else None),
@@ -287,6 +314,37 @@ def _lines(pos_pts: np.ndarray, league: leagues.League | None = None) -> dict:
             # safety, matching the boundary side's points is (roughly) enough
             "enough90": int(np.percentile(col, 90)) + (1 if key != "title" else 0),
         }
+    return out
+
+
+#: A points bin is only published once enough simulated seasons landed in it to
+#: mean something. Below this the curve is one season's noise drawn as a fact.
+MIN_CURVE_SEASONS = 40
+
+
+def _curves(hits, counts, teams, n_pts, total, events) -> list[dict]:
+    """"How many points do we need?", per club, read off the same simulations.
+
+    For each club, the points totals it actually reached across the simulated
+    seasons, and how often each of the three events happened when it finished
+    on that many. Thin bins are dropped rather than smoothed: a bin holding
+    three seasons out of fifty thousand is not a probability, it is an anecdote.
+    """
+    out = []
+    for i, t in enumerate(teams):
+        lo, hi = i * n_pts, (i + 1) * n_pts
+        cnt = counts[lo:hi]
+        keep = np.nonzero(cnt >= MIN_CURVE_SEASONS)[0]
+        if not len(keep):
+            out.append({"id": t, "pts": [], "n": [],
+                        **{e: [] for e in events}})
+            continue
+        row = {"id": t,
+               "pts": [int(p) for p in keep],
+               "n": [int(cnt[p]) for p in keep]}
+        for e_i, name in enumerate(events):
+            row[name] = [round(float(hits[lo + p, e_i] / cnt[p]), 4) for p in keep]
+        out.append(row)
     return out
 
 

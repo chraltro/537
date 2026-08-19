@@ -25,6 +25,11 @@ from model.parse import TeamRegistry, normalise                         # noqa: 
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SLUGS = [lg.slug for lg in leagues.LEAGUES]
+#: The five the model was tuned on. Several rules below are true of those and
+#: deliberately not of the three added later: only the big five have a
+#: football-datasets mirror, twenty-plus seasons of history, or a Champions
+#: League line worth pinning to a UEFA decision.
+BIG5 = [lg.slug for lg in leagues.BIG_FIVE]
 
 _CACHE: dict[str, Dataset] = {}
 
@@ -41,20 +46,45 @@ def dataset():
 
 # ---------------------------------------------------------------- registry
 def test_registry_is_internally_consistent():
-    assert len(leagues.LEAGUES) == 5
-    assert len({lg.slug for lg in leagues.LEAGUES}) == 5
+    assert len(leagues.BIG_FIVE) == 5
+    assert len(leagues.LEAGUES) == 8
+    assert len({lg.slug for lg in leagues.LEAGUES}) == len(leagues.LEAGUES)
+    assert set(leagues.BIG_FIVE) <= set(leagues.LEAGUES)
     for lg in leagues.LEAGUES:
         # A double round robin, and nothing else, is a season.
         assert lg.n_matches == lg.n_teams * (lg.n_teams - 1), lg.slug
         assert 1 <= lg.ucl_places < lg.n_teams - lg.releg_places
         assert lg.releg_places >= 1
-        assert lg.fd_dir and lg.of_top and lg.of_second
+        assert lg.of_top and lg.of_second
+        # Only the big five are in the results mirror -- it has exactly five
+        # league directories -- so everything else must say it reads goals only.
+        if lg in leagues.BIG_FIVE:
+            assert lg.source == "mirror" and lg.fd_dir, lg.slug
+        else:
+            assert lg.source == "openfootball" and not lg.fd_dir, lg.slug
+
+
+def test_promotion_leagues_declare_their_playoff_band():
+    """A second tier is read against a promotion line and a play-off band, and
+    the band has to fit between that line and the drop."""
+    for lg in leagues.LEAGUES:
+        if lg.kind != "promotion":
+            continue
+        assert lg.advance_direct == lg.ucl_places, lg.slug
+        assert lg.advance_playoff and lg.advance_playoff >= 1, lg.slug
+        assert lg.advance_direct + lg.advance_playoff < lg.n_teams - lg.releg_places
+        assert "advance_direct" in lg.public() and "kind" in lg.public()
 
 
 def test_2026_27_season_shapes_match_the_contract():
-    """380/380/380/306/306, in registry order."""
-    assert [lg.n_matches for lg in leagues.LEAGUES] == [380, 380, 380, 306, 306]
-    assert [lg.n_teams for lg in leagues.LEAGUES] == [20, 20, 20, 18, 18]
+    """380/380/380/306/306 for the big five, in registry order, and the three
+    competitions added after them: 306/306/552."""
+    assert [lg.n_matches for lg in leagues.BIG_FIVE] == [380, 380, 380, 306, 306]
+    assert [lg.n_teams for lg in leagues.BIG_FIVE] == [20, 20, 20, 18, 18]
+    extra = [lg for lg in leagues.LEAGUES if lg not in leagues.BIG_FIVE]
+    assert [lg.slug for lg in extra] == ["eredivisie", "primeira-liga", "championship"]
+    assert [lg.n_matches for lg in extra] == [306, 306, 552]
+    assert [lg.n_teams for lg in extra] == [18, 18, 24]
 
 
 def test_qualification_rules_are_the_verified_2026_27_ones():
@@ -62,14 +92,19 @@ def test_qualification_rules_are_the_verified_2026_27_ones():
     five; Italy and Germany have four; France is the fifth association and sends
     three straight to the league phase. Play-off relegation only in Germany and
     France."""
-    ucl = {lg.slug: lg.ucl_places for lg in leagues.LEAGUES}
+    ucl = {lg.slug: lg.ucl_places for lg in leagues.BIG_FIVE}
     assert ucl == {"premier-league": 5, "la-liga": 5, "serie-a": 4,
                    "bundesliga": 4, "ligue-1": 3}
-    releg = {lg.slug: lg.releg_places for lg in leagues.LEAGUES}
+    releg = {lg.slug: lg.releg_places for lg in leagues.BIG_FIVE}
     assert releg == {"premier-league": 3, "la-liga": 3, "serie-a": 3,
                      "bundesliga": 2, "ligue-1": 2}
-    with_playoff = {lg.slug for lg in leagues.LEAGUES if lg.releg_note}
+    with_playoff = {lg.slug for lg in leagues.BIG_FIVE if lg.releg_note}
     assert with_playoff == {"bundesliga", "ligue-1"}
+    # The Netherlands and Portugal each send champions and runners-up to the
+    # league phase; this repository's own data/europe/participants-2026-27.json
+    # lists PSV and Feyenoord, and Porto and Sporting CP, among the 36.
+    assert leagues.EREDIVISIE.ucl_places == 2
+    assert leagues.PRIMEIRA_LIGA.ucl_places == 2
 
 
 def test_source_urls_follow_the_documented_shapes():
@@ -96,7 +131,7 @@ def test_season_lists_end_at_the_forecast_season():
 
 def test_unknown_league_fails_loudly():
     with pytest.raises(KeyError):
-        leagues.get("eredivisie")
+        leagues.get("not-a-league")
 
 
 def test_config_constants_still_describe_the_premier_league():
@@ -197,8 +232,19 @@ def test_fixture_list_is_a_complete_season(dataset, slug):
 @pytest.mark.parametrize("slug", SLUGS)
 def test_history_is_deep_enough_to_fit(dataset, slug):
     ds = dataset(slug)
-    assert len({m.season for m in ds.top}) >= 20, f"{slug}: too few seasons"
-    assert len(ds.second) > 2000, f"{slug}: second tier needed to rate promoted clubs"
+    lg = leagues.get(slug)
+    # The mirror carries the big five back to 1993-94 and the pipeline reads it
+    # from 2000-01. openfootball's country files start much later, so the bar is
+    # "deep enough to fit", not "as deep as the Premier League".
+    want = 20 if lg.source == "mirror" else 8
+    assert len({m.season for m in ds.top}) >= want, f"{slug}: too few seasons"
+    # Enough second-tier football to rate a promoted club at all. The big five
+    # have a decade or more; the Eredivisie and Primeira Liga have five seasons
+    # upstream, which is thin on purpose -- `priors.regress` falls back to the
+    # measured Premier League constants rather than trusting a slope fitted on
+    # a handful of promoted clubs, and says so in the output.
+    floor = 2000 if lg.source == "mirror" else 1200
+    assert len(ds.second) > floor, f"{slug}: second tier needed to rate promoted clubs"
 
 
 # ---------------------------------------------------------------- goals-only
@@ -328,7 +374,9 @@ def test_thin_second_tier_falls_back_to_the_premier_league_constants():
     assert len(thin) < priors.MIN_PAIRS
     assert got["source"] == "premier-league"
     assert got["n"] == 3
-    assert got == {**priors.PL_FALLBACK["promoted"], "n": 3}
+    assert {k: v for k, v in got.items() if k != "reason"} == {
+        **priors.PL_FALLBACK["promoted"], "n": 3}
+    assert got["reason"] == "too few pairs"
     assert 0.2 < got["slope"] < 0.6, "a promoted club keeps a fraction of its edge"
 
     # With enough pairs the league measures its own: y = 0.5x exactly.
@@ -337,6 +385,18 @@ def test_thin_second_tier_falls_back_to_the_premier_league_constants():
     assert got["source"] == "serie-a"
     assert got["slope"] == pytest.approx(0.5, abs=1e-6)
     assert got["intercept"] == pytest.approx(0.0, abs=1e-6)
+
+
+def test_an_implausible_slope_falls_back_too():
+    """Enough pairs is not the same as a believable answer. Eight seasons of a
+    smaller league can fit a promoted-club slope above one, which would amplify
+    a promoted club's rating gap instead of shrinking it."""
+    silly = [(0.1 * i, 0.3 * i) for i in range(-6, 6)]      # slope 3.0
+    got = priors.regress(silly, "promoted", "primeira-liga")
+    assert len(silly) >= priors.MIN_PAIRS
+    assert got["source"] == "premier-league"
+    assert got["measured_slope"] > priors.SLOPE_BAND[1]
+    assert 0 < got["slope"] < 1
 
 
 def test_every_league_calibration_reports_its_source(dataset):

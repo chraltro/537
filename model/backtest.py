@@ -10,6 +10,8 @@ making. If the model does not beat all three out of sample, the model is wrong.
 from __future__ import annotations
 
 import datetime as dt
+import json
+import os
 from collections import defaultdict
 
 import numpy as np
@@ -48,6 +50,25 @@ def rps(p: np.ndarray, y: np.ndarray) -> float:
 
 def accuracy(p: np.ndarray, y: np.ndarray) -> float:
     return float(np.mean(np.argmax(p, axis=1) == y))
+
+
+def _score_masked(rows: list, P: np.ndarray, Y: np.ndarray,
+                  extra_mask: np.ndarray | None = None) -> dict | None:
+    """Score a baseline over exactly the matches it actually has a price for.
+
+    The model's own score over the same subset rides along as `model_here`, so
+    "the market beat us" is never a comparison between two different samples.
+    """
+    have = np.array([r is not None for r in rows])
+    if extra_mask is not None:
+        have = have & extra_mask
+    if have.sum() < 100:
+        return None
+    B = np.array([r for r, ok in zip(rows, have) if ok], float)
+    out = score_all(B, Y[have])
+    out["coverage"] = round(float(have.sum() / max(len(rows), 1)), 3)
+    out["model_here"] = score_all(P[have], Y[have])
+    return out
 
 
 def score_all(p: np.ndarray, y: np.ndarray) -> dict:
@@ -126,6 +147,97 @@ class Elo:
             self.update(m)
 
 
+#: Frozen external baselines: the closing bookmaker price and ClubElo's own
+#: published rating, extracted once by `tools/extract_baselines.py`. Absent file
+#: means those two baselines are simply not reported for that league.
+BASELINE_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "baselines")
+
+
+def load_external(league) -> dict:
+    """`{(date, home, away): row}` for one league, or {} when not extracted."""
+    path = os.path.join(BASELINE_DIR, f"{league.slug}.json")
+    if not os.path.exists(path):
+        return {}
+    try:
+        doc = json.load(open(path))
+    except (OSError, ValueError):
+        return {}
+    return {(r[0], r[1], r[2]): r for r in doc.get("rows", [])}
+
+
+class Market:
+    """The closing bookmaker price, de-vigged.
+
+    The only baseline on this page that is genuinely hard to beat, and the
+    reason it is here: everything else compares the model with something nobody
+    would actually use. Bookmakers price with injuries, lineups, weather and
+    money on the line, none of which this model can see, so beating them is not
+    the expectation — knowing the size of the gap is the point.
+    """
+    name = "Closing bookmaker odds"
+
+    def __init__(self, external: dict):
+        self.ext = external
+
+    def predict(self, m):
+        row = self.ext.get((m.date.isoformat(), m.home, m.away))
+        p = row[3] if row else None
+        return np.array(p, float) if p else None
+
+
+class ClubEloBaseline:
+    """ClubElo's published rating, mapped to 1X2.
+
+    A published, independently maintained rating — a much sterner test than the
+    toy Elo above, which learns only from the same match list the model sees.
+    The rating comes from the frozen snapshot; only the mapping from a rating
+    difference to three probabilities is fitted here, and it is fitted purely on
+    seasons *before* the backtest window so that no result is used to predict
+    itself.
+    """
+    name = "ClubElo rating"
+
+    def __init__(self, external: dict, train: list[Match]):
+        self.ext = external
+        self.home = 65.0
+        self.draw_a, self.draw_b = 0.30, 1.0
+        pairs = []
+        for m in train:
+            row = external.get((m.date.isoformat(), m.home, m.away))
+            if row and row[4] and row[5] and m.hg is not None:
+                pairs.append((row[4] - row[5], _result_index(m)))
+        if len(pairs) < 500:
+            return
+        diff = np.array([p[0] for p in pairs], float)
+        y = np.array([p[1] for p in pairs])
+        best = 1e9
+        for home in (40.0, 55.0, 65.0, 75.0, 90.0):
+            e = 1.0 / (1.0 + 10 ** (-(diff + home) / 400.0))
+            for a in np.arange(0.24, 0.35, 0.01):
+                for b in np.arange(0.4, 2.4, 0.2):
+                    p = self._curve(e, a, b)
+                    ll = log_loss(p, y)
+                    if ll < best:
+                        best = ll
+                        self.home, self.draw_a, self.draw_b = home, float(a), float(b)
+
+    @staticmethod
+    def _curve(e, a, b):
+        d = np.clip(a - b * (e - 0.5) ** 2, 0.06, 0.40)
+        hw = np.clip(e - d / 2, 1e-3, 1 - 1e-3)
+        aw = np.clip(1 - hw - d, 1e-3, 1 - 1e-3)
+        p = np.stack([hw, d, aw], -1)
+        return p / p.sum(-1, keepdims=True)
+
+    def predict(self, m):
+        row = self.ext.get((m.date.isoformat(), m.home, m.away))
+        if not row or not row[4] or not row[5]:
+            return None
+        e = 1.0 / (1.0 + 10 ** (-((row[4] - row[5]) + self.home) / 400.0))
+        return self._curve(np.array([e]), self.draw_a, self.draw_b)[0]
+
+
 class SeasonForm:
     """Season-to-date goal difference per game, mapped through a fitted logistic.
     This is 'just read the league table', quantified."""
@@ -193,7 +305,7 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
     preds: list[np.ndarray] = []
     ys: list[int] = []
     seasons_of: list[str] = []
-    base_preds = {k: [] for k in ("base", "elo", "form")}
+    base_preds = {k: [] for k in ("base", "elo", "form", "market", "clubelo")}
 
     warm: dict | None = None
     train0 = [m for m in ds.top if m.season < min(seasons)]
@@ -203,6 +315,14 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
     for m in sorted(train0, key=lambda x: x.date):
         form.update(m)
     base = BaseRate(train0)
+    # Two external baselines, from a frozen snapshot. Both may be absent -- for
+    # a league nobody has extracted, or for matches after the snapshot's own
+    # cut-off -- and a baseline scored on a different set of matches from the
+    # model would be a comparison of two different questions. So each carries
+    # its own mask and its own `n`, and the site prints both.
+    external = load_external(ds.league)
+    market = Market(external)
+    clubelo = ClubEloBaseline(external, train0)
 
     for season in seasons:
         season_matches = sorted([m for m in ds.top if m.season == season],
@@ -231,6 +351,8 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
                 base_preds["base"].append(base.predict(m))
                 base_preds["elo"].append(elo.predict(m))
                 base_preds["form"].append(form.predict(m))
+                base_preds["market"].append(market.predict(m))
+                base_preds["clubelo"].append(clubelo.predict(m))
             for m in chunk:
                 elo.update(m)
                 form.update(m)
@@ -248,10 +370,19 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
                {"season": s, **score_all(P[S == s], Y[S == s]),
                 "held_out": s not in TUNED_ON}
                for s in seasons if (S == s).any()],
-           "baselines": {k: score_all(np.array(v), Y) for k, v in base_preds.items()},
-           "baselines_held_out": {k: score_all(np.array(v)[held], Y[held])
-                                  for k, v in base_preds.items()} if held.any() else None,
-           "names": {"base": BaseRate.name, "elo": Elo.name, "form": SeasonForm.name},
+           "baselines": {k: v for k, v in
+                         ((k, _score_masked(v, P, Y)) for k, v in base_preds.items())
+                         if v is not None},
+           "baselines_held_out": ({k: v for k, v in
+                                   ((k, _score_masked(v, P, Y, held))
+                                    for k, v in base_preds.items()) if v is not None}
+                                  if held.any() else None),
+           "names": {"base": BaseRate.name, "elo": Elo.name, "form": SeasonForm.name,
+                     "market": Market.name, "clubelo": ClubEloBaseline.name},
+           "external": {"source": "xgabora/Club-Football-Match-Data-2000-2025",
+                        "url": ("https://github.com/xgabora/"
+                                "Club-Football-Match-Data-2000-2025"),
+                        "available": bool(external)},
            "seasons": seasons,
            "params": {"goals_weight": goals_weight, "decay": decay}}
     out["calibration"] = calibration(P, Y)

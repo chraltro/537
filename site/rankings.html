@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Global club rankings</title>
+<meta name="description" content="Every club in Europe on one rating scale, from one model fitted over fifteen seasons of continental football and fifty-two domestic leagues.">
+<meta property="og:title" content="Global club rankings">
+<meta property="og:description" content="Every club in Europe on one rating scale — the cross-league rating a single league table cannot give you.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="og/premier-league.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="og/premier-league.png">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
+<style>
+  #rk td.spi { position: relative; }
+  #rk .lgname { color: var(--ink2); font-size: 12.5px; }
+  #rk .lgname span { color: var(--muted); }
+</style>
+</head>
+<body>
+<main class="wrap" id="main">
+  <div class="pagehead">
+    <h1>Every club, one scale</h1>
+    <p class="lede" id="lede">Loading the global rating…</p>
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section class="card">
+    <div class="cardbar">
+      <h2>The ranking</h2>
+      <a class="morelink" href="compare.html">Compare two clubs →</a>
+    </div>
+    <p class="sub">One Dixon–Coles fit over every match the pipeline can reach — fifteen
+      seasons of UEFA competition, the big five, and every non-big-five top flight with a
+      feed. The continental matches are the only edges that join one league to another, and
+      they are what put these clubs on a single scale. Click a column to sort.</p>
+
+    <div class="rk-filters">
+      <label class="vh" for="q">Search clubs</label>
+      <input type="search" id="q" placeholder="Search club or league…" autocomplete="off">
+      <label for="lgf">League</label>
+      <select id="lgf"><option value="">Every league</option></select>
+      <button class="chip-btn" id="onlyours" aria-pressed="false">Only clubs we forecast</button>
+      <span style="margin-left:auto;color:var(--muted);font-size:12.5px" id="count"></span>
+    </div>
+
+    <div class="scroller">
+      <table id="rk">
+        <thead><tr>
+          <th class="l" data-k="rank">#</th>
+          <th class="l" data-k="name">Club</th>
+          <th class="l" data-k="league">League</th>
+          <th data-k="spi" title="Expected share of points against an average club of the big five leagues">SPI</th>
+          <th data-k="off" title="Goals expected to score against that average club">Att</th>
+          <th data-k="def" title="Goals expected to concede against that average club">Def</th>
+          <th data-k="league_rank" title="Rank within its own league">In league</th>
+          <th data-k="n" title="Matches in the fitted corpus">Matches</th>
+        </tr></thead>
+        <tbody id="rkbody"><tr><td colspan="8" class="skeleton">Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <p class="hint" id="note" style="margin-top:16px"></p>
+  </section>
+
+  <nav class="deeper" aria-label="Go deeper">
+    <a href="compare.html"><b>Compare two clubs</b>
+      <span>Any two clubs in Europe, side by side, with the head-to-head record and a
+        neutral-ground match between them.</span></a>
+    <a href="index.html"><b>Back to the league</b>
+      <span>Projected tables, match probabilities and season simulations, competition by
+        competition.</span></a>
+    <a href="method.html"><b>How this rating is fitted</b>
+      <span>Why the league forecasts keep their own scale, and what a stale feed does to a
+        club's rating.</span></a>
+  </nav>
+</main>
+
+<script type="module">
+import { siteData, esc, ord, initChrome, tip, tipRows, makeSortable, chipColor,
+         initPalette, setMeta } from './assets/app.js';
+initChrome('rankings');
+
+const g = await siteData('global');
+const rows = g.clubs;
+
+setMeta({
+  title: 'Global club rankings',
+  description: `Every club in Europe on one scale: ${g.n_clubs} clubs from `
+    + `${g.n_leagues} leagues, rated from ${g.n_matches.toLocaleString()} matches.`,
+});
+
+const fmtStamp = (iso) => new Date(iso).toLocaleDateString('en-GB',
+  { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+document.getElementById('lede').innerHTML =
+  `One rating for <b>${g.n_clubs}</b> clubs across <b>${g.n_leagues}</b> leagues, fitted in a `
+  + `single model over <b>${g.n_matches.toLocaleString()}</b> matches. `
+  + `${esc(g.note)} The five league forecasts keep their own scale and are not touched by this — `
+  + 'a rating quoted against nine hundred clubs would say something different, and the '
+  + 'projected tables would move for no new evidence.';
+
+document.getElementById('stamp').innerHTML = `
+  <span>Fitted to <b>${g.asof}</b></span>
+  <span>Scale set: <b>${g.scale_clubs}</b> big-five clubs</span>
+  <span>Updated <b>${fmtStamp(g.generated)}</b></span>`;
+
+const top = rows.slice(0, 3);
+document.getElementById('tiles').innerHTML = top.map((t, i) => `
+  <div class="tile"><div class="k">${ord(i + 1)} in Europe</div>
+    <div class="v">${esc(t.name)}</div>
+    <div class="n">SPI ${t.spi.toFixed(1)} · ${esc(t.league)}</div></div>`).join('')
+  + `<div class="tile"><div class="k">Leagues represented</div>
+       <div class="v">${g.n_leagues}</div>
+       <div class="n">from San Marino to the Premier League</div></div>`;
+
+/* league filter, ordered by how many ranked clubs each league has */
+const byLeague = new Map();
+rows.forEach((r) => byLeague.set(r.league, (byLeague.get(r.league) || 0) + 1));
+document.getElementById('lgf').insertAdjacentHTML('beforeend',
+  [...byLeague.entries()].sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `<option value="${esc(k)}">${esc(k)} (${v})</option>`).join(''));
+
+const maxSpi = Math.max(...rows.map((r) => r.spi));
+const body = document.getElementById('rkbody');
+const count = document.getElementById('count');
+
+function render(list) {
+  body.innerHTML = list.slice(0, 400).map((t) => `
+    <tr data-id="${t.id}">
+      <td class="l rank">${t.rank}</td>
+      <td class="l"><span class="club">
+        <span class="chip" style="background:${chipColor(t.primary)}"></span>
+        ${t.slug
+          ? `<a href="team.html?t=${encodeURIComponent(t.id)}&lg=${encodeURIComponent(t.slug)}">${esc(t.name)}</a>`
+          : `<span>${esc(t.name)}</span>`}
+        ${t.stale > 13 ? `<span class="stale-tag" title="Newest result in the corpus is ${t.stale} months old">${Math.round(t.stale)}mo old</span>` : ''}
+      </span></td>
+      <td class="l lgname">${esc(t.league)}${t.country ? ` <span>${esc(t.country)}</span>` : ''}</td>
+      <td class="spi"><b>${t.spi.toFixed(1)}</b>
+        <span class="minibar" style="width:${(t.spi / maxSpi * 100).toFixed(1)}%"></span></td>
+      <td>${t.off.toFixed(2)}</td>
+      <td>${t.def.toFixed(2)}</td>
+      <td>${ord(t.league_rank)}</td>
+      <td>${t.n}</td>
+    </tr>`).join('') || '<tr><td colspan="8" class="empty">Nothing matches that.</td></tr>';
+  count.textContent = list.length > 400
+    ? `Showing the top 400 of ${list.length}` : `${list.length} clubs`;
+}
+
+/* Filters live outside the sort so that changing one never resets the other:
+   `makeSortable` owns the order, this owns which rows survive it. */
+let query = '', league = '', ours = false;
+const keep = (t) => (!league || t.league === league)
+  && (!ours || t.featured)
+  && (!query || t.name.toLowerCase().includes(query) || t.league.toLowerCase().includes(query));
+
+let ordered = rows;
+makeSortable(document.getElementById('rk'), rows, (sorted) => {
+  ordered = sorted;
+  render(ordered.filter(keep));
+}, 'spi');
+const redraw = () => render(ordered.filter(keep));
+
+document.getElementById('q').addEventListener('input', (e) => {
+  query = e.target.value.trim().toLowerCase();
+  redraw();
+});
+document.getElementById('lgf').addEventListener('change', (e) => {
+  league = e.target.value;
+  redraw();
+});
+const only = document.getElementById('onlyours');
+only.addEventListener('click', () => {
+  ours = only.getAttribute('aria-pressed') !== 'true';
+  only.setAttribute('aria-pressed', String(ours));
+  redraw();
+});
+
+body.addEventListener('mousemove', (e) => {
+  const tr = e.target.closest('tr[data-id]');
+  if (!tr) return tip(null);
+  const t = rows.find((r) => r.id === tr.dataset.id);
+  tip(tipRows(esc(t.name), [
+    ['Rank in Europe', ord(t.rank)],
+    ['Rank in its league', `${ord(t.league_rank)} of ${byLeague.get(t.league)}`],
+    ['SPI', t.spi.toFixed(1)],
+    ['Attack / defence', `${t.off.toFixed(2)} / ${t.def.toFixed(2)}`],
+    ['Matches in the fit', t.n],
+    ['Newest result', t.last || 'unknown'],
+  ]), e);
+});
+body.addEventListener('mouseleave', () => tip(null));
+
+document.getElementById('note').textContent =
+  `A club is ranked once it has ${'12'} matches in the corpus and a result inside the last `
+  + 'two years. Clubs marked with an age are rated on a domestic feed that stopped '
+  + 'publishing — twenty-nine associations have nothing newer than May 2025 — so their '
+  + 'rating is as old as the tag says and the simulation widens their interval to match.';
+
+/* The palette's club entries link into one league's pages, and this page is
+   not league-scoped -- a Dutch club opened from a Premier League palette would
+   land on the wrong forecast. The page has its own search box; the palette
+   keeps the page and league jumps. */
+initPalette([]);
+window.addEventListener('themechange', redraw);
+</script>
+</body>
+</html>

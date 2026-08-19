@@ -79,6 +79,15 @@ def _centred_net(fit: ratings.Fit, teams: list[str]) -> dict[str, float]:
     return {t: v - m for t, v in net.items()}
 
 
+#: A believable range for a carryover slope. Below zero says a club's preseason
+#: edge predicts the *opposite* of what happens; above this says the season
+#: amplifies preseason differences rather than regressing them, which contradicts
+#: every measurement in this repository (the Premier League's promoted slope is
+#: 0.31 over 39 cases). Either is a small, noisy sample talking, not a fact about
+#: the league, and the Eredivisie and Primeira Liga have only eight seasons each.
+SLOPE_BAND = (0.02, 1.25)
+
+
 def regress(pairs: list[tuple[float, float]], key: str, source: str) -> dict:
     """Fit one league's own correction, or fall back to the Premier League's.
 
@@ -86,12 +95,22 @@ def regress(pairs: list[tuple[float, float]], key: str, source: str) -> dict:
     overachieve, so the honest choice is a correction measured somewhere with
     enough seasons rather than one measured here with too few. The result says
     which, so the site can too.
+
+    A slope outside `SLOPE_BAND` falls back for the same reason even when there
+    were enough pairs: eight seasons of a smaller league can produce a fitted
+    slope of 2.0, and applying it would double every promoted club's rating gap
+    instead of shrinking it.
     """
     if len(pairs) < MIN_PAIRS:
-        return {**PL_FALLBACK[key], "n": len(pairs)}
+        return {**PL_FALLBACK[key], "n": len(pairs), "reason": "too few pairs"}
     x = np.array([p[0] for p in pairs])
     y = np.array([p[1] for p in pairs])
     slope, intercept = np.polyfit(x, y, 1)
+    lo, hi = SLOPE_BAND
+    if not lo <= slope <= hi:
+        return {**PL_FALLBACK[key], "n": len(pairs),
+                "measured_slope": round(float(slope), 4),
+                "reason": f"measured slope {slope:.2f} outside {lo}-{hi}"}
     return {"slope": float(slope), "intercept": float(intercept),
             "n": len(pairs), "source": source}
 

@@ -48,8 +48,10 @@ class League:
                                # domestic cup winners move this line every year
 
     #: "league" = a domestic double round robin; "cup" = a UEFA-style
-    #: competition whose league phase feeds a knockout. Cups qualify by
-    #: advancement lines instead of UCL/relegation lines.
+    #: competition whose league phase feeds a knockout; "promotion" = a second
+    #: tier, where the top line is automatic promotion and a band beneath it
+    #: plays off for one more place. Cups and promotion leagues both read their
+    #: table against advancement lines instead of a Champions League line.
     kind: str = "league"
     advance_direct: int | None = None    # league-phase positions straight to the R16
     advance_playoff: int | None = None   # further positions into the knockout play-off
@@ -64,6 +66,18 @@ class League:
     of_second: str = ""        # openfootball path template, second tier
     fd_from: int = 2000        # first season year of usable mirror CSVs
     second_from: int = 2010    # first season year the second tier exists upstream
+
+    #: Where this competition's own history comes from. "mirror" is the
+    #: football-datasets CSV, which carries shots, cards, half-time scores and
+    #: the referee; "openfootball" is the plain-text fixture file, which carries
+    #: goals and nothing else. Only the big five are in the mirror -- it has
+    #: exactly five league directories -- so every competition added beyond them
+    #: is goals-only, the shot blend degrades gracefully via its coverage
+    #: weighting, and the method page says so per league.
+    source: str = "mirror"
+    #: First season of openfootball top-flight history, used when source is
+    #: "openfootball". Listed rather than probed: 404s cost a round trip each.
+    of_from: int = 2018
 
     #: Backtest window. The Premier League keeps the full record because it is
     #: the league the model was tuned on and the one whose scores are published
@@ -99,13 +113,18 @@ class League:
         end = int(season.split("-")[0])
         return [f"{y}-{(y + 1) % 100:02d}" for y in range(self.second_from, end + 1)]
 
+    def top_season_labels(self, season: str) -> list[str]:
+        """Top-flight season labels for a competition read from openfootball."""
+        end = int(season.split("-")[0])
+        return [f"{y}-{(y + 1) % 100:02d}" for y in range(self.of_from, end + 1)]
+
     def manifest_entry(self, ready: bool = False) -> dict:
         """The row this league contributes to site/data/leagues.json."""
         row = {"slug": self.slug, "name": self.name, "country": self.country,
                "ready": ready, "kind": self.kind, "n_teams": self.n_teams,
                "ucl_places": self.ucl_places, "releg_places": self.releg_places,
                "releg_note": self.releg_note}
-        if self.kind == "cup":
+        if self.kind in ("cup", "promotion"):
             row["advance_direct"] = self.advance_direct
             row["advance_playoff"] = self.advance_playoff
         if self.ready_note:
@@ -117,9 +136,11 @@ class League:
         row = {"slug": self.slug, "name": self.name, "country": self.country,
                "ucl_places": self.ucl_places, "releg_places": self.releg_places,
                "releg_note": self.releg_note, "n_teams": self.n_teams}
-        if self.kind == "cup":
+        if self.kind in ("cup", "promotion"):
             # A cup's table is read against advancement lines, not against a
-            # European place and a drop; the site takes its wording from here.
+            # European place and a drop; a second tier's top line is automatic
+            # promotion with a play-off band under it. Both take their wording
+            # from here rather than from anything hardcoded in the front end.
             row["kind"] = self.kind
             row["advance_direct"] = self.advance_direct
             row["advance_playoff"] = self.advance_playoff
@@ -209,6 +230,68 @@ LIGUE_1 = League(
 )
 
 # ---------------------------------------------------------------------------
+# Beyond the big five. These three have no football-datasets directory -- the
+# mirror carries exactly five league folders -- so they are read from
+# openfootball and run on goals alone. `ratings.fit`'s coverage-weighted blend
+# already handles a club with no shot data (it is what rates promoted clubs),
+# and the method page states the difference per league rather than hiding it.
+#
+# The single-source dependency is the real risk and it is why the freshness
+# panel exists: openfootball's in-season commits are roughly weekly with
+# multi-week gaps (measured on 2025-26: 2025-11-11 -> 2025-12-31 -> 2026-02-10),
+# and unlike the big five there is no second feed to fall back to.
+EREDIVISIE = League(
+    slug="eredivisie", name="Eredivisie", country="Netherlands",
+    n_teams=18, n_matches=306,
+    # The Netherlands sends its champions and its runners-up to the league
+    # phase -- this repository's own data/europe/participants-2026-27.json
+    # lists PSV (champions) and Feyenoord (2nd) among the 36, and that file is
+    # the sourced artefact the Champions League forecast already stands on.
+    ucl_places=2,
+    releg_places=1,
+    releg_note="16th and 17th enter the promotion/relegation play-offs",
+    europa_places=2,
+    of_top="europe/master/netherlands/{season}_nl1",
+    of_second="europe/master/netherlands/{season}_nl2",
+    source="openfootball", of_from=2018, second_from=2020,
+    backtest_from="2021-22",
+)
+
+PRIMEIRA_LIGA = League(
+    slug="primeira-liga", name="Primeira Liga", country="Portugal",
+    n_teams=18, n_matches=306,
+    # Same evidence: participants-2026-27.json carries Porto (champions) and
+    # Sporting CP (2nd) in the league phase.
+    ucl_places=2,
+    releg_places=2, releg_note=None,
+    europa_places=2,
+    of_top="europe/master/portugal/{season}_pt1",
+    of_second="europe/master/portugal/{season}_pt2",
+    source="openfootball", of_from=2018, second_from=2020,
+    backtest_from="2021-22",
+)
+
+#: The second tier read as its own competition: the top line is automatic
+#: promotion, the band beneath it plays off for one more place, and the bottom
+#: three go down. `kind="promotion"` is what makes the site say "promotion"
+#: where a top flight says "Champions League".
+CHAMPIONSHIP = League(
+    slug="championship", name="Championship", country="England",
+    n_teams=24, n_matches=552,
+    kind="promotion", advance_direct=2, advance_playoff=4,
+    # Reusing the two line fields keeps every downstream computation identical:
+    # `ucl_places` is the automatic-promotion line, `releg_places` the drop.
+    ucl_places=2, releg_places=3,
+    releg_note="3rd to 6th play off for the third promotion place",
+    europa_places=4,
+    of_top="england/master/{season}/2-championship",
+    of_second="england/master/{season}/3-league1",
+    source="openfootball", of_from=2004, second_from=2004,
+    backtest_from="2021-22",
+)
+
+
+# ---------------------------------------------------------------------------
 # European competitions. The league phase is literally a 36-team league whose
 # clubs each play 8 of the other 35, so the same machinery carries it; the
 # knockout stages live in model/knockout.py. Fixture source is OUR OWN
@@ -234,7 +317,14 @@ CHAMPIONS_LEAGUE = League(
 #: Registry order is the order the site shows them in. Domestic leagues build
 #: today; the Champions League appears in the manifest (ready:false until its
 #: pipeline lands) so the site can already show the sixth entry.
-LEAGUES: tuple[League, ...] = (PREMIER_LEAGUE, LA_LIGA, SERIE_A, BUNDESLIGA, LIGUE_1)
+LEAGUES: tuple[League, ...] = (PREMIER_LEAGUE, LA_LIGA, SERIE_A, BUNDESLIGA,
+                               LIGUE_1, EREDIVISIE, PRIMEIRA_LIGA, CHAMPIONSHIP)
+
+#: The five the model was calibrated on and whose backtest is quoted as the
+#: headline. Kept separate from `LEAGUES` so anything that means "the big five"
+#: says so rather than meaning "whatever the registry happens to hold".
+BIG_FIVE: tuple[League, ...] = (PREMIER_LEAGUE, LA_LIGA, SERIE_A, BUNDESLIGA,
+                                LIGUE_1)
 EUROPEAN: tuple[League, ...] = (CHAMPIONS_LEAGUE,)
 BY_SLUG: dict[str, League] = {lg.slug: lg for lg in LEAGUES + EUROPEAN}
 DEFAULT = PREMIER_LEAGUE

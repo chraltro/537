@@ -122,6 +122,47 @@ def freeze_predictions(matches: list[dict], out_dir: str | None = None) -> dict:
     return store
 
 
+def expected_points(matches: list[dict], frozen: dict, teams) -> dict[str, dict]:
+    """Points taken versus points the forecast said each match was worth.
+
+    The expectation is built from the probabilities frozen *before* kick-off, so
+    this is not the model marking a result it has already seen: a club sitting
+    above its expected points got results its own fixtures did not promise, and
+    the gap is the closest thing to a measurement of luck a results model can
+    honestly make.
+
+    Only matches with a genuine pre-kick-off forecast on record are counted, so
+    a club's expectation always covers exactly the matches its actual points
+    came from.
+    """
+    out = {t: {"pts": 0, "xp": 0.0, "played": 0} for t in teams}
+    for m in matches:
+        if not m["played"]:
+            continue
+        f = frozen.get(f"{m['h']}|{m['a']}")
+        if not f:
+            continue                    # no honest pre-match forecast on record
+        ph, pd, pa = float(f["ph"]), float(f["pd"]), float(f["pa"])
+        got_h = 3 if m["hg"] > m["ag"] else (1 if m["hg"] == m["ag"] else 0)
+        for t, pts, xp in ((m["h"], got_h, 3 * ph + pd),
+                           (m["a"], 3 - got_h if got_h != 1 else 1, 3 * pa + pd)):
+            r = out.get(t)
+            if r is None:
+                continue
+            r["pts"] += pts
+            r["xp"] += xp
+            r["played"] += 1
+    for r in out.values():
+        # Two decimals, not one: the site shows one, but a per-club figure
+        # rounded before it is summed no longer conserves points across a match,
+        # and "the whole division is 0.4 points lucky" is a rounding artefact
+        # that looks exactly like a finding.
+        r["xp"] = round(r["xp"], 2)
+        r["diff"] = round(r["pts"] - r["xp"], 2)
+        r["per_match"] = round(r["diff"] / r["played"], 3) if r["played"] else 0.0
+    return out
+
+
 def season_report(matches: list[dict], frozen: dict, names: dict) -> dict:
     """Score this season's completed matches against their pre-kick-off forecast."""
     rows, probs, ys = [], [], []

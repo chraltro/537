@@ -39,8 +39,8 @@ import time
 
 import numpy as np
 
-from . import (backtest, config, europe, insight, knockout, leagues, priors,
-               ratings, simulate)
+from . import (backtest, config, europe, feeds, gamestate, insight, knockout,
+               leagues, priors, rankings, ratings, simulate, social)
 from .data import Dataset
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -73,20 +73,30 @@ def spi(fit: ratings.Fit, team: str, adj: float = 0.0) -> float:
 
 def _rating_history(ds: Dataset, teams, shot_conv, adj: dict[str, float],
                     kickoff: dt.date) -> dict[str, list]:
-    """SPI at the start of each of the last few seasons, so each club has a
-    trajectory to show rather than a single number with no context.
+    """SPI at the start of every season in the record, so each club has a
+    trajectory rather than a single number with no context.
 
+    This used to stop at four seasons, which is enough to see a trend and far
+    too little to see a club. The mirror carries all five big-five leagues back
+    to 1993-94, and one fit costs about four tenths of a second on the full
+    corpus, so the whole run is a handful of seconds per league — a cheap price
+    for the one chart on the site that shows a decade instead of a season.
+
+    Every point is fitted only on matches played before that season started, so
+    the line is a walk-forward record and not a curve drawn through hindsight.
     The final point carries the same prior and market adjustment as the headline
     rating, so the trajectory ends exactly where the club's SPI is quoted.
     """
     hist: dict[str, list] = {t: [] for t in teams}
-    seasons = sorted({m.season for m in ds.top if m.season != ds.season})[-4:]
-    points = [(s, dt.date(int(s.split("-")[0]), 8, 1)) for s in seasons]
+    seasons = sorted({m.season for m in ds.top if m.season != ds.season})
+    points = [(s, dt.date(int(s.split("-")[0]), 7, 1)) for s in seasons]
     points.append((ds.season, kickoff))
+    top = sorted(ds.top, key=lambda m: m.date)
+    second = sorted(ds.second, key=lambda m: m.date)
     for label, ref in points:
-        past = [m for m in ds.top if m.date < ref] + [m for m in ds.second if m.date < ref]
+        past = [m for m in top if m.date < ref] + [m for m in second if m.date < ref]
         if len(past) < 1000:
-            continue
+            continue                   # too little history to fit anything honest
         pool = sorted({m.home for m in past} | {m.away for m in past})
         f = ratings.fit(past, pool, ref, shot_conv=shot_conv)
         live = label == ds.season
@@ -95,6 +105,86 @@ def _rating_history(ds: Dataset, teams, shot_conv, adj: dict[str, float],
                 a = adj.get(t, 0.0) if live else 0.0
                 hist[t].append({"season": label, "spi": round(spi(f, t, a), 1)})
     return hist
+
+
+def _recap_words(league: leagues.League) -> dict:
+    """How the weekly narrative names this competition's three stakes."""
+    if league.kind == "cup":
+        return {"title": "chance of winning it", "ucl": "chance of a top-eight finish",
+                "releg": "risk of going out", "win": "the trophy", "down": "go out"}
+    if league.kind == "promotion":
+        return {"title": "title chance", "ucl": "chance of automatic promotion",
+                "releg": "relegation risk", "win": "the title", "down": "go down"}
+    return {"title": "title chance", "ucl": "chance of qualifying for the "
+            "Champions League", "releg": "relegation risk",
+            "win": "the title", "down": "go down"}
+
+
+def _card_words(league: leagues.League) -> dict:
+    """Column headings and captions for the share card."""
+    name = league.name
+    if league.kind == "cup":
+        return {"question": f"Who wins the {name}?", "win": "TROPHY",
+                "top": "TOP 8", "down": "Out",
+                "finish": "Projected phase finish", "topnote": "straight to the last 16",
+                "posnote": "Chance of finishing in each league-phase place"}
+    if league.kind == "promotion":
+        return {"question": f"Who goes up from the {name}?", "win": "TITLE",
+                "top": "AUTO", "down": "Relegated",
+                "finish": "Projected finish", "topnote": "automatic promotion",
+                "posnote": "Chance of finishing in each place"}
+    article = "" if name.split()[-1][:1].isdigit() or len(name.split()[-1]) == 1 \
+        else "the "
+    return {"question": f"Who wins {article}{name}?", "win": "TITLE",
+            "top": "TOP", "down": "Relegated",
+            "finish": "Projected finish",
+            "topnote": f"top {league.ucl_places} qualifies",
+            "posnote": "Chance of finishing in each place"}
+
+
+def write_calendars(league: leagues.League, ms: list[dict], meta: dict,
+                    teams: list[str]) -> None:
+    """One .ics for the competition and one per club, into site/cal/.
+
+    The only push a static site has. A calendar client refetches the URL on its
+    own schedule, so a subscriber's fixtures carry whatever the last build
+    believed and update themselves as the season moves.
+    """
+    base = os.path.join(HERE, "site", "cal")
+
+    def label(md):
+        if md is None or str(md).strip() == "":
+            return league.name
+        return f"{'Matchday' if league.kind == 'cup' else 'Matchweek'} {md}" \
+            if str(md).isdigit() else str(md)
+
+    feeds.write(os.path.join(base, f"{league.slug}.ics"),
+                feeds.calendar(ms, meta, title=f"{league.name} forecast",
+                               uid_ns=f"{league.slug}.537", round_label=label))
+    for t in teams:
+        feeds.write(
+            os.path.join(base, league.slug, f"{t}.ics"),
+            feeds.calendar(ms, meta, title=f"{meta[t]['name']} — {league.name}",
+                           uid_ns=f"{league.slug}.537", team=t, round_label=label))
+    print(f"  → cal/{league.slug}.ics and {len(teams)} club calendars")
+
+
+def write_cards(league: leagues.League, fc: dict) -> None:
+    """Share cards for the competition and every club. Never fatal."""
+    words = _card_words(league)
+    base = os.path.join(HERE, "site", "og")
+    try:
+        n = int(social.save(social.league_card(fc, words),
+                            os.path.join(base, f"{league.slug}.png")))
+        for rank, t in enumerate(fc["teams"], 1):
+            n += int(social.save(social.club_card(fc, t, rank, words),
+                                 os.path.join(base, league.slug, f"{t['id']}.png")))
+        print(f"  → og/{league.slug}: {n} share card(s) redrawn")
+    except social.Unavailable as exc:
+        print(f"  ! share cards skipped: {exc}")
+    except Exception as exc:                       # noqa: BLE001
+        # A drawing bug must never cost the forecast. Loud, but not fatal.
+        print(f"  ! share cards failed for {league.slug}: {exc}")
 
 
 # --------------------------------------------------------------------------
@@ -150,6 +240,7 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
     print("Fitting ratings…")
     shot_conv = ratings.fit_shot_conversion(ds.top)
     ref = max(dt.date.today(), kickoff)
+    freshness = dict(ds.sources)
     hist = [m for m in ds.top if m.date < ref] + [m for m in ds.second if m.date < ref]
     pool = sorted({m.home for m in hist} | {m.away for m in hist})
     if pooled:
@@ -189,17 +280,33 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
     sim = simulate.simulate_season(fit, ds.fixtures, teams, league=league,
                                    adj=adj, leverage=True)
 
+    # Half time is a second, cheaper model over the same corpus, and the only
+    # thing the results feed carries that the forecast has never read.
+    ht_fit = gamestate.half_time_fit(hist, ref)
+    print("  · half-time model: "
+          + ("fitted" if ht_fit else "not enough half-time data in this feed"))
+
     table = ds.season_table(ds.season)
     idx = {t: i for i, t in enumerate(teams)}
     history = _rating_history(ds, teams, shot_conv, adj, kickoff)
     returning = {m.home for m in ds.top if m.season == prev_season}
 
+    pos = sim["position"]
+    # A second tier's table is read against a promotion line and a play-off
+    # band, exactly as a cup's is read against advancement lines. The band is
+    # the positions between automatic promotion and the play-off cut.
+    promo = league.kind == "promotion" and league.advance_playoff
     rows = []
     for t in teams:
         i = idx[t]
         m = meta[t]
         cur = table.get(t, {})
         a = adj.get(t, 0.0)
+        if promo:
+            lo = league.advance_direct or 0
+            playoff = float(pos[i, lo:lo + league.advance_playoff].sum())
+        else:
+            playoff = None
         rows.append({
             "id": t, "name": m["name"], "short": m["short"],
             "primary": m["primary"], "secondary": m["secondary"],
@@ -213,6 +320,7 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
             "gd": round(float(sim["gd_mean"][i])),
             "title": float(sim["title"][i]), "ucl": float(sim["ucl"][i]),
             "europa": float(sim["europa"][i]), "releg": float(sim["relegation"][i]),
+            **({"p_playoff": playoff} if promo else {}),
             "pos": [round(float(x), 5) for x in sim["position"][i]],
             "played": cur.get("pld", 0), "w": cur.get("w", 0), "d": cur.get("d", 0),
             "l": cur.get("l", 0), "gf": cur.get("gf", 0), "ga": cur.get("ga", 0),
@@ -233,9 +341,16 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
         rep = simulate.match_report(fit, f.home, f.away, adj)
         best = rep["top_scores"][0]
         lv = lev_by_match.get((f.home, f.away))
+        ht = gamestate.half_time_report(ht_fit, f.home, f.away, adj)
         ms.append({
             "md": f.matchday, "date": f.date.isoformat(), "time": f.time,
             "h": f.home, "a": f.away,
+            # Clean sheets were already being computed by `match_report` and
+            # thrown away here; half-time is the new model. Four numbers each,
+            # which is what keeps them out of the 7x7 grid's league of payload.
+            "csh": round(rep["cs_home"], 3), "csa": round(rep["cs_away"], 3),
+            **({"ht": [round(ht["ph"], 3), round(ht["pd"], 3), round(ht["pa"], 3)],
+                "htsc": ht["sc"], "htscp": round(ht["scp"], 3)} if ht else {}),
             "ph": round(rep["home_win"], 4), "pd": round(rep["draw"], 4),
             "pa": round(rep["away_win"], 4),
             "xgh": round(rep["xg_home"], 2), "xga": round(rep["xg_away"], 2),
@@ -276,22 +391,49 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
         print("  → sim_input.json")
     except ImportError:
         pass
+    names = {t: meta[t]["name"] for t in teams}
     try:
         from . import recap
-        recap.write_recap(os.path.join(out, "recap.json"), rows, played)
+        recap.write_recap(os.path.join(out, "recap.json"), rows, played,
+                          names=names, words=_recap_words(league))
         print("  → recap.json")
     except ImportError:
         pass
 
     frozen = insight.freeze_predictions(ms, out)
-    report = insight.season_report(ms, frozen, {t: meta[t]["name"] for t in teams})
+    report = insight.season_report(ms, frozen, names)
     json.dump(report, open(os.path.join(out, "season_report.json"), "w"),
               separators=(",", ":"))
+    # Points earned against points the pre-kick-off forecasts said each match
+    # was worth. Computed after the freeze so it reads exactly the probabilities
+    # that were on record before kick-off, never the ones written today.
+    xp = insight.expected_points(ms, frozen, teams)
+    for r in rows:
+        r["xp"] = xp[r["id"]]["xp"]
+        r["xp_diff"] = xp[r["id"]]["diff"]
+        r["xp_played"] = xp[r["id"]]["played"]
     snaps = insight.append_history(rows, played, out)
     print(f"  → schedule.json, predictions.json, season_report.json "
           f"({report['n']} scored), history.json ({len(snaps)} snapshots)")
 
-    json.dump({
+    if sim.get("curves"):
+        json.dump({"generated": dt.datetime.now(dt.timezone.utc)
+                                  .isoformat(timespec="seconds"),
+                   "events": list(simulate.EVENTS),
+                   "n_sims": int(sim["n_sims"]),
+                   "min_seasons": simulate.MIN_CURVE_SEASONS,
+                   "teams": sim["curves"]},
+                  open(os.path.join(out, "scenarios.json"), "w"),
+                  separators=(",", ":"))
+        print("  → scenarios.json")
+
+    gs = gamestate.build(ds.top, teams, ref)
+    json.dump(gs, open(os.path.join(out, "gamestate.json"), "w"),
+              separators=(",", ":"))
+    print(f"  → gamestate.json ({len(gs['referees'])} referees, "
+          f"{gs['average']['n']} matches of discipline)")
+
+    payload = {
         "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "season": config.SEASON_LABEL,
         "league": league.public(),
@@ -302,9 +444,15 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
         "ucl_places": league.ucl_places,
         "n_sims": int(sim["n_sims"]),
         "lines": sim.get("lines"),
+        "sources": freshness,
+        "half_time": bool(ht_fit),
         "teams": rows,
-    }, open(os.path.join(out, "forecast.json"), "w"), separators=(",", ":"))
+    }
+    json.dump(payload, open(os.path.join(out, "forecast.json"), "w"),
+              separators=(",", ":"))
     print(f"  → forecast.json ({len(rows)} teams)")
+    write_calendars(league, ms, meta, teams)
+    write_cards(league, payload)
 
     if not skip_backtest:
         print(f"Running the walk-forward backtest (from {league.backtest_from})…")
@@ -400,7 +548,7 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
             f.played = False
 
     print("Fitting the pooled rating over the European corpus…")
-    corpus = europe.Corpus(reg).load(quiet=False)
+    corpus = shared_corpus(reg, quiet=False)
     hist = corpus.before(ref)
     pool = sorted({m.home for m in hist} | {m.away for m in hist})
     missing = [t for t in teams if t not in set(pool)]
@@ -523,13 +671,43 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
     from . import siminput
     siminput.write_sim_input(fit, fixtures, teams, adj, meta,
                              os.path.join(out, "sim_input.json"), league=league)
+    # The European files carry a half-time score in parentheses on every line,
+    # which the parser now keeps, so a cup gets the same game-state panel as a
+    # league -- built from these clubs' continental record rather than from a
+    # domestic season they did not all play in. No cards or referees: the UEFA
+    # feed has neither.
+    euro_hist = [m for m in corpus.matches
+                 if m.comp in europe.EURO_COMPS and (m.home in set(teams)
+                                                     or m.away in set(teams))]
+    gs = gamestate.build(euro_hist, teams, ref)
+    gs["note"] = ("From these clubs' matches in UEFA competition. The European feed "
+                  "carries no cards, fouls or referees, so only the half-time "
+                  "columns are populated.")
+    json.dump(gs, open(os.path.join(out, "gamestate.json"), "w"),
+              separators=(",", ":"))
     frozen = insight.freeze_predictions(ms, out)
-    report = insight.season_report(ms, frozen, {t: meta[t]["name"] for t in teams})
+    names = {t: meta[t]["name"] for t in teams}
+    report = insight.season_report(ms, frozen, names)
     json.dump(report, open(os.path.join(out, "season_report.json"), "w"),
               separators=(",", ":"))
+    xp = insight.expected_points(ms, frozen, teams)
+    for r in rows:
+        r["xp"] = xp[r["id"]]["xp"]
+        r["xp_diff"] = xp[r["id"]]["diff"]
+        r["xp_played"] = xp[r["id"]]["played"]
     snaps = insight.append_history(rows, 0, out)
     from . import recap
-    recap.write_recap(os.path.join(out, "recap.json"), rows, 0)
+    recap.write_recap(os.path.join(out, "recap.json"), rows, 0,
+                      names=names, words=_recap_words(league))
+    if sim.get("curves"):
+        json.dump({"generated": dt.datetime.now(dt.timezone.utc)
+                                  .isoformat(timespec="seconds"),
+                   "events": list(simulate.CUP_EVENTS),
+                   "n_sims": int(sim["n_sims"]),
+                   "min_seasons": simulate.MIN_CURVE_SEASONS,
+                   "teams": sim["curves"]},
+                  open(os.path.join(out, "scenarios.json"), "w"),
+                  separators=(",", ":"))
 
     payload = {
         "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
@@ -558,6 +736,8 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
               separators=(",", ":"))
     print(f"  → forecast.json ({len(rows)} clubs), schedule.json, sim_input.json, "
           f"season_report.json, history.json ({len(snaps)} snapshots)")
+    write_calendars(league, ms, meta, teams)
+    write_cards(league, payload)
 
     if not skip_backtest:
         print("Running the European walk-forward (the two Swiss seasons)…")
@@ -690,6 +870,100 @@ def validate(league: leagues.League) -> None:
     print(f"Validation passed. ({league.slug})")
 
 
+#: The pooled corpus is expensive to assemble the first time (about seventy
+#: seconds cold, nothing at all against a warm `.cache`) and both the cup build
+#: and the global ranking want it. Built once per process.
+_CORPUS: europe.Corpus | None = None
+#: Competitions already folded into the shared corpus, so a second call does not
+#: add the same matches twice and double their weight in the fit.
+_RANKED_EXTRA: set[str] = set()
+
+
+def shared_corpus(reg=None, *, quiet: bool = True) -> europe.Corpus:
+    global _CORPUS
+    if _CORPUS is None:
+        from .parse import TeamRegistry
+        _CORPUS = europe.Corpus(reg or TeamRegistry()).load(quiet=quiet)
+    return _CORPUS
+
+
+def build_rankings(ready: set[str]) -> None:
+    """The cross-league rating, written to site/data/global.json.
+
+    Deliberately a separate file on a separate scale. The five domestic
+    forecasts are built by `build()` from each league's own fit and are not
+    touched here — see `POOLED_DOMESTIC` for why that matters.
+    """
+    print("\n=== Global club rankings (pooled cross-league fit) ===")
+    featured: set[str] = set()
+    for slug in sorted(ready):
+        path = os.path.join(OUT, slug, "forecast.json")
+        try:
+            featured |= {t["id"] for t in json.load(open(path))["teams"]}
+        except (OSError, ValueError, KeyError):
+            continue
+    corpus = shared_corpus(quiet=False)
+    # Second tiers this site forecasts in their own right belong in the pooled
+    # fit too, or the Championship would have a projected table on one page and
+    # no rating on the other. Loaded through the same registry, so a club that
+    # goes up keeps one id and one rating history.
+    for lg in leagues.LEAGUES:
+        if lg.kind != "promotion" or lg.slug in _RANKED_EXTRA:
+            continue
+        try:
+            ds = Dataset(lg).load()
+        except Exception as exc:                   # noqa: BLE001
+            print(f"  ! {lg.slug} not added to the pooled corpus: {exc}")
+            continue
+        corpus.add([m for m in ds.top if m.played], lg.slug)
+        _RANKED_EXTRA.add(lg.slug)
+        print(f"  · added {len(ds.top)} {lg.name} matches to the pooled corpus")
+    payload = rankings.build(corpus, featured=featured)
+    json.dump(payload, open(os.path.join(OUT, "global.json"), "w"),
+              separators=(",", ":"))
+    print(f"  → global.json ({payload['n_clubs']} clubs across "
+          f"{payload['n_leagues']} leagues, from {payload['n_matches']:,} matches)")
+    h2h = rankings.head_to_head(corpus, featured)
+    json.dump({"generated": payload["generated"], "pairs": h2h},
+              open(os.path.join(OUT, "h2h.json"), "w"), separators=(",", ":"))
+    print(f"  → h2h.json ({len(h2h)} pairs among {len(featured)} featured clubs)")
+    top = payload["clubs"][:5]
+    for r in top:
+        print(f"    {r['rank']:>3}. {r['name']:<24} {r['spi']:>5.1f}  {r['league']}")
+
+
+HOME = "https://chraltro.github.io/537/"
+
+
+def build_feeds(ready: set[str]) -> None:
+    """The JSON Feed and RSS of what the forecast changed its mind about."""
+    rows = []
+    for lg in leagues.LEAGUES + leagues.EUROPEAN:
+        if lg.slug not in ready:
+            continue
+        d = os.path.join(OUT, lg.slug)
+        try:
+            recap_doc = json.load(open(os.path.join(d, "recap.json")))
+            fc = json.load(open(os.path.join(d, "forecast.json")))
+        except (OSError, ValueError):
+            continue
+        rows.append({
+            "slug": lg.slug, "name": lg.name, "recap": recap_doc,
+            "meta": {t["id"]: t for t in fc["teams"]},
+            "url": f"{HOME}races.html"
+                   + (f"?lg={lg.slug}" if lg.slug != leagues.DEFAULT.slug else ""),
+        })
+    items = feeds.feed_items(rows)
+    title = "Ninety — forecast movement"
+    site = os.path.join(HERE, "site")
+    feeds.write(os.path.join(site, "feed.json"),
+                json.dumps(feeds.json_feed(items, home=HOME, title=title),
+                           separators=(",", ":")))
+    feeds.write(os.path.join(site, "feed.xml"),
+                feeds.rss(items, home=HOME, title=title))
+    print(f"  → feed.json and feed.xml ({len(items)} item(s) with real movement)")
+
+
 def write_manifest(ready: set[str]) -> dict:
     """Regenerate site/data/leagues.json from the registry.
 
@@ -784,6 +1058,15 @@ def main(argv: list[str] | None = None) -> None:
 
     ready = {lg.slug for lg in leagues.LEAGUES + leagues.EUROPEAN
              if has_forecast(lg)}
+    # Cross-competition outputs, once, after every league has been written.
+    # Each is optional: a failure here must not cost the forecasts that already
+    # landed, so it is reported and the run carries on.
+    for name, fn in (("global rankings", build_rankings), ("feeds", build_feeds)):
+        try:
+            fn(ready)
+        except Exception as exc:                   # noqa: BLE001
+            print(f"!! {name} failed: {exc}")
+            failures.append((name, exc))
     write_manifest(ready)
     total = time.perf_counter() - t0
     print("\n--- timings ---")
