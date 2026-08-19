@@ -10,7 +10,10 @@ on:
     - cron: '17 */6 * * *'
 
 permissions:
-  contents: read
+  # write: scheduled builds commit the forecast's state files (frozen pre-match
+  # predictions, daily history snapshots) back to main -- without that, the
+  # honest in-season scorecard loses its receipts between builds.
+  contents: write
   pages: write
   id-token: write
 
@@ -70,6 +73,23 @@ jobs:
       # paid plan), so this must not sink an otherwise good build: the forecast
       # is still built and uploaded, and the deploy job is skipped until a human
       # enables Pages once under Settings -> Pages, source "GitHub Actions".
+      - name: Persist forecast state
+        # Frozen predictions must outlive the build that froze them, and history
+        # snapshots must accumulate. Pushes from GITHUB_TOKEN do not retrigger
+        # workflows, so this cannot loop.
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "forecast-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add site/data/history.json site/data/predictions.json 2>/dev/null || true
+          git add site/data/*/history.json site/data/*/predictions.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Persist forecast state (history + frozen predictions)"
+            for i in 1 2 3; do git push && break || { git pull --rebase && true; }; done
+          else
+            echo "No state changes to persist."
+          fi
+
       - name: Configure Pages
         id: pages
         continue-on-error: true
