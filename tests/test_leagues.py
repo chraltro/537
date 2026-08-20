@@ -19,7 +19,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from model import config, insight, leagues, priors, ratings, simulate   # noqa: E402
+from model import config, insight, leagues, priors, ratings, run, simulate  # noqa: E402
 from model.data import Dataset                                          # noqa: E402
 from model.parse import TeamRegistry, normalise                         # noqa: E402
 
@@ -492,16 +492,24 @@ def test_built_output_matches_the_manifest():
             (lg.n_teams, lg.ucl_places, lg.releg_places)
 
 
-def test_premier_league_still_has_its_legacy_flat_files():
-    """The live site reads site/data/*.json until Agent B's refactor lands."""
+def test_the_flat_duplicates_of_one_league_are_gone():
+    """Every page reads `site/data/<slug>/<name>.json`. The flat copies at
+    `site/data/<name>.json` were a second Premier League that nothing fetched
+    and every build rewrote, so they are deleted -- and stay deleted, because a
+    stale duplicate of a forecast is worse than no duplicate at all.
+
+    The site-wide files are a different thing and must survive: they are not
+    scoped to a competition, which is their whole point.
+    """
     base = os.path.join(HERE, "site", "data")
     if not os.path.exists(os.path.join(base, "premier-league", "forecast.json")):
         pytest.skip("pipeline has not been run in this checkout")
-    for name in ("forecast.json", "matches.json", "sim_input.json"):
-        flat = os.path.join(base, name)
-        assert os.path.exists(flat), f"missing legacy {name}"
-        assert open(flat, "rb").read() == \
-            open(os.path.join(base, "premier-league", name), "rb").read()
+    for name in run.RETIRED_FLAT_FILES:
+        assert not os.path.exists(os.path.join(base, name)), \
+            f"{name} is a flat duplicate and should have been removed"
+    for name in ("leagues.json", "global.json", "h2h.json"):
+        assert os.path.exists(os.path.join(base, name)), \
+            f"{name} belongs to the whole site and must not be swept up"
 
 
 # ------------------------------------------------- arriving from above

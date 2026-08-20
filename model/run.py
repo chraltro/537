@@ -34,23 +34,26 @@ import argparse
 import datetime as dt
 import json
 import os
-import shutil
 import time
 
 import numpy as np
 
-from . import (backtest, config, europe, feeds, gamestate, insight, knockout,
+from . import (backtest, clubmeta, config, europe, feeds, gamestate, insight, knockout,
                leagues, priors, rankings, ratings, seo, simulate, social)
 from .data import Dataset
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(HERE, "site", "data")
 
-#: Files copied from site/data/premier-league/ to site/data/ for the pages that
-#: have not moved to the per-league layout yet.
-LEGACY_FILES = ("forecast.json", "matches.json", "schedule.json", "history.json",
-                "predictions.json", "season_report.json", "recap.json",
-                "sim_input.json", "backtest.json")
+#: Nine files that used to be copied from site/data/premier-league/ up to
+#: site/data/, from when the site read one league from flat paths. Every page
+#: has read `site/data/<slug>/<name>.json` since the multi-league layout landed,
+#: so the copies were a second, silently-diverging Premier League that nothing
+#: fetched and every build rewrote. They are deleted rather than left in place:
+#: a stale duplicate of a forecast is worse than no duplicate.
+RETIRED_FLAT_FILES = ("forecast.json", "matches.json", "schedule.json",
+                      "history.json", "predictions.json", "season_report.json",
+                      "recap.json", "sim_input.json", "backtest.json")
 
 
 def spi(fit: ratings.Fit, team: str, adj: float = 0.0) -> float:
@@ -1153,6 +1156,83 @@ def build_coverage(ready: set[str]) -> None:
         print(f"  → changelog.json ({len(log.get('entries', []))} entries)")
 
 
+#: How stale a competition's newest result may be, in days, before the build
+#: says so. Chosen from what the feeds actually do rather than from a round
+#: number: openfootball's in-season commits come roughly weekly with multi-week
+#: gaps, and the results mirror does not create a season's file until months in.
+#: Three weeks is past both of those and into "somebody stopped updating this".
+STALE_DAYS = 21
+
+
+def check_feeds(ready: set[str]) -> None:
+    """Say out loud when a competition's feed has gone quiet.
+
+    Belgium is why this exists. openfootball's `2025-26/be1.txt` stopped at 121
+    of 240 matches when the maintainer moved on to the Wallonian provincial
+    leagues, and nothing in the build noticed: a feed that stops updating
+    produces exactly the same output as a feed with nothing new to say, so a
+    frozen competition looked like a quiet one for months.
+
+    This does not fail the build. A stale feed is still the best evidence
+    available and a forecast built on it is still the right forecast; the
+    failure mode is not knowing. So it prints, and the site says the same thing
+    on its own method page.
+    """
+    today = dt.date.today()
+    quiet, missing = [], []
+    for lg in leagues.LEAGUES:
+        if lg.slug not in ready:
+            continue
+        try:
+            fc = json.load(open(os.path.join(OUT, lg.slug, "forecast.json")))
+        except (OSError, ValueError):
+            continue
+        src = fc.get("sources", {})
+        cov = fc.get("coverage", {})
+        # A feed with no results yet is a season that has not started, not a
+        # feed that has stopped. Only a season already under way can go quiet.
+        to = src.get("results_to")
+        if to and src.get("played"):
+            age = (today - dt.date.fromisoformat(to)).days
+            if age > STALE_DAYS:
+                quiet.append((lg.slug, to, age))
+        for key in ("mirror", "fixtures"):
+            block = src.get(key) or {}
+            if block.get("url") and not block.get("available"):
+                missing.append((lg.slug, key, block["url"]))
+        if cov.get("missing_seasons") or cov.get("partial_seasons"):
+            gaps = ", ".join(cov.get("missing_seasons", [])
+                             + [f"{s} (partial)" for s in cov.get("partial_seasons", [])])
+            print(f"  · {lg.slug}: feed has holes -- {gaps}")
+    for slug, key, url in missing:
+        print(f"!! {slug}: the {key} feed did not resolve ({url})")
+    for slug, to, age in quiet:
+        print(f"!! {slug}: newest result is {to}, {age} days ago -- feed may have "
+              "stopped updating")
+    if not quiet and not missing:
+        print("  → every feed is current")
+
+
+def build_clubs(ready: set[str]) -> None:
+    """Founded year and city per club, from `openfootball/clubs`.
+
+    The one thing a club page can say that no amount of results will tell you.
+    Matching is on this repository's own alias table rather than on display
+    names, and a club the register does not have is left out rather than given
+    a placeholder -- see `model/clubmeta` for what is deliberately not read.
+    """
+    path = os.path.join(HERE, "data", "team_meta.json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            meta = json.load(fh)
+    except (OSError, ValueError):
+        print("  · team_meta.json unreadable, skipping club metadata")
+        return
+    got = clubmeta.build(OUT, meta)
+    print(f"  → clubs.json ({got['matched']} of {got['of']} clubs matched "
+          "to the openfootball register)")
+
+
 def build_seo(ready: set[str]) -> None:
     """robots.txt, the sitemap, and a static stub per club."""
     manifest = {"default": leagues.DEFAULT.slug,
@@ -1234,16 +1314,22 @@ def has_forecast(league: leagues.League) -> bool:
         return False
 
 
-def copy_legacy(league: leagues.League) -> None:
-    """Mirror one league's output to the flat site/data/*.json the site still reads."""
-    src = os.path.join(OUT, league.slug)
-    n = 0
-    for name in LEGACY_FILES:
-        p = os.path.join(src, name)
+def drop_legacy_flat() -> None:
+    """Remove the flat duplicates of the default league's output.
+
+    Kept as a build step rather than a one-off deletion because the files are
+    committed: a checkout from before this change still has them, and a build
+    that leaves them lying around leaves a Premier League forecast frozen at
+    whatever date the copies stopped being written.
+    """
+    gone = []
+    for name in RETIRED_FLAT_FILES:
+        p = os.path.join(OUT, name)
         if os.path.exists(p):
-            shutil.copyfile(p, os.path.join(OUT, name))
-            n += 1
-    print(f"Copied {n} {league.slug} files to the legacy flat site/data/ paths.")
+            os.remove(p)
+            gone.append(name)
+    if gone:
+        print(f"  → removed {len(gone)} retired flat file(s) from site/data/")
 
 
 # --------------------------------------------------------------------------
@@ -1288,9 +1374,6 @@ def main(argv: list[str] | None = None) -> None:
             print(f"!! {lg.slug} failed: {exc}")
         timings.append((lg.slug, time.perf_counter() - t1))
 
-    if leagues.DEFAULT in todo and has_forecast(leagues.DEFAULT):
-        copy_legacy(leagues.DEFAULT)
-
     ready = {lg.slug for lg in leagues.LEAGUES + leagues.EUROPEAN
              if has_forecast(lg)}
     # Cross-competition outputs, once, after every league has been written.
@@ -1298,6 +1381,9 @@ def main(argv: list[str] | None = None) -> None:
     # landed, so it is reported and the run carries on.
     for name, fn in (("global rankings", build_rankings), ("feeds", build_feeds),
                      ("coverage", build_coverage),
+                     ("club register", build_clubs),
+                     ("retired flat files", lambda _r: drop_legacy_flat()),
+                     ("feed freshness", check_feeds),
                      ("sitemap and club pages", build_seo),
                      ("size budget", check_size)):
         try:

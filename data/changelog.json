@@ -3,6 +3,18 @@
   "entries": [
     {
       "date": "2026-08-20",
+      "title": "A club page says when the club was founded and where it plays",
+      "effect": "New information, no change to any number.",
+      "body": "From openfootball's club register, matched on the alias list this repository already keeps — which is how \"Bayern Munich\" here finds \"Bayern München\" there. The same register carries stadiums and they are not read: it still has West Ham at the Boleyn Ground and Tottenham at White Hart Lane. 271 of 335 clubs matched; the rest are from countries with no register, and are shown without the line rather than with a guess."
+    },
+    {
+      "date": "2026-08-20",
+      "title": "The build says when a feed has gone quiet",
+      "effect": "No change to any number.",
+      "body": "A feed that stops updating produces exactly the same output as a feed with nothing new to say, which is how Belgium's 2025-26 file sat at 121 of 240 matches without anything noticing. Each build now reports any competition whose newest result is more than three weeks old, any feed that failed to resolve, and any season the register is missing outright."
+    },
+    {
+      "date": "2026-08-20",
       "title": "Follow a club, copy a link, and every colour on the site meets WCAG AA",
       "effect": "No change to any number.",
       "body": "A star on each club page keeps a list in this browser and nothing leaves it; the rankings page gains a filter for it, and a way past the 400-row cap that used to be presented as a total. Contrast was measured on every page in both themes rather than eyeballed: the light theme's caption grey was 3.5:1 against the page and carried every hint on the site, the amber staleness tag was 1.79:1, and a seven-step colour ramp was being read with one fixed text colour, which fails at one end of the ramp by construction. All of it now clears 4.5:1."
@@ -17,7 +29,7 @@
       "date": "2026-08-20",
       "title": "Nine competitions, and a page that says what each is built on",
       "effect": "New numbers, no change to existing ones.",
-      "body": "Belgium's Pro League joins the eight already here. Its feed is the thinnest on the site — openfootball has no top flight at all for 2020-21 or 2022-23, and its 2025-26 file stopped at 121 of 240 matches — so the coverage table below now states, per competition, how many seasons and matches the fit actually rests on and which seasons the feed is missing."
+      "body": "Belgium's Pro League joins the eight already here. Its feed is the thinnest on the site — openfootball has no top flight at all for 2020-21 or 2022-23, and its 2025-26 file stopped at 121 of 240 matches — so the coverage table on the Data tab now states, per competition, how many seasons and matches the fit actually rests on and which seasons the feed is missing."
     },
     {
       "date": "2026-08-20",

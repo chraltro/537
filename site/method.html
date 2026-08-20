@@ -363,7 +363,13 @@
     <p>Match results, shots and cards come from
       <a href="https://github.com/datasets/football-datasets">datasets/football-datasets</a>,
       a daily-updated mirror of football-data.co.uk. Fixtures and second-tier results come
-      from <a href="https://github.com/openfootball">openfootball</a>.
+      from <a href="https://github.com/openfootball">openfootball</a>. The founding year and
+      city on a club page come from
+      <a href="https://github.com/openfootball/clubs">openfootball/clubs</a>, matched on the
+      alias list this repository already keeps; that register also carries stadiums, which
+      are not read, because it has West Ham at the Boleyn Ground and Tottenham at White Hart
+      Lane — grounds they left in 2016 and 2017. A club the register does not carry is shown
+      without the line rather than with a guess.
       The forecast rebuilds itself every six hours on GitHub Actions.
       Model, site and the odds snapshot are all in
       <a href="https://github.com/chraltro/537">the repository</a>.</p>
