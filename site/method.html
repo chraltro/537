@@ -166,6 +166,26 @@
     <div id="movechart"></div>
   </section>
 
+  <section class="card" id="tablecard" hidden>
+    <h2>Did it call the season?</h2>
+    <p class="sub" id="tablesub"></p>
+    <div class="tiles" id="tabletiles" style="margin-bottom:18px"></div>
+    <div class="scroller">
+      <table id="tabletbl">
+        <thead><tr>
+          <th class="l">Season</th>
+          <th>Champion</th>
+          <th id="tblhead-top">Top places</th>
+          <th id="tblhead-rel">Relegation</th>
+          <th>Rank corr.</th>
+          <th>Points error</th>
+        </tr></thead>
+        <tbody id="tablebody"></tbody>
+      </table>
+    </div>
+    <p class="hint" id="tablenote" style="margin-top:14px"></p>
+  </section>
+
   <section class="card" id="calcard">
     <h2>Is it calibrated?</h2>
     <p class="sub">A forecast can rank teams correctly and still lie about how sure it is.
@@ -173,6 +193,16 @@
       those actually happened. Points on the diagonal mean the stated confidence is honest.</p>
     <div id="calib"></div>
     <p style="color:var(--muted);font-size:12px;margin:8px 0 0" id="calibnote"></p>
+    <div id="outcomewrap" hidden>
+      <h3 style="margin:26px 0 4px;font-size:14px">And the same question, one outcome at a time</h3>
+      <p class="sub" style="margin-bottom:12px">The curve above mixes home wins, draws and
+        away wins, and a model that is light on draws and heavy on the other two looks
+        perfectly calibrated there: the errors cancel. Draws are the outcome a goals model
+        is most likely to miss — they are the thin middle of a distribution over two
+        counts — so they are worth checking on their own.</p>
+      <div class="tiles" id="outcometiles" style="margin-bottom:6px"></div>
+      <p class="hint" id="outcomenote"></p>
+    </div>
   </section>
 
   <div class="prose" id="prosecard">
@@ -315,7 +345,14 @@
       <li><b>No referee effect.</b> Referee appointments are not published anywhere the build
         can reach before kick-off, so the referee page is a record and not a prediction.</li>
       <li><b>No fixture congestion or European commitments.</b> A Thursday night in Baku
-        followed by a Sunday lunchtime kick-off is not modelled.</li>
+        followed by a Sunday lunchtime kick-off is not modelled, and not for want of trying:
+        across 18,929 big-five matches since 2015-16, a day of extra rest relative to the
+        opponent is worth −0.014 goals of unexplained goal difference — the wrong sign, and
+        four of the five leagues' confidence intervals contain zero. The sign is almost
+        certainly the confound rather than the effect: the club on short rest is short of
+        rest <em>because</em> it is still in Europe, which is to say because it is good. A
+        covariate cannot be separated from that without a European fixture list joined to
+        the domestic one, so nothing is fitted here.</li>
       <li><b>Promoted clubs carry real uncertainty.</b> The correction is measured across 39
         past cases, but 39 is not a large sample, and clubs differ.</li>
       <li><b>It is not betting advice.</b> The model has no access to team news and does not
@@ -646,20 +683,23 @@ if (!bt) {
   }
 
   /* ---- calibration: predicted vs observed ---- */
-  const W = 560, H = 360, P = 58;
-  const sx = (v) => P + v * (W - P - 16);
-  const sy = (v) => H - P - v * (H - P - 16);
+  /* Chart geometry. Named for what it is: `W` is the page's league
+     vocabulary everywhere else on this site, and a local `W` meaning
+     "560 pixels" silently turned league names into `undefined`. */
+  const CW = 560, CH = 360, CP = 58;
+  const sx = (v) => CP + v * (CW - CP - 16);
+  const sy = (v) => CH - CP - v * (CH - CP - 16);
   const ticks = [0, 0.25, 0.5, 0.75, 1];
   const pts = bt.calibration;
   const maxN = Math.max(...pts.map((p) => p.n));
   document.getElementById('calib').innerHTML = `
-   <svg viewBox="0 0 ${W} ${H}" style="max-width:${W}px;width:100%;height:auto" role="img"
+   <svg viewBox="0 0 ${CW} ${CH}" style="max-width:${CW}px;width:100%;height:auto" role="img"
         aria-label="Calibration: predicted probability against observed frequency">
      ${ticks.map((t) => `
        <line x1="${sx(t)}" y1="${sy(0)}" x2="${sx(t)}" y2="${sy(1)}" stroke="var(--grid)" stroke-width="1"/>
        <line x1="${sx(0)}" y1="${sy(t)}" x2="${sx(1)}" y2="${sy(t)}" stroke="var(--grid)" stroke-width="1"/>
-       <text x="${sx(t)}" y="${H - P + 18}" fill="var(--muted)" font-size="11" text-anchor="middle">${t * 100}%</text>
-       <text x="${P - 12}" y="${sy(t) + 4}" fill="var(--muted)" font-size="11" text-anchor="end">${t * 100}%</text>`).join('')}
+       <text x="${sx(t)}" y="${CH - CP + 18}" fill="var(--muted)" font-size="11" text-anchor="middle">${t * 100}%</text>
+       <text x="${CP - 12}" y="${sy(t) + 4}" fill="var(--muted)" font-size="11" text-anchor="end">${t * 100}%</text>`).join('')}
      <line x1="${sx(0)}" y1="${sy(0)}" x2="${sx(1)}" y2="${sy(1)}"
            stroke="var(--rule)" stroke-width="2"/>
      <text x="${sx(0.04)}" y="${sy(0.82)}" fill="var(--muted)" font-size="11">the grey line is perfect calibration</text>
@@ -669,9 +709,9 @@ if (!bt) {
         r="${(4 + 4 * Math.sqrt(p.n / maxN)).toFixed(1)}" fill="var(--accent)"
         stroke="var(--surface)" stroke-width="2"
         data-p="${p.predicted}" data-o="${p.observed}" data-n="${p.n}"/>`).join('')}
-     <text x="${W / 2}" y="${H - 6}" fill="var(--muted)" font-size="11" text-anchor="middle">model said this likely</text>
-     <text x="15" y="${H / 2}" fill="var(--muted)" font-size="11" text-anchor="middle"
-           transform="rotate(-90 15 ${H / 2})">actually happened this often</text>
+     <text x="${CW / 2}" y="${CH - 6}" fill="var(--muted)" font-size="11" text-anchor="middle">model said this likely</text>
+     <text x="15" y="${CH / 2}" fill="var(--muted)" font-size="11" text-anchor="middle"
+           transform="rotate(-90 15 ${CH / 2})">actually happened this often</text>
    </svg>`;
   document.getElementById('calib').addEventListener('mousemove', (e) => {
     const c = e.target.closest('circle');
@@ -695,6 +735,81 @@ if (!bt) {
         + `${gap > 0 ? 'above' : 'below'} the line by about ${Math.abs(gap * 100).toFixed(0)} points \u2014 `
         + `outcomes it calls strong favourites come in ${gap > 0 ? 'slightly more' : 'slightly less'} `
         + `often than stated, so it is mildly ${gap > 0 ? 'under' : 'over'}confident there.`;
+  }
+
+  /* ---- calibration, split three ways ---- */
+  /* Reported, not corrected. A recalibration fitted on the same matches used
+     to find the bias would be fitting noise, and the bias points in different
+     directions in different competitions -- so a single global draw nudge
+     would make some of them worse. */
+  const bo = bt.by_outcome;
+  if (bo && bo.length === 3) {
+    const NAME = { home: 'Home win', draw: 'Draw', away: 'Away win' };
+    document.getElementById('outcometiles').innerHTML = bo.map((r) => `
+      <div class="tile"><div class="k">${esc(NAME[r.outcome] || r.outcome)}</div>
+        <div class="v">${pct(r.observed, 1)}</div>
+        <div class="n">happened · model said ${pct(r.predicted, 1)}${
+          Math.abs(r.bias) < 0.005 ? '' : ` (${r.bias > 0 ? 'over' : 'under'} by
+          ${Math.abs(r.bias * 100).toFixed(1)} points)`}</div></div>`).join('');
+    const draw = bo.find((r) => r.outcome === 'draw');
+    const notable = bo.filter((r) => Math.abs(r.z) >= 2);
+    document.getElementById('outcomenote').innerHTML = notable.length
+      ? `Over ${draw.n.toLocaleString()} matches the
+         ${notable.map((r) => esc((NAME[r.outcome] || r.outcome).toLowerCase())).join(' and ')}
+         ${notable.length === 1 ? 'figure is' : 'figures are'} far enough from what happened
+         that chance is an uncomfortable explanation. It is left uncorrected on purpose: a
+         correction fitted on the matches that revealed the bias is fitting noise, and the
+         same gap measured on the other competitions here points the other way, so there is
+         no single adjustment that improves all of them. If it is real it will still be
+         here next season, on matches this fit never saw.`
+      : `All three sit within ordinary sampling noise of what happened over
+         ${draw.n.toLocaleString()} matches. Nothing to correct.`;
+    document.getElementById('outcomewrap').hidden = false;
+  }
+
+  /* ---- did it call the season? ---- */
+  /* Match log-loss is the right way to score a forecast and the wrong way to
+     argue about one. Nobody has an intuition for 0.97. */
+  const ta = bt.table;
+  if (ta && ta.n) {
+    /* `pct` prints ">99%" near one, which is right for a probability and wrong
+       for a share of five places: four of five is 80%, five of five is 100%. */
+    const share = (x) => `${Math.round(x * 100)}%`;
+    const seasons = ta.seasons || [];
+    document.getElementById('tablesub').innerHTML =
+      `Log-loss is the honest way to score a forecast and a hopeless way to describe one.
+       So: at the start of each of the last ${ta.n} ${esc(W.name)} seasons, fit on what was
+       knowable then, project every fixture, and compare the resulting table with the one
+       that happened. Nothing below was visible to the fit that produced it.`;
+    document.getElementById('tblhead-top').textContent =
+      W.isPromotion ? 'Promoted' : `Top ${W.uclPlaces}`;
+    document.getElementById('tblhead-rel').textContent = W.isCup ? 'Out' : 'Relegated';
+    document.getElementById('tabletiles').innerHTML = [
+      ['Champion called', share(ta.champion_rate),
+        `${Math.round(ta.champion_rate * ta.n)} of ${ta.n} seasons`],
+      [W.isPromotion ? 'Promotion places' : `Top ${W.uclPlaces} places`,
+        share(ta.top_overlap), 'of the right clubs, on average'],
+      ['Points per club', `±${ta.mean_points_error.toFixed(1)}`,
+        `mean error; ${ta.mean_rank_error.toFixed(1)} places out of ${W.nTeams}`],
+    ].map(([k, v, n]) => `<div class="tile"><div class="k">${esc(k)}</div>
+        <div class="v">${v}</div><div class="n">${esc(n)}</div></div>`).join('');
+    document.getElementById('tablebody').innerHTML = seasons.map((r) => `
+      <tr>
+        <td class="l">${esc(r.season)}</td>
+        <td class="${r.champion_called ? 'p-hi' : 'p-lo'}">${r.champion_called ? 'yes' : 'no'}</td>
+        <td>${share(r.top_overlap)}</td>
+        <td>${share(r.releg_overlap)}</td>
+        <td>${r.rank_corr.toFixed(2)}</td>
+        <td>±${r.mean_points_error.toFixed(1)}</td>
+      </tr>`).join('');
+    document.getElementById('tablenote').innerHTML =
+      `"Champion" is whether the projected table's first place won it. The two overlap
+       columns are the share of the right clubs in the right band, not the right order
+       within it. Rank correlation is Spearman's, over all ${W.nTeams} clubs. The
+       season-by-season spread above is the point of the table: a good preseason model
+       still misses a champion more often than it calls one, because most of a season is
+       variance and no amount of rating gets in front of it.`;
+    document.getElementById('tablecard').hidden = false;
   }
 
   const cp = bt.calibration_priors;
@@ -842,7 +957,8 @@ try {
    is still what loads. The panels are hidden by CSS when printing. */
 initTabs(document.getElementById('tabs'), [
   { id: 'accuracy', label: 'Accuracy',
-    sections: ['seasoncard', 'acccard', 'extcard', 'linescard', 'movecard', 'calcard']
+    sections: ['seasoncard', 'acccard', 'tablecard', 'extcard', 'linescard',
+               'movecard', 'calcard']
       .map((x) => document.getElementById(x)).filter(Boolean) },
   { id: 'model', label: 'The model',
     sections: [document.getElementById('prosecard')].filter(Boolean) },

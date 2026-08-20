@@ -3,6 +3,12 @@
   "entries": [
     {
       "date": "2026-08-20",
+      "title": "Follow a club, copy a link, and every colour on the site meets WCAG AA",
+      "effect": "No change to any number.",
+      "body": "A star on each club page keeps a list in this browser and nothing leaves it; the rankings page gains a filter for it, and a way past the 400-row cap that used to be presented as a total. Contrast was measured on every page in both themes rather than eyeballed: the light theme's caption grey was 3.5:1 against the page and carried every hint on the site, the amber staleness tag was 1.79:1, and a seven-step colour ramp was being read with one fixed text colour, which fails at one end of the ramp by construction. All of it now clears 4.5:1."
+    },
+    {
+      "date": "2026-08-20",
       "title": "The site is called 537, and a phone gets a real navigation bar",
       "effect": "No change to any number.",
       "body": "A homage to FiveThirtyEight, whose Soccer Power Index this is built in the spirit of. The masthead below 700px is now two rows — identity on the first, four tab-shaped destinations and the menu on the second — instead of one row that hid all four links and left a lone \"More\" button. The sticky table header used to assume a 60-pixel masthead; it now measures the bar it sits under, so it stays correct the next time the bar changes."

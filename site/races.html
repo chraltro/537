@@ -271,7 +271,8 @@ function runIn(id) {
     const step = Math.min(6, Math.max(1, Math.ceil(((f.difficulty - dLo) / ((dHi - dLo) || 1)) * 6)));
     const opp = meta[f.opp] || { name: f.opp, short: f.opp };
     return `<span class="slot">
-      <span class="box ${f.home ? '' : 'away'}" style="background:var(--ramp-${step})"
+      <span class="box ${f.home ? '' : 'away'}"
+        style="background:var(--ramp-${step});color:var(--ink-${step})"
         title="${esc(roundLabel(f.md))}, ${f.home ? 'home to' : 'away at'} ${esc(opp.name)} on ${esc(fmtDay(f.date))}, opponent rating ${f.difficulty}"
         >${esc(opp.short)}</span>
       <span class="cap">${esc(W.roundAbbr)}${f.md} ${f.home ? 'H' : 'A'}</span></span>`;

@@ -34,6 +34,7 @@
       <span class="vs">versus</span>
       <label class="vh" for="pb">Second club</label>
       <select id="pb"></select>
+      <button class="copybtn" id="copycmp">Copy link</button>
     </div>
     <div id="rows"></div>
     <p class="hint" id="scalenote" style="margin-top:14px"></p>
@@ -65,7 +66,8 @@
 
 <script type="module">
 import { siteData, data, esc, ord, pct, initChrome, initPalette, setMeta, chipColor,
-         scoreGrid, dcGrid, dcOutcome, neutralLambdas, timeline } from './assets/app.js';
+         scoreGrid, dcGrid, dcOutcome, neutralLambdas, timeline,
+         copyLink } from './assets/app.js';
 initChrome('compare');
 
 const g = await siteData('global');
@@ -98,6 +100,11 @@ const selA = document.getElementById('pa');
 const selB = document.getElementById('pb');
 selA.innerHTML = options;
 selB.innerHTML = options;
+
+/* The pairing is already in the URL and nothing said so. A pairing worth
+   looking at is usually worth sending to somebody. */
+document.getElementById('copycmp').addEventListener('click',
+  (e) => copyLink(e.currentTarget));
 
 const params = new URLSearchParams(location.search);
 const pick = (want, fallback) => (byId[want] ? want : fallback);

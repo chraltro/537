@@ -12,7 +12,9 @@
   --raised:  #222221;
   --ink:     #ffffff;
   --ink2:    #c3c2b7;
-  --muted:   #898781;
+  /* #898781 gave 4.43:1 against the raised surface — under WCAG AA for the
+     small type it is mostly used on. Measured, not guessed at. */
+  --muted:   #95938c;
   --grid:    #2c2c2a;
   --rule:    #383835;
   --border:  rgba(255, 255, 255, 0.10);
@@ -25,6 +27,20 @@
   --shadow:  0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.28);
   --ramp-0:#171b21; --ramp-1:#17304d; --ramp-2:#1c4677; --ramp-3:#2360a5;
   --ramp-4:#2f7ad0; --ramp-5:#5598e7; --ramp-6:#9ec5f4;
+  /* The foreground each ramp step can actually carry. A single text colour
+     across a seven-step ramp fails at one end or the other by construction --
+     white on the palest step here was 1.79:1 -- so each step names its own,
+     picked as whichever of white or near-black clears more contrast on it. */
+  --ink-0:#fff; --ink-1:#fff; --ink-2:#fff; --ink-3:#fff;
+  --ink-4:#0b0b0b; --ink-5:#0b0b0b; --ink-6:#0b0b0b;
+  /* Fills that carry white text on top of them. `--accent` and `--away` are
+     tuned to be read *as* text against the page; white sitting on them is the
+     opposite problem, and the same colour cannot serve both. These three are
+     picked so white clears 4.5:1 on each, in either theme, which is why they
+     are not redefined below. */
+  --bar-home: #1f6ac4;
+  --bar-draw: #6e6d67;
+  --bar-away: #c53433;
   --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -35,19 +51,24 @@
   --raised:  #f2f1ed;
   --ink:     #0b0b0b;
   --ink2:    #52514e;
-  --muted:   #898781;
+  /* 3.5:1 on the page and 3.18:1 on a card — the worst contrast on the site,
+     and it was carrying every caption, hint and low-probability cell. */
+  --muted:   #68665f;
   --grid:    #e1e0d9;
   --rule:    #c3c2b7;
   --border:  rgba(11, 11, 11, 0.10);
-  --accent:  #2a78d6;
-  --away:    #e34948;
-  --draw:    #9b9a95;
+  --accent:  #1a63bb;      /* 4.30:1 as link text was under AA; this is 5.77 */
+  --away:    #d13b3a;
+  --draw:    #77766f;
   --good:    #006300;
-  --warning: #fab219;
   --critical:#d03b3b;
   --shadow:  0 1px 2px rgba(11,11,11,.06), 0 8px 24px rgba(11,11,11,.06);
   --ramp-0:#f4f7fc; --ramp-1:#cde2fb; --ramp-2:#9ec5f4; --ramp-3:#6da7ec;
   --ramp-4:#3987e5; --ramp-5:#256abf; --ramp-6:#104281;
+  /* The light ramp runs the other way, so the crossover does too. */
+  --ink-0:#0b0b0b; --ink-1:#0b0b0b; --ink-2:#0b0b0b; --ink-3:#0b0b0b;
+  --ink-4:#0b0b0b; --ink-5:#fff; --ink-6:#fff;
+  --warning: #8f6208;      /* #fab219 is 1.79:1 as text on a light page */
 }
 
 * { box-sizing: border-box; }
@@ -263,7 +284,10 @@ thead th[data-dir]::after { content: " \25BE"; color: var(--accent); }
 thead th[data-dir="asc"]::after { content: " \25B4"; color: var(--accent); }
 tbody td { padding: 7px 8px; text-align: right; border-bottom: 1px solid var(--grid); font-size: 13.5px; }
 tbody tr:hover { background: var(--raised); }
-.scroller { overflow-x: visible; }
+/* `position: relative` so the scroller is a containing block: a visually-hidden
+   label inside a table is `position: absolute` with no offsets, which without
+   this escapes the scroller's clip and widens the whole document. */
+.scroller { overflow-x: visible; position: relative; }
 /* A cup's table carries two more probability columns than a league's. On a
    narrow screen they will not fit, so the table scrolls inside its own box —
    never the page. Wide screens have the room and keep a plain block, so nothing
@@ -342,9 +366,9 @@ tbody tr:hover { background: var(--raised); }
 .match .res { text-align: center; font-variant-numeric: tabular-nums; font-weight: 700; }
 .wdl { display: flex; gap: 2px; height: 22px; align-items: stretch; }
 .wdl i { display: block; border-radius: 2px; position: relative; min-width: 2px; }
-.wdl i.h { background: var(--accent); }
-.wdl i.d { background: var(--draw); }
-.wdl i.a { background: var(--away); }
+.wdl i.h { background: var(--bar-home); }
+.wdl i.d { background: var(--bar-draw); }
+.wdl i.a { background: var(--bar-away); }
 .wdl b {
   position: absolute; inset: 0; display: grid; place-items: center;
   font-size: 10.5px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums;
@@ -458,7 +482,7 @@ footer a { color: var(--ink2); }
 /* ================= accessibility ================= */
 .skip {
   position: absolute; left: -9999px; top: 0; z-index: 200;
-  background: var(--accent); color: #fff; padding: 10px 16px; border-radius: 0 0 8px 0;
+  background: var(--bar-home); color: #fff; padding: 10px 16px; border-radius: 0 0 8px 0;
 }
 .skip:focus { left: 0; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
@@ -594,7 +618,7 @@ kbd {
   background: var(--surface); border: 1px solid var(--border); color: var(--ink2);
   border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12.5px; cursor: pointer;
 }
-.chip-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip-btn[aria-pressed="true"] { background: var(--bar-home); border-color: var(--bar-home); color: #fff; }
 .chip-btn:hover { color: var(--ink); }
 .empty { color: var(--muted); font-size: 13px; padding: 26px 0; text-align: center; }
 .hint { color: var(--muted); font-size: 11.5px; }
@@ -774,6 +798,16 @@ kbd {
   background: var(--surface); color: var(--ink); border: 1px solid var(--border);
   border-radius: 9px; padding: 7px 11px; font: inherit; font-size: 13px; min-width: 190px;
 }
+/* Four controls wrapping at 360px produced a search box beside a stray label,
+   with the select on the next line at half width. Each control gets its own
+   full-width row instead, and the count sits under them. */
+@media (max-width: 620px) {
+  .rk-filters { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .rk-filters > label { display: none; }
+  .rk-filters input[type="search"],
+  .rk-filters select { width: 100%; min-width: 0; }
+  .rk-filters > span { margin-left: 0 !important; }
+}
 .stale-tag {
   font-size: 10px; letter-spacing: .04em; text-transform: uppercase;
   color: var(--warning); border: 1px solid currentColor; border-radius: 4px;
@@ -781,7 +815,14 @@ kbd {
 }
 
 /* comparison */
-.cmp-pickers { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: center; margin-bottom: 20px; }
+.cmp-pickers { display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 14px; align-items: center; margin-bottom: 20px; }
+/* On a phone the two selects stack and the copy button goes under them, rather
+   than squeezing a fourth column into 360 pixels. */
+@media (max-width: 620px) {
+  .cmp-pickers { grid-template-columns: 1fr; gap: 10px; }
+  .cmp-pickers .vs { text-align: center; }
+  .cmp-pickers .copybtn { justify-self: start; }
+}
 .cmp-pickers .vs { color: var(--muted); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
 .cmp-pickers select {
   width: 100%; background: var(--surface); color: var(--ink);
@@ -942,3 +983,16 @@ tr.rowcursor > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 @media (max-width: 620px) {
   .changelog li { grid-template-columns: 1fr; gap: 4px; }
 }
+
+/* ---- follow star and copy-link ----
+   Two small controls that appear on several pages; they share one look so the
+   star always means the same thing. */
+.followbtn, .copybtn {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  background: none; border: 1px solid var(--border); color: var(--ink2);
+  border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 12.5px;
+  font-weight: 550; white-space: nowrap;
+}
+.followbtn:hover, .copybtn:hover { background: var(--raised); color: var(--ink); }
+.followbtn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.followbtn svg { flex: none; }

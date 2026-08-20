@@ -47,6 +47,7 @@
       <label for="lgf">League</label>
       <select id="lgf"><option value="">Every league</option></select>
       <button class="chip-btn" id="onlyours" aria-pressed="false">Only clubs we forecast</button>
+      <button class="chip-btn" id="onlyfollow" aria-pressed="false" hidden>Only clubs I follow</button>
       <span style="margin-left:auto;color:var(--muted);font-size:12.5px" id="count"></span>
     </div>
 
@@ -57,15 +58,19 @@
           <th class="l" data-k="name">Club</th>
           <th class="l" data-k="league">League</th>
           <th data-k="spi" title="Expected share of points against an average club of the big five leagues">SPI</th>
-          <th data-k="off" title="Goals expected to score against that average club">Att</th>
-          <th data-k="def" title="Goals expected to concede against that average club">Def</th>
-          <th data-k="league_rank" title="Rank within its own league">In league</th>
-          <th data-k="n" title="Matches in the fitted corpus">Matches</th>
+          <th class="p3" data-k="off" title="Goals expected to score against that average club">Att</th>
+          <th class="p3" data-k="def" title="Goals expected to concede against that average club">Def</th>
+          <th class="p3" data-k="league_rank" title="Rank within its own league">In league</th>
+          <th class="p4" data-k="n" title="Matches in the fitted corpus">Matches</th>
+          <th class="l p2" aria-label="Follow"></th>
         </tr></thead>
-        <tbody id="rkbody"><tr><td colspan="8" class="skeleton">Loading…</td></tr></tbody>
+        <tbody id="rkbody"><tr><td colspan="9" class="skeleton">Loading…</td></tr></tbody>
       </table>
     </div>
     <p class="hint" id="note" style="margin-top:16px"></p>
+    <p id="morewrap" hidden style="margin-top:14px;text-align:center">
+      <button class="chip-btn" id="showmore"></button>
+    </p>
   </section>
 
   <nav class="deeper" aria-label="Go deeper">
@@ -83,7 +88,7 @@
 
 <script type="module">
 import { siteData, esc, ord, initChrome, tip, tipRows, makeSortable, chipColor,
-         initPalette, setMeta } from './assets/app.js';
+         initPalette, setMeta, followButton, followed } from './assets/app.js';
 initChrome('rankings');
 
 const g = await siteData('global');
@@ -130,8 +135,23 @@ const maxSpi = Math.max(...rows.map((r) => r.spi));
 const body = document.getElementById('rkbody');
 const count = document.getElementById('count');
 
+/* Eight hundred and thirty-six clubs was rendered as "the top 400" and no way
+   to see the other 436 -- a cap presented as a total. It is a real cap, because
+   836 rows of eight cells is a slow paint on a phone, so it stays and gains a
+   button. */
+const PAGE = 400;
+let limit = PAGE;
+
 function render(list) {
-  body.innerHTML = list.slice(0, 400).map((t) => `
+  const shown = list.slice(0, limit);
+  const more = document.getElementById('morewrap');
+  const btn = document.getElementById('showmore');
+  more.hidden = list.length <= limit;
+  if (!more.hidden) {
+    btn.textContent = `Show ${Math.min(PAGE, list.length - limit)} more (${
+      list.length - limit} left)`;
+  }
+  body.innerHTML = shown.map((t) => `
     <tr data-id="${t.id}">
       <td class="l rank">${t.rank}</td>
       <td class="l"><span class="club">
@@ -144,20 +164,24 @@ function render(list) {
       <td class="l lgname">${esc(t.league)}${t.country ? ` <span>${esc(t.country)}</span>` : ''}</td>
       <td class="spi"><b>${t.spi.toFixed(1)}</b>
         <span class="minibar" style="width:${(t.spi / maxSpi * 100).toFixed(1)}%"></span></td>
-      <td>${t.off.toFixed(2)}</td>
-      <td>${t.def.toFixed(2)}</td>
-      <td>${ord(t.league_rank)}</td>
-      <td>${t.n}</td>
-    </tr>`).join('') || '<tr><td colspan="8" class="empty">Nothing matches that.</td></tr>';
-  count.textContent = list.length > 400
-    ? `Showing the top 400 of ${list.length}` : `${list.length} clubs`;
+      <td class="p3">${t.off.toFixed(2)}</td>
+      <td class="p3">${t.def.toFixed(2)}</td>
+      <td class="p3">${ord(t.league_rank)}</td>
+      <td class="p4">${t.n}</td>
+      <td class="l p2">${t.featured ? followButton(t.id, t.name) : ''}</td>
+    </tr>`).join('') || '<tr><td colspan="9" class="empty">Nothing matches that.</td></tr>';
+  count.textContent = list.length > shown.length
+    ? `Showing ${shown.length} of ${list.length}`
+    : `${list.length} club${list.length === 1 ? '' : 's'}`;
 }
 
 /* Filters live outside the sort so that changing one never resets the other:
    `makeSortable` owns the order, this owns which rows survive it. */
-let query = '', league = '', ours = false;
+let query = '', league = '', ours = false, mine = false;
+let follows = new Set(followed());
 const keep = (t) => (!league || t.league === league)
   && (!ours || t.featured)
+  && (!mine || follows.has(t.id))
   && (!query || t.name.toLowerCase().includes(query) || t.league.toLowerCase().includes(query));
 
 let ordered = rows;
@@ -165,7 +189,30 @@ makeSortable(document.getElementById('rk'), rows, (sorted) => {
   ordered = sorted;
   render(ordered.filter(keep));
 }, 'spi');
-const redraw = () => render(ordered.filter(keep));
+/* Any change to a filter starts the list again from the top: showing rows
+   401-800 of a list the reader has just narrowed to nine is nonsense. */
+const redraw = () => { limit = PAGE; render(ordered.filter(keep)); };
+document.getElementById('showmore').addEventListener('click', () => {
+  limit += PAGE;
+  render(ordered.filter(keep));
+});
+
+/* The follow filter only appears once there is something to filter to. */
+const followChip = document.getElementById('onlyfollow');
+const syncFollow = () => {
+  follows = new Set(followed());
+  followChip.hidden = follows.size === 0 && !mine;
+  followChip.textContent = follows.size
+    ? `Only the ${follows.size} club${follows.size === 1 ? '' : 's'} I follow`
+    : 'Only clubs I follow';
+};
+syncFollow();
+followChip.addEventListener('click', () => {
+  mine = followChip.getAttribute('aria-pressed') !== 'true';
+  followChip.setAttribute('aria-pressed', String(mine));
+  redraw();
+});
+addEventListener('followchange', () => { syncFollow(); if (mine) redraw(); });
 
 document.getElementById('q').addEventListener('input', (e) => {
   query = e.target.value.trim().toLowerCase();

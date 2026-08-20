@@ -46,6 +46,7 @@
     <div class="controls" style="margin-bottom:18px">
       <label for="pick">Club</label>
       <select id="pick"></select>
+      <span id="clubtools" style="margin-left:auto;display:flex;gap:8px"></span>
     </div>
     <h1 id="title">Club</h1>
     <p class="lede" id="lede"></p>
@@ -137,7 +138,8 @@
 <script type="module">
 import { data, pct, signed, esc, ord, initChrome, tip, tipRows, timeline, chipColor,
          initPalette, matchModal, lg, withLg, setMeta, eventLabels, cardUrl,
-         bracketStrip, roundLabel, roundShort, initTabs } from './assets/app.js';
+         bracketStrip, roundLabel, roundShort, initTabs, followButton,
+         copyLink } from './assets/app.js';
 initChrome('team');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
@@ -414,6 +416,18 @@ function render() {
     document.getElementById('sparklab').textContent = '';
   }
 
+  /* Follow this club, and copy the link to this exact view. The star is kept
+     in this browser -- there is no server here to keep it on -- and the link is
+     the URL that is already in the address bar, which nobody thinks to copy. */
+  document.getElementById('clubtools').innerHTML =
+    followButton(t.id, t.name)
+    + `<button class="copybtn" id="copyclub">Copy link</button>`;
+  document.getElementById('copyclub').addEventListener('click', (e) => {
+    const u = new URL(location.href);
+    u.searchParams.set('t', t.id);
+    copyLink(e.currentTarget, u.toString());
+  });
+
   renderScenarios(t);
   renderState(t);
   const cal = document.getElementById('callink');
@@ -447,7 +461,8 @@ function render() {
       const f = (r.difficulty - lo) / ((hi - lo) || 1);
       const step = Math.min(6, Math.max(1, Math.ceil(f * 6)));
       return `<span class="slot">
-        <span class="box ${r.home ? '' : 'away'}" style="background:var(--ramp-${step})"
+        <span class="box ${r.home ? '' : 'away'}"
+          style="background:var(--ramp-${step});color:var(--ink-${step})"
           title="${esc(roundLabel(r.md))}, ${r.home ? 'home to' : 'away at'} ${esc(meta[r.opp].name)}, opponent rating ${r.difficulty}"
           >${esc(meta[r.opp].short)}</span>
         <span class="cap">${esc(W.roundAbbr)}${r.md} ${r.home ? 'H' : 'A'}</span></span>`;

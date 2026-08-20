@@ -381,9 +381,9 @@ export const PAGES = [
   { id: 'team',     label: 'Clubs',           long: 'Club pages',           file: 'team.html',      group: 'league', primary: true },
   { id: 'races',    label: 'Races',           long: 'The races',            file: 'races.html',     group: 'league', primary: true },
   { id: 'sim',      label: 'What if',         long: 'What if? simulator',   file: 'simulator.html', group: 'league' },
-  { id: 'review',   label: 'Season review',   long: 'How wrong were we?',   file: 'review.html',    group: 'league' },
-  { id: 'rankings', label: 'Global rankings', long: 'Global club rankings', file: 'rankings.html',  group: 'europe', site: true },
-  { id: 'compare',  label: 'Compare clubs',   long: 'Compare two clubs',    file: 'compare.html',   group: 'europe', site: true },
+  { id: 'review',   label: 'Season review',   short: 'Review',              long: 'How wrong were we?',   file: 'review.html',    group: 'league' },
+  { id: 'rankings', label: 'Global rankings', short: 'Rankings',            long: 'Global club rankings', file: 'rankings.html',  group: 'europe', site: true },
+  { id: 'compare',  label: 'Compare clubs',   short: 'Compare',             long: 'Compare two clubs',    file: 'compare.html',   group: 'europe', site: true },
   { id: 'method',   label: 'Method',          long: 'Method and accuracy',  file: 'method.html',    group: 'about' },
 ];
 
@@ -431,7 +431,12 @@ export function initChrome(page) {
      and you would have to open it to find out where you were. */
   const current = PAGES.find((p) => p.id === page);
   const here = current && !current.primary;
+  /* The button names the page you are standing on, when that page lives in the
+     menu. On a phone it shares a row with four tabs, and "Global rankings" does
+     not fit next to them -- so the registry carries a short form for the names
+     that are too long, and the bar shows whichever fits. */
   const hereLabel = here ? current.label : 'More';
+  const hereShort = here ? (current.short || current.label) : 'More';
 
   const opts = LEAGUES.map((l) => {
     const here = l.slug === LG.slug;
@@ -459,7 +464,8 @@ export function initChrome(page) {
         <div class="navmenu">
           <button class="morebtn" id="moretog" aria-expanded="false" aria-haspopup="true"
                   aria-controls="morepop"${here ? ' data-here="1"' : ''}>
-            <span>${esc(hereLabel)}</span>
+            <span class="full">${esc(hereLabel)}</span><span
+              class="abbr">${esc(hereShort)}</span>
             <svg width="10" height="10" viewBox="0 0 16 16" aria-hidden="true" class="chev">
               <path d="M3 6l5 5 5-5" fill="none" stroke="currentColor"
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -688,12 +694,20 @@ export function chipColor(hex) {
 /* ---------------- sequential ramp ----------------
    One hue, light to dark, seven steps. Cells near zero recede into the
    surface so the eye lands on where a club actually finishes.        */
-export function rampColor(p, max) {
-  if (!(p > 0.002)) return 'var(--ramp-0)';             // genuinely never happens
+export function rampStep(p, max) {
+  if (!(p > 0.002)) return 0;                           // genuinely never happens
   const t = Math.min(1, (p / (max || 1)) ** 0.55);      // compress, but keep the peak loud
-  const step = Math.min(6, Math.max(1, Math.ceil(t * 6)));
-  return `var(--ramp-${step})`;
+  return Math.min(6, Math.max(1, Math.ceil(t * 6)));
 }
+
+export const rampColor = (p, max) => `var(--ramp-${rampStep(p, max)})`;
+
+/* The text colour that step can carry. A seven-step ramp cannot be read with a
+   single foreground: white on the palest step of the dark ramp was 1.79:1, and
+   near-black on the darkest step of the light ramp was 1.99:1. Each step names
+   its own in the stylesheet, chosen as whichever of white or near-black clears
+   more contrast against it. */
+export const rampInk = (p, max) => `var(--ink-${rampStep(p, max)})`;
 
 /* ---------------- sortable tables ---------------- */
 export function makeSortable(table, rows, render, initial, opts = {}) {
@@ -1008,6 +1022,100 @@ export function initTabs(host, groups, { param = '' } = {}) {
   return show;
 }
 
+/* ================= following clubs =================
+   Nine competitions and 174 clubs, and a reader almost always cares about one
+   or two. The list is kept in this browser and never leaves it -- there is no
+   server here to keep it on -- so it is small, forgiving of a cleared cache,
+   and stores ids rather than names so a rename does not lose anybody. */
+const FOLLOW_KEY = 'plf-follow';
+
+export function followed() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(FOLLOW_KEY) || '[]');
+    return Array.isArray(raw) ? raw.filter((x) => typeof x === 'string') : [];
+  } catch { return []; }
+}
+
+export const isFollowed = (id) => followed().includes(id);
+
+/** Toggle one club and return whether it is now followed. */
+export function toggleFollow(id) {
+  const list = followed();
+  const at = list.indexOf(id);
+  if (at >= 0) list.splice(at, 1);
+  else list.push(id);
+  try { localStorage.setItem(FOLLOW_KEY, JSON.stringify(list)); } catch { /* private mode */ }
+  dispatchEvent(new CustomEvent('followchange', { detail: { id, on: at < 0 } }));
+  return at < 0;
+}
+
+/* The star, as one function, because three pages want the same control and a
+   star that means "followed" on one page and "favourite" on another is worse
+   than no star. `label` names the club so a screen reader hears which one. */
+export function followButton(id, label) {
+  const on = isFollowed(id);
+  return `<button class="followbtn" data-follow="${esc(id)}" aria-pressed="${on}"
+            title="${on ? 'Stop following' : 'Follow'} ${esc(label)}">
+      <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M8 1.6l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.4l-3.8 2 .7-4.3-3.1-3 4.3-.6z"
+              fill="${on ? 'currentColor' : 'none'}" stroke="currentColor"
+              stroke-width="1.4" stroke-linejoin="round"/>
+      </svg><span>${on ? 'Following' : 'Follow'}</span>
+    </button>`;
+}
+
+/* One delegated listener for the whole document: any star anywhere works, and
+   every star for the same club updates together. */
+addEventListener('click', (e) => {
+  const btn = e.target.closest?.('[data-follow]');
+  if (!btn) return;
+  e.preventDefault();
+  toggleFollow(btn.dataset.follow);
+});
+addEventListener('followchange', (e) => {
+  document.querySelectorAll(`[data-follow="${CSS.escape(e.detail.id)}"]`)
+    .forEach((b) => {
+      b.setAttribute('aria-pressed', String(e.detail.on));
+      const path = b.querySelector('path');
+      if (path) path.setAttribute('fill', e.detail.on ? 'currentColor' : 'none');
+      const txt = b.querySelector('span');
+      if (txt) txt.textContent = e.detail.on ? 'Following' : 'Follow';
+      const t = b.getAttribute('title') || '';
+      b.setAttribute('title', e.detail.on
+        ? t.replace(/^Follow /, 'Stop following ')
+        : t.replace(/^Stop following /, 'Follow '));
+    });
+});
+
+/* ================= copy a link =================
+   Every view on this site is already in its URL. Saying so, with a button that
+   puts it on the clipboard, is the difference between a shareable page and one
+   a reader has to know is shareable. */
+export function copyLink(btn, href = location.href) {
+  const say = (msg) => {
+    const was = btn.dataset.label || btn.textContent;
+    btn.dataset.label = was;
+    btn.textContent = msg;
+    setTimeout(() => { btn.textContent = btn.dataset.label; }, 1600);
+  };
+  const fallback = () => {
+    /* `navigator.clipboard` needs a secure context, which a file:// copy of
+       this site is not. Select the URL instead so a reader can still copy it. */
+    const ta = document.createElement('textarea');
+    ta.value = href;
+    ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch { ok = false; }
+    ta.remove();
+    say(ok ? 'Copied' : 'Press ⌘C');
+  };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(href).then(() => say('Copied'), fallback);
+  } else fallback();
+}
+
 /* The site rewards keyboard use and advertised almost none of it. */
 export function showShortcuts() {
   modal(`<h3>Keyboard shortcuts</h3>
@@ -1181,7 +1289,8 @@ export function scoreGrid(grid, homeShort, awayShort, best) {
       /* No tabindex. 121 focus stops inside a dialog is a trap, not access:
          the whole grid is one labelled figure below, and the numbers are also
          written out in the caption for a reader that cannot hover. */
-      return `<div class="gcell${isBest ? ' best' : ''}" style="background:var(--ramp-${step})"
+      return `<div class="gcell${isBest ? ' best' : ''}"
+        style="background:var(--ramp-${step});color:var(--ink-${step})"
         title="${homeShort} ${h}–${a} ${awayShort} · ${(p * 100).toFixed(1)}%"
         >${p >= 0.04 ? Math.round(p * 100) : ''}</div>`;
     }).join('')).join('');
