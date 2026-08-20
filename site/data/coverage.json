@@ -1,5 +1,5 @@
 {
- "generated": "2026-08-20T08:53:48+00:00",
+ "generated": "2026-08-20T09:36:57+00:00",
  "leagues": [
   {
    "slug": "premier-league",
@@ -10,11 +10,136 @@
    "first_season": "2000-01",
    "last_season": "2025-26",
    "matches": 9880,
-   "second_tier": 8857,
+   "second_tier": 8832,
    "above": 0,
    "missing_seasons": [],
    "partial_seasons": [],
    "has_shots": true
+  },
+  {
+   "slug": "la-liga",
+   "name": "La Liga",
+   "country": "Spain",
+   "source": "mirror",
+   "seasons": 26,
+   "first_season": "2000-01",
+   "last_season": "2025-26",
+   "matches": 9880,
+   "second_tier": 6128,
+   "above": 0,
+   "missing_seasons": [],
+   "partial_seasons": [],
+   "has_shots": true
+  },
+  {
+   "slug": "serie-a",
+   "name": "Serie A",
+   "country": "Italy",
+   "source": "mirror",
+   "seasons": 26,
+   "first_season": "2000-01",
+   "last_season": "2025-26",
+   "matches": 9584,
+   "second_tier": 5263,
+   "above": 0,
+   "missing_seasons": [],
+   "partial_seasons": [],
+   "has_shots": true
+  },
+  {
+   "slug": "bundesliga",
+   "name": "Bundesliga",
+   "country": "Germany",
+   "source": "mirror",
+   "seasons": 26,
+   "first_season": "2000-01",
+   "last_season": "2025-26",
+   "matches": 7956,
+   "second_tier": 4077,
+   "above": 0,
+   "missing_seasons": [],
+   "partial_seasons": [],
+   "has_shots": true
+  },
+  {
+   "slug": "ligue-1",
+   "name": "Ligue 1",
+   "country": "France",
+   "source": "mirror",
+   "seasons": 26,
+   "first_season": "2000-01",
+   "last_season": "2025-26",
+   "matches": 9409,
+   "second_tier": 4122,
+   "above": 0,
+   "missing_seasons": [],
+   "partial_seasons": [],
+   "has_shots": true
+  },
+  {
+   "slug": "eredivisie",
+   "name": "Eredivisie",
+   "country": "Netherlands",
+   "source": "openfootball",
+   "seasons": 8,
+   "first_season": "2018-19",
+   "last_season": "2025-26",
+   "matches": 2373,
+   "second_tier": 1890,
+   "above": 0,
+   "missing_seasons": [],
+   "partial_seasons": [],
+   "has_shots": false
+  },
+  {
+   "slug": "primeira-liga",
+   "name": "Primeira Liga",
+   "country": "Portugal",
+   "source": "openfootball",
+   "seasons": 8,
+   "first_season": "2018-19",
+   "last_season": "2025-26",
+   "matches": 2448,
+   "second_tier": 1458,
+   "above": 0,
+   "missing_seasons": [],
+   "partial_seasons": [],
+   "has_shots": false
+  },
+  {
+   "slug": "pro-league",
+   "name": "Pro League",
+   "country": "Belgium",
+   "source": "openfootball",
+   "seasons": 6,
+   "first_season": "2018-19",
+   "last_season": "2025-26",
+   "matches": 1547,
+   "second_tier": 0,
+   "above": 0,
+   "missing_seasons": [
+    "2020-21",
+    "2022-23"
+   ],
+   "partial_seasons": [
+    "2025-26"
+   ],
+   "has_shots": false
+  },
+  {
+   "slug": "championship",
+   "name": "Championship",
+   "country": "England",
+   "source": "openfootball",
+   "seasons": 22,
+   "first_season": "2004-05",
+   "last_season": "2025-26",
+   "matches": 12144,
+   "second_tier": 11796,
+   "above": 9880,
+   "missing_seasons": [],
+   "partial_seasons": [],
+   "has_shots": false
   }
  ]
 }
