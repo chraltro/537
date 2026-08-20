@@ -64,10 +64,10 @@
           <th data-k="spi" title="Expected share of points against an average club in this competition">SPI</th>
           <th data-k="att_r" title="Attack out of 100. Higher is better">Attack</th>
           <th data-k="def_r" title="Defence out of 100. Higher is better, because it is the conceding that is low">Defence</th>
-          <th class="p3" data-k="off" title="Goals expected against an average opponent">Scored</th>
-          <th class="p3" data-k="def" title="Goals conceded against an average opponent">Conceded</th>
-          <th class="p2" data-k="gd" title="Projected goal difference across the season">GD</th>
-          <th class="p3" data-k="sos" title="Average rating of the opponents left to play. Higher is harder">Sched</th>
+          <th data-k="off" title="Goals expected against an average opponent">Scored</th>
+          <th data-k="def" title="Goals conceded against an average opponent">Conceded</th>
+          <th data-k="gd" title="Projected goal difference across the season">GD</th>
+          <th data-k="sos" title="Average rating of the opponents left to play. Higher is harder">Sched</th>
         </tr></thead>
         <tbody id="rtbody"></tbody>
       </table>
@@ -350,10 +350,10 @@ function renderRatings(list) {
         t.spi.toFixed(1)}</b></td>
       <td class="rated"><b>${t.att_r ?? '—'}</b>${bar(t.att_r)}</td>
       <td class="rated"><b>${t.def_r ?? '—'}</b>${bar(t.def_r)}</td>
-      <td class="p3">${t.off.toFixed(2)}</td>
-      <td class="p3">${t.def.toFixed(2)}</td>
-      <td class="p2">${signed(t.gd)}</td>
-      <td class="p3 ${t.sos_rank && t.sos_rank <= 5 ? 'p-hi' : 'p-lo'}"
+      <td>${t.off.toFixed(2)}</td>
+      <td>${t.def.toFixed(2)}</td>
+      <td>${signed(t.gd)}</td>
+      <td class="${t.sos_rank && t.sos_rank <= 5 ? 'p-hi' : 'p-lo'}"
           title="${t.sos_rank ? ord(t.sos_rank) + ' hardest run left' : ''}">${t.sos ?? '—'}</td>
     </tr>`).join('');
 }
@@ -371,8 +371,10 @@ document.getElementById('ratingfoot').innerHTML =
   `<b>${esc(bestAtt.name)}</b> have the best attack at ${bestAtt.att_r}, worth `
   + `${bestAtt.off.toFixed(2)} goals a match against an average opponent; `
   + `<b>${esc(bestDef.name)}</b> the best defence at ${bestDef.def_r}, conceding `
-  + `${bestDef.def.toFixed(2)}. The two goal columns are what the ratings are computed from, `
-  + `and what every probability on this site is computed from.`;
+  + `${bestDef.def.toFixed(2)}. The two goal columns are this competition's own: what a `
+  + `club is expected to score and concede against an average opponent here, and what `
+  + `every probability on this site is computed from. The ratings beside them are the `
+  + `pooled European fit, which is why they can be compared with any other competition's.`;
 
 /* ---- distribution view ---- */
 /* One column per finishing position, however many the league has. The two

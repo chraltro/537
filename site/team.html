@@ -124,9 +124,9 @@
 
   <section class="card" id="c-fdr">
     <h2>The run of fixtures</h2>
-    <p class="sub">Difficulty of each of the next matches, shaded by the opponent's rating
-      adjusted for venue, since the same opponent away is a harder night than at home.
-      Outlined squares are away trips.</p>
+    <p class="sub">Chance of winning each of the next matches, over a box shaded by the
+      opponent's rating adjusted for venue, since the same opponent away is a harder night
+      than at home. Outlined squares are away trips.</p>
     <div id="fdr"></div>
     <div id="fdrnote" class="hint" style="margin-top:12px"></div>
   </section>
@@ -337,9 +337,13 @@ function renderRadar(t) {
   document.getElementById('radarhead').textContent =
     `The ${WORD[have.length] || have.length} ratings`;
   document.getElementById('radarsub').innerHTML =
-    `All of them on the same scale: 65 is an average ${esc(W.name)} club and higher is `
-    + `better every time, defence and discipline included. For those it is the `
-    + `<em>conceding</em> and the <em>booking</em> that is low. The dashed ring is 65.`;
+    `Out of 100, and higher is better every time, defence and discipline included. For `
+    + `those it is the <em>conceding</em> and the <em>booking</em> that is low. `
+    + `<b>Attack</b> and <b>defence</b> come from the pooled European fit and are measured `
+    + `against an average big-five club, so they can be read against any other club on the `
+    + `site. The rest are measured against ${esc(W.the)}, because "how you do against the `
+    + `best in your division" only means something inside one. The dashed ring is 65, `
+    + `average for this competition.`;
   const note = document.getElementById('radarnote');
   if (!shape) {
     note.textContent =
@@ -455,6 +459,19 @@ function renderState(t) {
    not carry is simply left without the line rather than given a placeholder. */
 let REGISTER = {};
 try { REGISTER = (await siteData('clubs')).clubs || {}; } catch { /* older build */ }
+
+/* Attack and defence from the pooled European fit, so this club's 70 means the
+   same as any other club's 70 anywhere on the site. The league fit's own
+   versions remain as the fallback. */
+try {
+  const R = (await siteData('ratings')).clubs || {};
+  fc.teams.forEach((t) => {
+    const r = R[t.id];
+    if (!r) return;
+    if (r.att_r != null) t.att_r = r.att_r;
+    if (r.def_r != null) t.def_r = r.def_r;
+  });
+} catch { /* older build */ }
 
 const ARRIVED_FROM = {
   up: '<span><b>Promoted</b> from the division below</span>',
@@ -592,15 +609,28 @@ function render() {
   const nxt = t.next || [];
   const allDiff = fc.teams.flatMap((x) => (x.next || []).map((r) => r.difficulty));
   const lo = Math.min(...allDiff), hi = Math.max(...allDiff);
+  /* The shade says how strong the opponent is. What a reader wants next is the
+     chance of beating them, which the match forecast already holds, so each
+     box carries it underneath rather than making them scroll to the fixture
+     list to find out. */
+  const winOf = (r) => {
+    const m = mm.matches.find((x) => x.md === r.md
+      && ((r.home && x.h === current && x.a === r.opp)
+       || (!r.home && x.a === current && x.h === r.opp)));
+    return m ? (r.home ? m.ph : m.pa) : null;
+  };
   document.getElementById('fdr').innerHTML = nxt.length ? `<div class="fdr">${
     nxt.map((r) => {
       const f = (r.difficulty - lo) / ((hi - lo) || 1);
       const step = Math.min(6, Math.max(1, Math.ceil(f * 6)));
+      const w = winOf(r);
       return `<span class="slot">
         <span class="box ${r.home ? '' : 'away'}"
           style="background:var(--ramp-${step});color:var(--ink-${step})"
-          title="${esc(roundLabel(r.md))}, ${r.home ? 'home to' : 'away at'} ${esc(meta[r.opp].name)}, opponent rating ${r.difficulty}"
+          title="${esc(roundLabel(r.md))}, ${r.home ? 'home to' : 'away at'} ${esc(meta[r.opp].name)}, opponent rating ${r.difficulty}${
+            w == null ? '' : `, ${pct(w, 0)} chance of winning`}"
           >${esc(meta[r.opp].short)}</span>
+        <span class="win">${w == null ? '' : pct(w, 0)}</span>
         <span class="cap">${esc(W.roundAbbr)}${r.md} ${r.home ? 'H' : 'A'}</span></span>`;
     }).join('')}</div>` : '<p class="empty">No fixtures left.</p>';
   document.getElementById('fdrnote').innerHTML = t.sos

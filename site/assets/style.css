@@ -1074,3 +1074,8 @@ tr.rowcursor > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 /* The comparison table under the two-club radar: value, label, value. */
 .rdtbl td.v.lead { color: var(--accent); }
 .rdtbl td.v:first-child { text-align: right; }
+/* Chance of winning, under each box in a club's run of fixtures. */
+.fdr .win {
+  font-size: 11.5px; font-weight: 700; color: var(--ink2);
+  font-variant-numeric: tabular-nums; line-height: 1.1;
+}

@@ -1340,6 +1340,50 @@ def _rate_dimensions(rows: list[dict], gs: dict) -> None:
                 row[field] = got
 
 
+def build_ratings(ready: set[str]) -> None:
+    """One small file of ratings on the pooled scale, keyed by club.
+
+    Attack and defence on a competition page used to be measured against that
+    competition's own average, which made them useless for the comparison people
+    most want to make: Club Brugge's attack against Manchester City's. Both read
+    somewhere in the sixties or seventies, and neither number knew about the
+    other. A rating that is only meaningful next to its own neighbours is a rank
+    with extra steps.
+
+    So the two that *can* be global are global everywhere. The pooled European
+    fit puts every club on one scale, and this copies its attack and defence out
+    to a file every page can afford to fetch -- global.json itself is well over
+    a megabyte, which is fine for the ranking page and not for a club page.
+
+    The other three stay relative to a club's own division, because they cannot
+    be anything else: "points against the top quarter" is a fact about a
+    division, and scoring it across Europe rates whoever dominates the weakest
+    league the best big-game side on the continent.
+    """
+    try:
+        with open(os.path.join(OUT, "global.json"), encoding="utf-8") as fh:
+            g = json.load(fh)
+    except (OSError, ValueError):
+        print("  · global.json unreadable, skipping ratings.json")
+        return
+    keep = ("att_r", "def_r", "home_r", "big_r", "consistency_r")
+    clubs = {}
+    for c in g.get("clubs", []):
+        row = {k: c[k] for k in keep if c.get(k) is not None}
+        if row:
+            clubs[c["id"]] = row
+    json.dump({"generated": g.get("generated"),
+               "scale": {"global": ["att_r", "def_r"],
+                         "league": ["home_r", "big_r", "consistency_r"]},
+               "note": ("Attack and defence are measured against an average "
+                        "big-five club, so they compare across borders. The "
+                        "other three are measured against each club's own "
+                        "division."),
+               "clubs": clubs},
+              open(os.path.join(OUT, "ratings.json"), "w"), separators=(",", ":"))
+    print(f"  → ratings.json ({len(clubs)} clubs on the pooled scale)")
+
+
 def build_seo(ready: set[str]) -> None:
     """robots.txt, the sitemap, and a static stub per club."""
     manifest = {"default": leagues.DEFAULT.slug,
@@ -1489,6 +1533,7 @@ def main(argv: list[str] | None = None) -> None:
     for name, fn in (("global rankings", build_rankings), ("feeds", build_feeds),
                      ("coverage", build_coverage),
                      ("club register", build_clubs),
+                     ("pooled ratings", build_ratings),
                      ("shooting", build_shooting),
                      ("retired flat files", lambda _r: drop_legacy_flat()),
                      ("feed freshness", check_feeds),

@@ -240,7 +240,12 @@ function row(label, a, b, better) {
    for the big five, and those live on the club's league forecast. Absent for
    everybody else, and absent rather than zero. */
 const GLOBAL_DIMS = ['att_r', 'def_r', 'home_r', 'big_r', 'consistency_r'];
-const LEAGUE_DIMS = ['finishing_r', 'creation_r', 'discipline_r'];
+/* A club with a forecast page has these measured on its own competition's five
+   seasons, which is a longer and cleaner window than the pooled corpus can give
+   it. Preferring them keeps a club's numbers identical on every page it appears
+   on; the pooled versions stand in for the 662 clubs with no forecast page. */
+const LEAGUE_DIMS = ['finishing_r', 'creation_r', 'discipline_r',
+                     'home_r', 'big_r', 'consistency_r'];
 
 async function ratings(c) {
   const out = Object.fromEntries(DIMS.map((d) => [d.key, null]));
@@ -251,7 +256,10 @@ async function ratings(c) {
       if (r.ok) {
         const fc = await r.json();
         const t = (fc.teams || []).find((x) => x.id === c.id);
-        if (t) LEAGUE_DIMS.forEach((k) => { out[k] = t[k] ?? null; });
+        /* Attack and defence are never taken from here: the league fit measures
+           them against that league's own average, and this page exists to
+           compare across leagues. */
+        if (t) LEAGUE_DIMS.forEach((k) => { if (t[k] != null) out[k] = t[k]; });
       }
     } catch { /* the five from the ranking still stand */ }
   }
@@ -433,9 +441,12 @@ async function render() {
     + `<p class="hint" style="margin-top:10px">Each point is fitted only on matches played
       before that season began, so the line is a walk-forward record rather than a curve
       drawn through hindsight. Both clubs share one vertical scale.${
-        colA === 'var(--accent)'
-          ? ' Their own colours were too close to tell apart, so the chart uses the two it'
-            + ' uses for the sides of a match.' : ''}</p>`;
+        /* The fallback pair can come back either way round, since each club
+           takes whichever of the two is nearer its own colour. Testing for one
+           order missed half the cases. */
+        colA.startsWith('var(') || colB.startsWith('var(')
+          ? ' These two play in colours too close to tell apart on a chart, so it uses the'
+            + ' two this site uses for the sides of a match.' : ''}</p>`;
 }
 
 /* Four screens rather than one long scroll. The pickers sit above the tabs

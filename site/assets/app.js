@@ -676,8 +676,22 @@ export function tipRows(title, rows) {
    Leeds' yellow are invisible against one surface or the other. Nudge any
    colour that cannot be seen toward the current ink until it can be, rather
    than hand-picking 20 approximations of the right colour.          */
+/* Any CSS colour this site actually writes, as [r, g, b], or null.
+
+   It used to accept only `#rrggbb` and, handed anything else, return [0, 0, 0]
+   rather than nothing: `parseInt('rgb(200,16,46)', 16)` is NaN and NaN through
+   a bitwise shift is 0. So a failed parse produced a real-looking black, and a
+   caller checking `if (rgb)` was reassured by an array that meant nothing.
+   Failing returns null now, and rgb() strings parse. */
 const _hex = (h) => {
-  const v = h.replace('#', '');
+  if (typeof h !== 'string') return null;
+  const m = h.match(/rgba?\(([^)]+)\)/i);
+  if (m) {
+    const p = m[1].split(/[\s,/]+/).map(Number).slice(0, 3);
+    return p.length === 3 && p.every((v) => Number.isFinite(v)) ? p : null;
+  }
+  const v = h.replace('#', '').trim();
+  if (!/^([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)) return null;
   const n = parseInt(v.length === 3 ? v.split('').map((c) => c + c).join('') : v, 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 };
@@ -704,7 +718,10 @@ export function chipColor(hex) {
   const dark = document.documentElement.getAttribute('data-theme') !== 'light';
   const surface = dark ? [26, 26, 25] : [252, 252, 251];
   const target = dark ? [255, 255, 255] : [11, 11, 11];
-  let c = _hex(hex);
+  /* `_hex` returns null on anything it cannot read. A club with a missing or
+     malformed colour gets the neutral grey the club table already falls back
+     to, rather than throwing and taking the page down with it. */
+  let c = _hex(hex) || _hex('#7A8290');
   for (let i = 0; i < 12 && _ratio(c, surface) < 2.4; i++) {
     c = c.map((v, k) => Math.round(v + (target[k] - v) * 0.18));
   }
@@ -1431,17 +1448,39 @@ export function timeline(points, { w = 860, h = 240, pad = 38, color = 'var(--ac
    the two sides of a match: the accent for the first club, the away red for the
    second. A reader who has seen one fixture bar on this site already knows which
    is which. */
+const _dist = (p, q) => Math.sqrt(p.reduce((t, v, i) => t + (v - q[i]) ** 2, 0));
+
+/** A CSS custom property resolved to [r, g, b]. */
+function _varRgb(name, fallback) {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name);
+  return _hex((v || '').trim()) || fallback;
+}
+
 export function distinctPair(a, b) {
+  /* Compare the clubs' own colours, not the display colours: `chipColor`
+     returns an `rgb(...)` string, and comparing those meant comparing two
+     failed parses, which are equal, so every pair in the site's history was
+     judged a clash and got the fallback by position. Liverpool, first in the
+     picker, was therefore drawn in blue and Chelsea in red. */
+  const rawA = _hex(a), rawB = _hex(b);
   const ca = chipColor(a), cb = chipColor(b);
-  const rgbA = _hex(ca), rgbB = _hex(cb);
-  if (rgbA && rgbB) {
-    /* Distance in plain RGB is a poor perceptual measure but a fine "are these
-       obviously different" one, and it needs no colour-space maths. Below a
-       sixth of the diagonal, two lines read as the same line. */
-    const d = Math.sqrt(rgbA.reduce((t, v, i) => t + (v - rgbB[i]) ** 2, 0));
-    if (d > 442 / 6) return [ca, cb];
-  }
-  return ['var(--accent)', 'var(--away)'];
+  if (!rawA || !rawB) return [ca, cb];
+  /* Plain RGB distance is a poor perceptual measure and a fine "are these
+     obviously different" one. Below a sixth of the diagonal two lines read as
+     one line. */
+  if (_dist(rawA, rawB) > 442 / 6) return [ca, cb];
+
+  /* They do clash, so one of them has to give up its colour. Hand out the two
+     the site uses for the sides of a match, but by which club each is nearer
+     to rather than by who was picked first: of two red clubs, the redder one
+     keeps red. */
+  const accent = _varRgb('--accent', [57, 135, 229]);
+  const away = _varRgb('--away', [230, 103, 103]);
+  const straight = _dist(rawA, accent) + _dist(rawB, away);
+  const swapped = _dist(rawA, away) + _dist(rawB, accent);
+  return straight <= swapped
+    ? ['var(--accent)', 'var(--away)']
+    : ['var(--away)', 'var(--accent)'];
 }
 
 /* The eight ratings, in the order they are drawn round a radar and listed in a
@@ -1490,9 +1529,16 @@ export function radar(clubs, { size = 300, mid = 65 } = {}) {
     const k = Math.max(0, Math.min(1, (v - LO) / (HI - LO)));
     return [cx + Math.cos(a) * r * k, cy + Math.sin(a) * r * k];
   };
-  const ring = (v, extra = '') => `<polygon points="${
+  /* One ring, drawn once. The average ring used to be emitted twice: a plain
+     one from the list of gridlines and a dashed one on top of it, and the
+     dashed one carried a second `stroke` attribute that the parser dropped as
+     a duplicate. So it inherited the gridline colour and sat exactly on the
+     line it was meant to stand out from, which is two separate reasons for a
+     ring the caption promised and nobody could see. */
+  const ring = (v, { dash = false } = {}) => `<polygon points="${
     have.map((_, i) => at(i, v).map((n) => n.toFixed(1)).join(',')).join(' ')}"
-    fill="none" stroke="var(--grid)" stroke-width="1" ${extra}/>`;
+    fill="none" stroke="${dash ? 'var(--ink2)' : 'var(--grid)'}"
+    stroke-width="${dash ? 1.3 : 1}"${dash ? ' stroke-dasharray="4 4"' : ''}/>`;
   const label = (d, i) => {
     const a = (i / have.length) * 2 * Math.PI - Math.PI / 2;
     const lx = cx + Math.cos(a) * (r + 16);
@@ -1504,8 +1550,8 @@ export function radar(clubs, { size = 300, mid = 65 } = {}) {
   };
   return `<div class="radar"><svg viewBox="0 0 ${W} ${H}" role="img"
       aria-label="Rating radar: ${have.map((d) => esc(d.label)).join(', ')}">
-    ${[LO + 15, mid, HI - 10].map((v) => ring(v)).join('')}
-    ${ring(mid, 'stroke="var(--rule)" stroke-dasharray="3 3"')}
+    ${[LO + 15, HI - 10].map((v) => ring(v)).join('')}
+    ${ring(mid, { dash: true })}
     ${have.map((_, i) => {
       const [ex, ey] = at(i, HI);
       return `<line x1="${cx}" y1="${cy}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}"
