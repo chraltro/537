@@ -1396,6 +1396,104 @@ export function timeline(points, { w = 860, h = 240, pad = 38, color = 'var(--ac
 /* ================= multi-series line chart =================
    Used for the forecast's own movement over time. Series are direct-labelled
    at their endpoint, so identity never rests on colour alone.             */
+/* Two clubs' colours, guaranteed to be told apart.
+
+   Half the clubs in Europe play in red. Drawing Arsenal against Bayern in their
+   own colours produces two red lines, which is worse than useless on a chart
+   whose entire job is comparison. So the pair is checked first, and when the two
+   are too close the chart falls back to the colours this site already uses for
+   the two sides of a match: the accent for the first club, the away red for the
+   second. A reader who has seen one fixture bar on this site already knows which
+   is which. */
+export function distinctPair(a, b) {
+  const ca = chipColor(a), cb = chipColor(b);
+  const rgbA = _hex(ca), rgbB = _hex(cb);
+  if (rgbA && rgbB) {
+    /* Distance in plain RGB is a poor perceptual measure but a fine "are these
+       obviously different" one, and it needs no colour-space maths. Below a
+       sixth of the diagonal, two lines read as the same line. */
+    const d = Math.sqrt(rgbA.reduce((t, v, i) => t + (v - rgbB[i]) ** 2, 0));
+    if (d > 442 / 6) return [ca, cb];
+  }
+  return ['var(--accent)', 'var(--away)'];
+}
+
+/* Two clubs' rating histories on one pair of axes.
+
+   They used to be two charts side by side, each on its own vertical scale, on
+   the grounds that a shared axis running from zero would squash both series
+   into the top of the frame. That is true of an axis from zero and is the wrong
+   fix: a comparison chart whose two halves have different scales invites
+   exactly the reading it cannot support, which is comparing the shapes. So the
+   axis is shared and does not start at zero -- it covers what the two clubs
+   actually did, and nothing else.
+
+   The two need not cover the same seasons. They are aligned on the union, and a
+   season a club spent in another division is a break in its line rather than a
+   straight segment drawn across a gap it was not there for. */
+export function spiCompare(a, b, { w = 860, h = 300, pad = 40 } = {}) {
+  const series = [a, b].filter((s) => s && s.points && s.points.length);
+  if (!series.length) return '';
+  const seasons = [...new Set(series.flatMap((s) => s.points.map((p) => p.season)))].sort();
+  if (seasons.length < 2) return '';
+  const at = series.map((s) => {
+    const by = new Map(s.points.map((p) => [p.season, p.spi]));
+    return seasons.map((k) => (by.has(k) ? by.get(k) : null));
+  });
+  const vals = at.flat().filter((v) => v != null);
+  const lo = Math.floor(Math.min(...vals) / 5) * 5;
+  const hi = Math.ceil(Math.max(...vals) / 5) * 5;
+  const span = (hi - lo) || 1;
+  const x = (i) => pad + (i * (w - pad - 12)) / Math.max(seasons.length - 1, 1);
+  const y = (v) => h - pad - ((v - lo) / span) * (h - pad - 22);
+
+  /* One `path` per contiguous run, so a gap stays a gap. */
+  const runs = (pts) => {
+    const out = [];
+    let cur = [];
+    pts.forEach((v, i) => {
+      if (v == null) { if (cur.length) out.push(cur); cur = []; }
+      else cur.push([i, v]);
+    });
+    if (cur.length) out.push(cur);
+    return out;
+  };
+
+  const ticks = [lo, lo + span / 4, lo + span / 2, lo + (3 * span) / 4, hi];
+  const last = seasons.length - 1;
+  const every = Math.max(1, Math.round(seasons.length / 8));
+  return `<div class="timeline"><svg viewBox="0 0 ${w} ${h}" role="img"
+      aria-label="Rating by season, ${series.map((s) => esc(s.label)).join(' against ')}, ${
+        esc(seasons[0])} to ${esc(seasons[last])}">
+    ${ticks.map((t) => `
+      <line x1="${pad}" y1="${y(t).toFixed(1)}" x2="${w - 12}" y2="${y(t).toFixed(1)}"
+            stroke="var(--grid)" stroke-width="1"/>
+      <text class="tl-axis" x="${pad - 7}" y="${(y(t) + 4).toFixed(1)}"
+            text-anchor="end">${t.toFixed(0)}</text>`).join('')}
+    ${seasons.map((k, i) => (i === 0 || i === last || i % every === 0)
+      ? `<text class="tl-axis" x="${x(i).toFixed(1)}" y="${h - pad + 16}"
+              text-anchor="${i === 0 ? 'start' : (i === last ? 'end' : 'middle')}"
+              >${esc(k.slice(2))}</text>` : '').join('')}
+    ${series.map((s, si) => runs(at[si]).map((run) => `
+      <path d="${run.map(([i, v], k) => `${k ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ')}"
+            fill="none" stroke="${s.color}" stroke-width="2.4"
+            stroke-linejoin="round" stroke-linecap="round"/>
+      ${run.length === 1 ? `<circle cx="${x(run[0][0]).toFixed(1)}"
+            cy="${y(run[0][1]).toFixed(1)}" r="3" fill="${s.color}"/>` : ''}`).join('')
+      + (() => {
+        const pts = at[si];
+        let i = pts.length - 1;
+        while (i >= 0 && pts[i] == null) i -= 1;
+        return i < 0 ? '' : `
+          <circle cx="${x(i).toFixed(1)}" cy="${y(pts[i]).toFixed(1)}" r="4"
+                  fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>`;
+      })()).join('')}
+  </svg>
+  <div class="tl-key">${series.map((s) => `
+    <span><i style="background:${s.color}"></i>${esc(s.label)}</span>`).join('')}</div>
+  </div>`;
+}
+
 export function lineChart(series, { w = 720, h = 260, pad = 34, fmt = (v) => v,
                                     yMax = 1, yLabel = '' } = {}) {
   if (!series.length || series[0].points.length < 2) return '';

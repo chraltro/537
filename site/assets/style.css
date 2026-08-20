@@ -1027,3 +1027,21 @@ tr.rowcursor > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .followbtn:hover, .copybtn:hover { background: var(--raised); color: var(--ink); }
 .followbtn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
 .followbtn svg { flex: none; }
+
+/* A rating out of 100 with its own bar underneath, drawn on the 35-95 scale the
+   ratings live on rather than on the division's own range: a division where
+   every club is close together should look like one. */
+.rated { white-space: nowrap; }
+.ratebar {
+  display: block; height: 4px; border-radius: 2px; margin: 3px 0 0 auto;
+  max-width: 74px; width: var(--f, 0%); background: var(--accent);
+}
+@media (max-width: 620px) { .ratebar { display: none; } }
+
+/* Legend for the two-club rating chart. */
+.tl-key {
+  display: flex; gap: 18px; flex-wrap: wrap; margin-top: 8px;
+  color: var(--ink2); font-size: 12.5px;
+}
+.tl-key span { display: inline-flex; align-items: center; gap: 7px; }
+.tl-key i { width: 14px; height: 3px; border-radius: 2px; flex: none; }

@@ -3,6 +3,12 @@
   "entries": [
     {
       "date": "2026-08-20",
+      "title": "A Ratings view, and a trajectory chart that can actually be compared",
+      "effect": "No change to any number.",
+      "body": "The “show ratings and schedule” button on the table did nothing below 1100 pixels wide: every column it revealed was also marked low priority, and a media query hid them again. So on a phone, and on most laptops, it was a no-op. Ratings now have a tab of their own — every club's SPI, attack, defence, goals for and against, goal difference and remaining schedule in one sortable view, with bars drawn on the 35-95 rating scale rather than stretched to the division's own range. The head-to-head page is four tabs, and its two rating trajectories became one chart on one axis: two panels with different vertical scales invited exactly the reading they could not support. Where two clubs' colours are too close to tell apart — half of Europe plays in red — the chart falls back to the two colours this site already uses for the sides of a match, and says so."
+    },
+    {
+      "date": "2026-08-20",
       "title": "Attack and defence are ratings out of 100",
       "effect": "A new way of reading two numbers that already existed. No forecast changed.",
       "body": "The model thinks in goals — 1.91 expected against an average opponent, 0.55 conceded — and those are still what every probability is computed from. But the defence column was backwards against every other column on the page: the smaller number was the better club. Both are now also published out of 100, higher better, sitting roughly between 40 and 90. On a competition page 65 is an average club there; on the global rankings 65 is an average big-five club, which is why most of Europe sits below 50. The spread each is measured against is a fixed constant, so a club's rating does not move when a rival's does."

@@ -43,21 +43,36 @@
             <th class="cuponly p2" data-k="p_playoff" id="pohead">Play-off</th>
             <th class="promoonly" data-k="p_up" id="uphead"><span class="full">Promoted</span><span class="abbr">Up</span></th>
             <th data-k="down" id="downhead">Down</th>
-            <th class="x p3" data-k="spi" title="Expected share of points against an average team">SPI</th>
-            <th class="x p3" data-k="att_r" title="Attack out of 100. 65 is an average club in this competition; higher is better">Att</th>
-            <th class="x p3" data-k="def_r" title="Defence out of 100. Higher is better — it is the conceding that is low">Def</th>
-            <th class="x p3" data-k="gd">GD</th>
-            <th class="x p3" data-k="sos" title="Average rating of the opponents left to play">Sched</th>
-            <th class="x p3 leagueonly" data-k="europa">Europa</th>
+            <th class="p4 leagueonly" data-k="europa">Europa</th>
           </tr></thead>
           <tbody id="tbody"><tr><td colspan="6" class="skeleton">Loading forecast…</td></tr></tbody>
         </table>
       </div>
-      <button class="chip-btn" id="morecols" aria-pressed="false"
-              style="margin-top:14px">Show ratings and schedule</button>
     </div>
 
     <p class="hint" id="lines" style="margin-top:16px"></p>
+  </section>
+
+  <section class="card" id="c-ratings">
+    <h2>Ratings, side by side</h2>
+    <p class="sub" id="ratingsub"></p>
+    <div class="scroller">
+      <table id="rtbl">
+        <thead><tr>
+          <th class="l" data-k="rank">#</th>
+          <th class="l" data-k="name">Club</th>
+          <th data-k="spi" title="Expected share of points against an average club in this competition">SPI</th>
+          <th data-k="att_r" title="Attack out of 100. Higher is better">Attack</th>
+          <th data-k="def_r" title="Defence out of 100. Higher is better — it is the conceding that is low">Defence</th>
+          <th class="p3" data-k="off" title="Goals expected against an average opponent">Scored</th>
+          <th class="p3" data-k="def" title="Goals conceded against an average opponent">Conceded</th>
+          <th class="p2" data-k="gd" title="Projected goal difference across the season">GD</th>
+          <th class="p3" data-k="sos" title="Average rating of the opponents left to play. Higher is harder">Sched</th>
+        </tr></thead>
+        <tbody id="rtbody"></tbody>
+      </table>
+    </div>
+    <p class="hint" id="ratingfoot" style="margin-top:16px"></p>
   </section>
 
   <section class="card" id="c-luck" hidden>
@@ -272,15 +287,7 @@ function render(list) {
       <td class="cuponly p2 ${cls(t.p_playoff)}">${pct(t.p_playoff ?? 0)}</td>
       <td class="promoonly ${cls(t.p_up ?? 0)}">${pct(t.p_up ?? 0)}</td>
       <td class="${cls(t.down)}">${pct(t.down)}</td>
-      <td class="x p3" title="${t.spi_lo != null
-        ? `One standard deviation either way: ${t.spi_lo}–${t.spi_hi}` : ''}">
-        <b>${t.spi.toFixed(1)}</b></td>
-      <td class="x p3" title="${t.off.toFixed(2)} goals scored per match against an average opponent">${t.att_r ?? '—'}</td>
-      <td class="x p3" title="${t.def.toFixed(2)} conceded per match against an average opponent">${t.def_r ?? '—'}</td>
-      <td class="x p3">${signed(t.gd)}</td>
-      <td class="x p3 ${t.sos_rank && t.sos_rank <= 5 ? 'p-hi' : 'p-lo'}"
-          title="${t.sos_rank ? ord(t.sos_rank) + ' hardest run left' : ''}">${t.sos ?? '—'}</td>
-      <td class="x p3 leagueonly ${cls(t.europa)}">${pct(t.europa ?? 0)}</td>
+      <td class="p4 leagueonly ${cls(t.europa)}">${pct(t.europa ?? 0)}</td>
     </tr>`).join('');
 }
 makeSortable(document.getElementById('tbl'), rows, render, 'pts');
@@ -315,14 +322,58 @@ tbody.addEventListener('mousemove', (e) => {
 });
 tbody.addEventListener('mouseleave', () => tip(null));
 
-/* extra columns stay one click away rather than crowding the default view */
-const more = document.getElementById('morecols');
-more.addEventListener('click', () => {
-  const on = more.getAttribute('aria-pressed') !== 'true';
-  more.setAttribute('aria-pressed', String(on));
-  document.getElementById('tbl').classList.toggle('showx', on);
-  more.textContent = on ? 'Hide ratings and schedule' : 'Show ratings and schedule';
-});
+/* ---- ratings, all clubs at once ----
+   This replaces a "show ratings and schedule" button that widened the table
+   above. It did nothing below 1100px -- every column it revealed was also
+   marked low priority, and a media query hid them again -- so on a phone, and
+   on most laptops, the button was a no-op. Ratings deserve a view of their own
+   anyway: the question they answer is "how do these twenty clubs compare", and
+   that is a different table from "what happens to them this season". */
+const rbody = document.getElementById('rtbody');
+/* Bars are drawn on the rating scale itself, 35 to 95, not on this division's
+   own range. A division where everyone is close together should look like one,
+   rather than being stretched to fill the width. */
+const bar = (v) => (v == null ? '' :
+  `<span class="ratebar" style="--f:${Math.max(0, Math.min(100,
+    ((v - 35) / 60) * 100)).toFixed(1)}%"></span>`);
+
+function renderRatings(list) {
+  rbody.innerHTML = list.map((t) => `
+    <tr data-id="${t.id}">
+      <td class="l rank">${t.rank}</td>
+      <td class="l"><span class="club">
+        <span class="chip" style="background:${chipColor(t.primary)}"></span>
+        <a href="${url(`team.html?t=${t.id}`)}">${esc(t.name)}</a>
+      </span></td>
+      <td title="${t.spi_lo != null
+        ? `One standard deviation either way: ${t.spi_lo}–${t.spi_hi}` : ''}"><b>${
+        t.spi.toFixed(1)}</b></td>
+      <td class="rated"><b>${t.att_r ?? '—'}</b>${bar(t.att_r)}</td>
+      <td class="rated"><b>${t.def_r ?? '—'}</b>${bar(t.def_r)}</td>
+      <td class="p3">${t.off.toFixed(2)}</td>
+      <td class="p3">${t.def.toFixed(2)}</td>
+      <td class="p2">${signed(t.gd)}</td>
+      <td class="p3 ${t.sos_rank && t.sos_rank <= 5 ? 'p-hi' : 'p-lo'}"
+          title="${t.sos_rank ? ord(t.sos_rank) + ' hardest run left' : ''}">${t.sos ?? '—'}</td>
+    </tr>`).join('');
+}
+makeSortable(document.getElementById('rtbl'), rows, renderRatings, 'spi',
+             { param: 'rsort' });
+
+const bestAtt = [...rows].sort((a, b) => (b.att_r ?? 0) - (a.att_r ?? 0))[0];
+const bestDef = [...rows].sort((a, b) => (b.def_r ?? 0) - (a.def_r ?? 0))[0];
+document.getElementById('ratingsub').innerHTML =
+  `Attack and defence are out of 100 and higher is better both times — including defence, `
+  + `where it is the <em>conceding</em> that is low. 65 is an average ${esc(W.name)} club; `
+  + `the scale is this competition's own, so a 70 here and a 70 elsewhere are not the same `
+  + `club. Click a column to sort.`;
+document.getElementById('ratingfoot').innerHTML =
+  `<b>${esc(bestAtt.name)}</b> have the best attack at ${bestAtt.att_r}, worth `
+  + `${bestAtt.off.toFixed(2)} goals a match against an average opponent; `
+  + `<b>${esc(bestDef.name)}</b> the best defence at ${bestDef.def_r}, conceding `
+  + `${bestDef.def.toFixed(2)}. The two goal columns are what the ratings were computed `
+  + `from and what every probability on this site is computed from; the ratings are the `
+  + `same two numbers made readable.`;
 
 /* ---- distribution view ---- */
 /* One column per finishing position, however many the league has. The two
@@ -459,6 +510,7 @@ window.addEventListener('themechange', () => {
    until then rather than offered empty. */
 initTabs(document.getElementById('tabs'), [
   { id: 'table', label: 'Table', sections: [document.getElementById('c-table')] },
+  { id: 'ratings', label: 'Ratings', sections: [document.getElementById('c-ratings')] },
   { id: 'finishes', label: 'Every finish', sections: [document.getElementById('c-dist')] },
   { id: 'luck', label: 'Luck', sections: [document.getElementById('c-luck')] },
   { id: 'next', label: W.isCup ? 'Next round' : 'Next up',

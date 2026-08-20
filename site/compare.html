@@ -27,20 +27,24 @@
     <div class="stamp" id="stamp"></div>
   </div>
 
-  <section class="card">
-    <div class="cmp-pickers">
-      <label class="vh" for="pa">First club</label>
-      <select id="pa"></select>
-      <span class="vs">versus</span>
-      <label class="vh" for="pb">Second club</label>
-      <select id="pb"></select>
-      <button class="copybtn" id="copycmp">Copy link</button>
-    </div>
+  <div class="cmp-pickers" style="margin-bottom:18px">
+    <label class="vh" for="pa">First club</label>
+    <select id="pa"></select>
+    <span class="vs">versus</span>
+    <label class="vh" for="pb">Second club</label>
+    <select id="pb"></select>
+    <button class="copybtn" id="copycmp">Copy link</button>
+  </div>
+
+  <div id="tabs"></div>
+
+  <section class="card" id="c-side">
+    <h2>Side by side</h2>
     <div id="rows"></div>
     <p class="hint" id="scalenote" style="margin-top:14px"></p>
   </section>
 
-  <section class="card">
+  <section class="card" id="c-neutral">
     <h2>On neutral ground</h2>
     <p class="sub" id="neutralsub">The match these ratings imply, with no home advantage for
       either side.</p>
@@ -55,19 +59,20 @@
     <div id="h2hbody"></div>
   </section>
 
-  <section class="card">
-    <h2>Rating trajectories</h2>
-    <p class="sub">Where each club has been, on its own vertical scale. The line comes from
-      that club's league forecast, so a club whose competition this site does not build has
-      no line to draw.</p>
+  <section class="card" id="c-traj">
+    <h2>Rating trajectory</h2>
+    <p class="sub">Both clubs on one scale, season by season. The line comes from that club's
+      own league forecast, so a club in a competition this site does not build has no line to
+      draw — and a season spent in another division is a gap rather than a straight segment
+      across years it was not there for.</p>
     <div id="traj"></div>
   </section>
 </main>
 
 <script type="module">
 import { siteData, data, esc, ord, pct, initChrome, initPalette, setMeta, chipColor,
-         scoreGrid, dcGrid, dcOutcome, neutralLambdas, timeline,
-         copyLink } from './assets/app.js';
+         scoreGrid, dcGrid, dcOutcome, neutralLambdas, spiCompare,
+         distinctPair, copyLink, initTabs } from './assets/app.js';
 initChrome('compare');
 
 const g = await siteData('global');
@@ -131,10 +136,16 @@ document.getElementById('scalenote').textContent = g.note
 const fmtStale = (c) => (c.stale > 13 ? ` · rated to ${c.last}` : '');
 
 /* A rating out of 100 with the goals it came from underneath, because the
-   rating is the readable number and the goals are the honest one. */
-const rated = (r, goals) => (r == null
+   rating is the readable number and the goals are the honest one.
+
+   The second line has to say what it is measuring. "0.89 a game" under a
+   defence rating of 71 reads as though the rating were somehow per-game; what
+   it means is that this club concedes 0.89 goals a match against an average
+   opponent, which is the number the 71 was computed from. */
+const rated = (r, goals, what) => (r == null
   ? goals.toFixed(2)
-  : `${r}<span class="hint" style="display:block">${goals.toFixed(2)} a game</span>`);
+  : `${r}<span class="hint" style="display:block">out of 100 · ${
+      goals.toFixed(2)} ${what} a match</span>`);
 
 /* What has actually been happening to these two, as opposed to how good the
    model thinks they are. Both are worth knowing and they are not the same
@@ -204,9 +215,10 @@ async function render() {
     + row('Rank in Europe', ord(A.rank), ord(B.rank), cmp(A.rank, B.rank, false))
     + row('League', `${esc(A.league)} (${ord(A.league_rank)})`,
           `${esc(B.league)} (${ord(B.league_rank)})`, -1)
-    + row('Attack', rated(A.att_r, A.off), rated(B.att_r, B.off),
+    + row('Attack', rated(A.att_r, A.off, 'scored'), rated(B.att_r, B.off, 'scored'),
           cmp(A.att_r ?? 0, B.att_r ?? 0))
-    + row('Defence', rated(A.def_r, A.def), rated(B.def_r, B.def),
+    + row('Defence', rated(A.def_r, A.def, 'conceded'),
+          rated(B.def_r, B.def, 'conceded'),
           cmp(A.def_r ?? 0, B.def_r ?? 0))
     + formRows(A, B)
     + row('Matches in the fit', `${A.n}${fmtStale(A)}`, `${B.n}${fmtStale(B)}`, -1);
@@ -253,7 +265,7 @@ async function render() {
   }
   card.hidden = false;
 
-  /* trajectories */
+  /* trajectory */
   const [ha, hb] = await Promise.all([trajectory(A), trajectory(B)]);
   const el = document.getElementById('traj');
   if (!ha && !hb) {
@@ -261,22 +273,35 @@ async function render() {
       + 'forecasts, so there is no season-by-season line to draw.</p>';
     return;
   }
-  /* Two charts rather than two lines on one: a shared axis from zero squashes
-     both series into the top tenth of the frame, and these two clubs are being
-     compared on the numbers above, not on the shape of a shared y-axis. */
-  const panel = (h, c) => !h ? `
-    <section><h3 style="font-size:13.5px;margin:0 0 8px">${esc(c.name)}</h3>
-      <p class="empty" style="padding:12px 0">No season-by-season line: this site does not
-        forecast ${esc(c.league)}.</p></section>` : `
-    <section><h3 style="font-size:13.5px;margin:0 0 8px">${esc(c.name)}</h3>
-      ${timeline(h, { w: 520, h: 210, color: chipColor(c.primary) })}
-      <p class="hint" style="margin-top:6px">${esc(h[0].season)} → ${esc(h[h.length - 1].season)}</p>
-    </section>`;
-  el.innerHTML = `<div class="split">${panel(ha, A)}${panel(hb, B)}</div>
-    <p class="hint" style="margin-top:10px">Each point is fitted only on matches played
+  /* One chart, one axis. Two panels on separate vertical scales invited exactly
+     the reading they could not support -- comparing the shapes -- and the axis
+     does not start at zero, which was the only real argument for splitting
+     them. */
+  const [colA, colB] = distinctPair(A.primary, B.primary);
+  const missing = [!ha && A, !hb && B].filter(Boolean);
+  el.innerHTML = spiCompare(
+    ha && { label: A.name, color: colA, points: ha },
+    hb && { label: B.name, color: colB, points: hb },
+    { w: 860, h: 300 })
+    + (missing.length ? `<p class="hint" style="margin-top:10px">No line for ${
+        missing.map((c) => `<b>${esc(c.name)}</b>`).join(' or ')}: this site does not
+        forecast ${missing.map((c) => esc(c.league)).join(' or ')}.</p>` : '')
+    + `<p class="hint" style="margin-top:10px">Each point is fitted only on matches played
       before that season began, so the line is a walk-forward record rather than a curve
-      drawn through hindsight. Vertical scales are each club's own.</p>`;
+      drawn through hindsight. Both clubs share one vertical scale.${
+        colA === 'var(--accent)'
+          ? ' Their own colours were too close to tell apart, so the chart uses the two it'
+            + ' uses for the sides of a match.' : ''}</p>`;
 }
+
+/* Four screens rather than one long scroll. The pickers sit above the tabs
+   because they belong to all four. */
+initTabs(document.getElementById('tabs'), [
+  { id: 'side', label: 'Side by side', sections: [document.getElementById('c-side')] },
+  { id: 'match', label: 'Neutral match', sections: [document.getElementById('c-neutral')] },
+  { id: 'h2h', label: 'Head to head', sections: [document.getElementById('h2hcard')] },
+  { id: 'trajectory', label: 'Trajectory', sections: [document.getElementById('c-traj')] },
+]);
 
 initPalette([]);
 await render();
