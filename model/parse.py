@@ -167,7 +167,35 @@ def parse_football_data_csv(text: str, season: str, reg: TeamRegistry) -> list[M
         ))
     return out
 
-_MD_RE = re.compile(r"^\s*(?:▪)?\s*(?:Matchday|Regular Season -|Round)\s*(\d+)", re.I)
+#: A round heading in an openfootball domestic file, in every spelling the
+#: corpus actually contains.
+#:
+#: This used to accept `Matchday 3`, `Regular Season - 3` and `Round 3` only,
+#: which is three of the seven forms in use -- and it failed on every heading in
+#: Belgium's file, which writes `▪ 1. Round`. The result was 306 fixtures with
+#: no matchweek at all: the What-if simulator's week selector was empty and its
+#: heading read "NaN", the front page could not group the next round, and
+#: nothing failed loudly enough for anybody to notice. The European reader two
+#: hundred lines below had handled `1. Round` since the day it was written.
+#:
+#: Handled, in the order they appear here:
+#:   ▪ Matchday 3            ▪▪ Matchday 3        (a doubled marker)
+#:   ▪ Regular Season - 3    ▪ Regular, Matchday 3
+#:   ▪ Championship, Matchday 3 / ▪ Relegation, Matchday 3   (a split phase)
+#:   ▪ Round 3               ▪ 3. Round           ▪ 3. Round (datum TBC)
+#:
+#: Knockout headings -- `▪ Final`, `▪ Semifinals`, `▪ Round of 16` -- carry no
+#: bare number after the keyword and so still match nothing, which is correct:
+#: a domestic file's knockout rounds are not matchweeks.
+_MD_RE = re.compile(
+    r"""^\s*▪*\s*                      # zero or more round markers
+        (?:[^,\d]*,\s*)?               # an optional phase prefix, e.g. 'Championship, '
+        (?:
+            (?:Matchday|Regular\s+Season\s*-|Round|Spieltag|Speeldag|Jornada)
+            \s*(\d+)
+          | (\d+)\s*\.\s*Round        # '3. Round', the form Belgium uses
+        )""",
+    re.I | re.X)
 _DATE_RE = re.compile(
     r"^\s*(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+([A-Za-z]{3})\w*\s+(\d{1,2})(?:\s+(\d{4}))?\s*$")
 #: A kick-off time, or the placeholder a feed uses when the time is not yet
@@ -386,7 +414,9 @@ def parse_openfootball(text: str, season: str, reg: TeamRegistry,
                 continue
         m = _MD_RE.match(line)
         if m:
-            matchday = int(m.group(1))
+            # Two alternatives, one number: 'Matchday 3' fills the first group,
+            # '3. Round' the second.
+            matchday = int(m.group(1) or m.group(2))
             continue
         m = _DATE_RE.match(line)
         if m:

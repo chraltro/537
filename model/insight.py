@@ -11,6 +11,8 @@ import os
 
 import numpy as np
 
+from . import config
+
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 #: Default output directory. Both state files below live *inside* a league's own
 #: directory, so every function here takes `out_dir`; this is only the fallback
@@ -80,6 +82,12 @@ def append_history(rows: list[dict], played: int, out_dir: str | None = None) ->
     today = dt.date.today().isoformat()
     snap = {
         "date": today,
+        # The season this snapshot belongs to. Without it the file is 400 days
+        # of undifferentiated dates, and a chart reading it splices last
+        # season's title race onto this one -- with a club promoted this summer
+        # plotted at a flat, confident 0% for every day it was in another
+        # division. Absent is not zero, and the reader cannot tell them apart.
+        "season": config.SEASON_LABEL,
         "played": played,
         "teams": {r["id"]: {"title": round(r["title"], 4), "ucl": round(r["ucl"], 4),
                             "releg": round(r["releg"], 4), "pts": r["pts"],

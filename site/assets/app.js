@@ -1575,6 +1575,20 @@ export function spiCompare(a, b, { w = 860, h = 300, pad = 40 } = {}) {
   </div>`;
 }
 
+/* Only this season's snapshots, newest last.
+
+   `history.json` keeps 400 days, which is more than a season, and a snapshot
+   carries the season it belongs to precisely so a chart does not splice one
+   title race onto the next. An older file has no season stamp; there is nothing
+   to filter on, so it is used whole rather than thrown away. */
+export function thisSeason(snaps, season) {
+  if (!snaps || !snaps.length) return [];
+  const tagged = snaps.filter((s) => s.season);
+  if (!tagged.length || !season) return snaps;
+  const mine = tagged.filter((s) => s.season === season);
+  return mine.length ? mine : snaps;
+}
+
 export function lineChart(series, { w = 720, h = 260, pad = 34, fmt = (v) => v,
                                     yMax = 1, yLabel = '' } = {}) {
   if (!series.length || series[0].points.length < 2) return '';
@@ -1587,12 +1601,28 @@ export function lineChart(series, { w = 720, h = 260, pad = 34, fmt = (v) => v,
     ${ticks.map((t) => `
       <line x1="${pad}" y1="${y(t)}" x2="${w - 92}" y2="${y(t)}" stroke="var(--grid)" stroke-width="1"/>
       <text x="${pad - 6}" y="${y(t) + 4}" fill="var(--muted)" font-size="10" text-anchor="end">${fmt(t)}</text>`).join('')}
-    ${series.map((s) => `
-      <polyline points="${s.points.map((p, i) => `${x(i).toFixed(1)},${y(p).toFixed(1)}`).join(' ')}"
-        fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-      <circle cx="${x(n - 1).toFixed(1)}" cy="${y(s.points[n - 1]).toFixed(1)}" r="3.5"
-        fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>
-      <text x="${w - 86}" y="${y(s.points[n - 1]) + 4}" fill="var(--ink2)" font-size="11">${esc(s.label)}</text>`).join('')}
+    ${series.map((s) => {
+      /* A missing point is a gap in the line, never a zero on it. A club that
+         was not in this division for part of the window has no probability for
+         those days, and drawing one at the floor is a claim the data does not
+         make -- it reads as "the model gave them no chance". */
+      const runs = [];
+      let cur = [];
+      s.points.forEach((p, i) => {
+        if (p == null) { if (cur.length) runs.push(cur); cur = []; }
+        else cur.push([i, p]);
+      });
+      if (cur.length) runs.push(cur);
+      if (!runs.length) return '';
+      const tail = runs[runs.length - 1];
+      const [li, lv] = tail[tail.length - 1];
+      return runs.map((run) => `
+        <polyline points="${run.map(([i, p]) => `${x(i).toFixed(1)},${y(p).toFixed(1)}`).join(' ')}"
+          fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`).join('')
+      + `<circle cx="${x(li).toFixed(1)}" cy="${y(lv).toFixed(1)}" r="3.5"
+          fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>
+        <text x="${w - 86}" y="${y(lv) + 4}" fill="var(--ink2)" font-size="11">${esc(s.label)}</text>`;
+    }).join('')}
   </svg>`;
 }
 

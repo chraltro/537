@@ -165,7 +165,8 @@
 
 <script type="module">
 import { data, pct, esc, ord, initChrome, initPalette, chipColor, roundLabel,
-         lineChart, probBar, lg, url, setMeta, cardUrl, initTabs } from './assets/app.js';
+         lineChart, probBar, lg, url, setMeta, cardUrl, initTabs,
+         thisSeason } from './assets/app.js';
 initChrome('races');
 
 const fc = await data('forecast');
@@ -176,7 +177,7 @@ document.documentElement.setAttribute('data-kind', W.kind);
 const soft = async (n) => { try { return await data(n); } catch { return null; } };
 const [sc, rc, hs] = await Promise.all([soft('schedule'), soft('recap'), soft('history')]);
 const sched = sc?.schedule || {};
-const snaps = hs?.snapshots || [];
+const snaps = thisSeason(hs?.snapshots, fc.season);
 const recap = rc || { mode: 'preseason', movers: [], shocks: [],
                       note: 'Baseline preseason forecast. Movement tracking begins once results arrive.' };
 
@@ -307,9 +308,10 @@ function raceChart(list, key, what) {
   }
   const series = list.map((t) => ({
     label: t.short, color: chipColor(t.primary),
-    points: snaps.map((s) => s.teams?.[t.id]?.[key] ?? 0),
+    points: snaps.map((s) => s.teams?.[t.id]?.[key] ?? null),
   }));
-  const peak = Math.max(0.1, ...series.flatMap((s) => s.points));
+  /* Nulls are gaps, and `Math.max` would read them as zero. */
+  const peak = Math.max(0.1, ...series.flatMap((s) => s.points).filter((p) => p != null));
   const yMax = Math.min(1, Math.ceil(peak * 10 + 0.5) / 10);
   return `<div class="charthead">How ${what} has moved</div>`
     + lineChart(series, { yMax, fmt: (v) => `${Math.round(v * 100)}%`, yLabel: what })

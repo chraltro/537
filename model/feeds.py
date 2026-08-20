@@ -130,13 +130,22 @@ def calendar(matches: list[dict], meta: dict, *, title: str, uid_ns: str,
 # --------------------------------------------------------------------------
 # Change feed
 # --------------------------------------------------------------------------
+#: The fallback names for the three stakes, used only when a caller supplies
+#: none. Every competition on this site has its own -- `ucl` is a Champions
+#: League place in the Premier League, automatic promotion in the Championship
+#: and survival in a cup's league phase -- and the feed used to apply these
+#: three to all nine, so a Championship item read "Middlesbrough's qualification
+#: chance fell", naming a competition the club is not in. The weekly narrative
+#: beside this had taken a per-competition vocabulary since it was written; the
+#: feed simply never asked for one.
 _EVENT_WORDS = {"title": "title chance", "ucl": "qualification chance",
                 "releg": "relegation risk"}
 
 
-def _sentence(mv: dict, meta: dict) -> str:
+def _sentence(mv: dict, meta: dict, words: dict | None = None) -> str:
     name = meta.get(mv["id"], {}).get("name", mv["id"])
-    word = _EVENT_WORDS.get(mv["metric"], mv["metric"])
+    vocab = {**_EVENT_WORDS, **(words or {})}
+    word = vocab.get(mv["metric"], mv["metric"])
     verb = "rose" if mv["delta"] > 0 else "fell"
     return (f"{name}'s {word} {verb} from {round(mv['before'] * 100)}% to "
             f"{round(mv['after'] * 100)}%.")
@@ -145,7 +154,9 @@ def _sentence(mv: dict, meta: dict) -> str:
 def feed_items(leagues_data: list[dict]) -> list[dict]:
     """One item per league that actually moved, newest league data first.
 
-    `leagues_data` is a list of `{slug, name, recap, meta, url}`.
+    `leagues_data` is a list of `{slug, name, recap, meta, url, words}`, where
+    `words` names this competition's three stakes. Without it every item is
+    written in Premier League vocabulary.
     """
     items = []
     for d in leagues_data:
@@ -154,7 +165,7 @@ def feed_items(leagues_data: list[dict]) -> list[dict]:
                   if abs(m.get("delta", 0)) >= FEED_MIN_DELTA]
         if not movers:
             continue
-        lines = [_sentence(m, d["meta"]) for m in movers[:5]]
+        lines = [_sentence(m, d["meta"], d.get("words")) for m in movers[:5]]
         items.append({
             "id": f"{d['slug']}-{recap.get('asof')}",
             "url": d["url"],

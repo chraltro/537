@@ -12,6 +12,7 @@ import collections
 import datetime as dt
 import json
 import os
+import re
 import sys
 
 import numpy as np
@@ -511,6 +512,91 @@ def test_the_flat_duplicates_of_one_league_are_gone():
     for name in ("leagues.json", "global.json", "h2h.json"):
         assert os.path.exists(os.path.join(base, name)), \
             f"{name} belongs to the whole site and must not be swept up"
+
+
+# ------------------------------------------------- silent degradation
+@pytest.mark.parametrize("slug", SLUGS)
+def test_every_fixture_has_a_matchweek(dataset, slug):
+    """A fixture with no matchweek is not an error anywhere, and that is the
+    problem: it just quietly stops being groupable.
+
+    Belgium's file writes its round headings as `1. Round` where every other
+    feed writes `Matchday 1`, and the domestic reader knew only the second form.
+    All 306 Belgian fixtures came through with `matchday=None`, which emptied the
+    What-if simulator's week selector, printed "NaN" as its heading, and left the
+    front page unable to say what the next round was. Nothing raised. The
+    European reader in the same file had handled `1. Round` from the start.
+    """
+    ds = dataset(slug)
+    missing = [f for f in ds.fixtures if f.matchday is None]
+    assert not missing, (
+        f"{slug}: {len(missing)} of {len(ds.fixtures)} fixtures have no matchweek "
+        f"-- first is {missing[0].home} v {missing[0].away}")
+    weeks = {f.matchday for f in ds.fixtures}
+    # A double round robin is played over 2*(n-1) weeks; a second tier with a
+    # bigger field takes more. Either way the count must be exact, because a
+    # feed that numbers its rounds wrongly is as bad as one that does not number
+    # them at all.
+    assert len(weeks) == 2 * (ds.league.n_teams - 1), \
+        f"{slug}: {len(weeks)} matchweeks for {ds.league.n_teams} clubs"
+    assert min(weeks) == 1 and max(weeks) == len(weeks), f"{slug}: weeks are not 1..N"
+
+
+def test_the_matchday_reader_knows_every_heading_the_corpus_uses():
+    """Seven spellings of a round heading, and the reader used to know three."""
+    from model.parse import _MD_RE
+    def read(line):
+        m = _MD_RE.match(line)
+        return int(m.group(1) or m.group(2)) if m else None
+    for line, want in (
+            ("\u25aa Matchday 3", 3),
+            ("\u25aa\u25aa Matchday 3", 3),          # a doubled marker
+            ("\u25aa Regular Season - 12", 12),
+            ("\u25aa Regular, Matchday 5", 5),
+            ("\u25aa Championship, Matchday 3", 3),   # a split phase
+            ("\u25aa Relegation, Matchday 2", 2),
+            ("\u25aa Round 7", 7),
+            ("\u25aa 1. Round", 1),                   # the form Belgium uses
+            ("\u25aa 27. Round (datum TBC)", 27)):
+        assert read(line) == want, f"{line!r} read as {read(line)}, wanted {want}"
+    # A knockout heading carries no matchweek and must stay unread: a domestic
+    # file's cup rounds are not weeks of the league.
+    for line in ("\u25aa Final", "\u25aa Semifinals", "\u25aa Round of 16",
+                 "\u25aa Quarterfinals", "\u25aa Group A", "  Fri Aug 7 2026"):
+        assert read(line) is None, f"{line!r} was read as a matchweek"
+
+
+def test_every_competition_country_has_a_club_register():
+    """The third hand-kept map, and the third chance to rot silently.
+
+    `clubmeta.REGISTERS` names one openfootball register per country. A
+    competition in a country not listed gets no founding years and no cities,
+    and the club pages simply omit the line -- which looks exactly like a club
+    the register does not happen to carry. Same failure shape as the pooled
+    ranking's slug map, one severity down.
+    """
+    from model import clubmeta
+    for lg in leagues.LEAGUES:
+        assert lg.country in clubmeta.REGISTERS, (
+            f"{lg.slug} plays in {lg.country}, which has no entry in "
+            "clubmeta.REGISTERS -- its clubs will silently have no founding year")
+
+
+def test_the_sitemap_and_the_navigation_list_the_same_pages():
+    """Two hand-kept lists of every page on the site, in different languages.
+
+    `model/seo.py` decides what enters the sitemap and `site/assets/app.js`
+    decides what a reader can navigate to. A page added to one and not the other
+    either never gets indexed or gets indexed and cannot be reached, and neither
+    failure announces itself.
+    """
+    from model import seo
+    js = open(os.path.join(HERE, "site", "assets", "app.js"), encoding="utf-8").read()
+    in_nav = set(re.findall(r"file: '([a-z0-9]+\.html)'", js))
+    in_sitemap = set(seo.LEAGUE_PAGES) | set(seo.SITE_PAGES)
+    assert in_nav == in_sitemap, (
+        f"only in the sitemap: {sorted(in_sitemap - in_nav)}; "
+        f"only in the navigation: {sorted(in_nav - in_sitemap)}")
 
 
 # ------------------------------------------------- the pooled corpus

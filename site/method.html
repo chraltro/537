@@ -379,7 +379,7 @@
 
 <script type="module">
 import { data, siteData, pct, esc, initChrome, tip, tipRows, initPalette, lineChart,
-         chipColor, probBar, lg, ord, setMeta, cardUrl, initTabs, url } from './assets/app.js';
+         chipColor, probBar, lg, ord, setMeta, cardUrl, initTabs, url, thisSeason } from './assets/app.js';
 initChrome('method');
 
 const fc = await data('forecast');
@@ -389,9 +389,15 @@ initPalette(fc.teams);
 
 setMeta({
   title: `Method and accuracy — ${W.name} ${fc.season} Forecast`,
-  description: `How the ${W.name} forecast works: Dixon-Coles ratings on a shots-and-goals `
-    + 'blend, measured promotion priors, a decaying market anchor, and a walk-forward '
-    + 'backtest against the closing odds, ClubElo and three simpler baselines.',
+  /* The market anchor exists for the Premier League and nowhere else, so eight
+     of the nine descriptions were claiming a method their competition does not
+     use. The page body already said so correctly; only this line did not. */
+  description: `How the ${W.name} forecast works: Dixon-Coles ratings on a `
+    + (fc.sources?.kind === 'mirror' ? 'shots-and-goals blend' : 'goals-only fit')
+    + ', measured promotion priors, '
+    + (fc.market_weight ? 'a decaying market anchor, ' : 'results alone, ')
+    + 'and a walk-forward backtest against the closing odds, ClubElo and three '
+    + 'simpler baselines.',
   image: cardUrl(W.slug),
 });
 
@@ -436,7 +442,7 @@ if (fc.lines) {
 /* ---- how the forecast has moved ---- */
 let hist = null;
 try { hist = await data('history'); } catch { /* first build */ }
-const snaps = hist?.snapshots || [];
+const snaps = thisSeason(hist?.snapshots, fc.season);
 if (snaps.length >= 2) {
   const card = document.getElementById('movecard');
   card.hidden = false;
@@ -444,7 +450,7 @@ if (snaps.length >= 2) {
     const top = [...fc.teams].sort((a, b) => (b[key] || 0) - (a[key] || 0)).slice(0, 5);
     document.getElementById('movechart').innerHTML = lineChart(
       top.map((t) => ({ label: t.short, color: chipColor(t.primary),
-                        points: snaps.map((s) => s.teams[t.id]?.[key] ?? 0) })),
+                        points: snaps.map((s) => s.teams[t.id]?.[key] ?? null) })),
       { yMax: 1, fmt: (v) => `${Math.round(v * 100)}%` })
       + `<div class="hint" style="margin-top:6px">${snaps.length} snapshots · `
       + `${snaps[0].date} to ${snaps[snaps.length - 1].date}</div>`;

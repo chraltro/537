@@ -3,6 +3,18 @@
   "entries": [
     {
       "date": "2026-08-20",
+      "title": "Belgium's fixtures had no matchweek, and nothing said so",
+      "effect": "Fixes the What-if simulator, the next-round card and match grouping for the Pro League.",
+      "body": "openfootball's Belgian file writes its round headings as \"1. Round\" where every other feed writes \"Matchday 1\", and the reader knew only the second form. All 306 Belgian fixtures came through with no matchweek: the simulator's week selector was empty and its heading read \"NaN\", and the front page could not say what the next round was. Nothing raised — a fixture with no matchweek is not an error anywhere, it just quietly stops being groupable. The European reader in the same file had handled \"1. Round\" since the day it was written. The reader now knows all seven spellings the corpus actually uses, including the split-phase headings Belgium used before this season, and a test fails if any competition has a fixture without a week."
+    },
+    {
+      "date": "2026-08-20",
+      "title": "Three more places where absent was being rendered as a number",
+      "effect": "Changes the movement charts, and the wording of the RSS and JSON feeds.",
+      "body": "The forecast keeps 400 days of daily snapshots with no season stamp, and the movement charts read a club missing from one as a probability of zero. Next August that would have drawn a promoted club at a flat, confident 0% for every day it spent in another division — a line that reads as \"the model gave them no chance\". Snapshots now carry their season, the charts use only the current one, and a club absent from a snapshot is a gap in the line rather than a point on the floor. Separately, the feeds applied Premier League vocabulary to all nine competitions, so a Championship item read \"Middlesbrough's qualification chance fell\" — naming a competition the club is not in. The weekly narrative beside it had taken a per-competition vocabulary since it was written; the feed simply never asked for one. And the method page's own description claimed a decaying market anchor on eight competitions that have none."
+    },
+    {
+      "date": "2026-08-20",
       "title": "Eight ratings, and a radar to compare them on",
       "effect": "New numbers. No forecast changed.",
       "body": "Attack and defence were two of a possible eight. The other six are the same transform over different measurables — distance from the competition's own average, through a logistic, so 65 is average and higher is better every time. Creation is shots on target per match and Finishing is goals per shot on target, kept apart because a club that creates plenty and finishes badly is the interesting case. Big games is points per game against the top quarter of that season's table. Home is points per game at home minus away: the competition's home advantage is already in the model, and this is the part that belongs to the club. Consistency is how little the goal difference moves match to match — a description, not a compliment. Discipline is cards and fouls inverted. Club pages draw all eight as a radar; the head-to-head page overlays two. Creation, finishing and discipline need a shot feed, so the four openfootball competitions show five axes rather than eight, and an axis nobody has is dropped rather than pinned at the middle."

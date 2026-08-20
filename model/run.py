@@ -1075,6 +1075,10 @@ def build_feeds(ready: set[str]) -> None:
             continue
         rows.append({
             "slug": lg.slug, "name": lg.name, "recap": recap_doc,
+            # The same vocabulary the weekly narrative uses, so a Championship
+            # item says "chance of automatic promotion" rather than naming a
+            # European competition the club is not in.
+            "words": _recap_words(lg),
             "meta": {t["id"]: t for t in fc["teams"]},
             "url": f"{HOME}races.html"
                    + (f"?lg={lg.slug}" if lg.slug != leagues.DEFAULT.slug else ""),
