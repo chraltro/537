@@ -1582,11 +1582,14 @@ export function spiCompare(a, b, { w = 860, h = 300, pad = 40 } = {}) {
    title race onto the next. An older file has no season stamp; there is nothing
    to filter on, so it is used whole rather than thrown away. */
 export function thisSeason(snaps, season) {
-  if (!snaps || !snaps.length) return [];
-  const tagged = snaps.filter((s) => s.season);
-  if (!tagged.length || !season) return snaps;
-  const mine = tagged.filter((s) => s.season === season);
-  return mine.length ? mine : snaps;
+  if (!snaps || !snaps.length || !season) return snaps || [];
+  /* Drop what is *known* to be from another season, and keep everything else.
+     The stamp is new, so the snapshots written before it carry none -- and
+     those are from this season, because that is when they were written. The
+     first rule tried was the other way round, keeping only what matched, which
+     threw away every pre-stamp snapshot and left the chart with too few points
+     to draw for as long as it took new ones to accumulate. */
+  return snaps.filter((s) => !s.season || s.season === season);
 }
 
 export function lineChart(series, { w = 720, h = 260, pad = 34, fmt = (v) => v,
