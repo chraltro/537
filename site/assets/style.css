@@ -834,10 +834,11 @@ kbd {
   .rk-filters select { width: 100%; min-width: 0; }
   .rk-filters > span { margin-left: 0 !important; }
 }
+/* A statement about the feed, not a warning about the club. Muted and
+   borderless: the amber outline made a perfectly good rating look broken. */
 .stale-tag {
-  font-size: 10px; letter-spacing: .04em; text-transform: uppercase;
-  color: var(--warning); border: 1px solid currentColor; border-radius: 4px;
-  padding: 0 4px; margin-left: 7px; white-space: nowrap;
+  font-size: 10.5px; color: var(--muted); padding: 0; margin-left: 7px;
+  white-space: nowrap; font-weight: 550;
 }
 
 /* comparison */
@@ -1078,4 +1079,42 @@ tr.rowcursor > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .fdr .win {
   font-size: 11.5px; font-weight: 700; color: var(--ink2);
   font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+
+/* League-wide fixture difficulty: one row per club, one cell per upcoming
+   match, shaded by the opponent's rating. */
+.fdrgrid {
+  display: grid; grid-template-columns: minmax(112px, auto) repeat(var(--n, 5), 1fr) 52px;
+  gap: 4px; align-items: center; min-width: 460px;
+}
+.fdrgrid .fh {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--muted); font-weight: 650; text-align: center; padding-bottom: 2px;
+}
+.fdrgrid .fh.l, .fdrgrid .fc.l { text-align: left; }
+.fdrgrid .fc { text-align: center; }
+.fdrgrid .fc.avg { font-variant-numeric: tabular-nums; font-size: 13px; }
+.fdrgrid .box {
+  display: block; border-radius: 6px; padding: 7px 2px; font-size: 11.5px;
+  font-weight: 700; letter-spacing: .02em;
+}
+.fdrgrid .box.away { box-shadow: inset 0 0 0 2px var(--rule); }
+.fdrgrid .box i { font-style: normal; opacity: .62; margin-left: 3px; font-size: 10px; }
+.fdrgrid .club { min-width: 0; gap: 7px; }
+.fdrgrid .club .full { color: var(--muted); font-size: 11.5px; }
+/* The grid is wider than a phone, so it scrolls. The club column has to stay
+   put while it does, or a row you have scrolled sideways belongs to nobody;
+   the average is the sort key and sits at the far end, which is exactly the
+   trip that loses the name. */
+@media (max-width: 900px) {
+  .fdrgrid .club .full { display: none; }
+  .fdrgrid .club a { font-size: 13px; }
+  .fdrgrid .l {
+    position: sticky; left: 0; z-index: 1;
+    background: var(--surface); padding-right: 6px;
+    /* Stretch, because the grid centres its items and the header's corner cell
+       is empty: a zero-height box paints no background, and the column numbers
+       it is meant to hide show straight through it. */
+    align-self: stretch; display: flex; align-items: center;
+  }
 }

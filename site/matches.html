@@ -64,6 +64,32 @@
   </div>
   <div id="list"><p class="skeleton">Loading match forecasts…</p></div>
   </section>
+<section class="card" id="c-fdr" hidden>
+    <div class="cardbar">
+      <h2>Fixture difficulty</h2>
+      <label for="fdrn" style="color:var(--muted);font-size:12.5px">Games ahead
+        <select id="fdrn">
+          <option value="3">3</option>
+          <option value="5" selected>5</option>
+          <option value="8">8</option>
+        </select>
+      </label>
+    </div>
+    <p class="sub" id="fdrsub"></p>
+    <div class="legend" style="margin:0 0 14px">
+      <span>Kinder</span>
+      <span class="swatches" aria-hidden="true">
+        <i style="background:var(--ramp-1)"></i><i style="background:var(--ramp-2)"></i>
+        <i style="background:var(--ramp-3)"></i><i style="background:var(--ramp-4)"></i>
+        <i style="background:var(--ramp-5)"></i><i style="background:var(--ramp-6)"></i></span>
+      <span>Harder</span>
+      <span class="swatches" style="margin-left:10px" aria-hidden="true">
+        <i style="background:transparent;box-shadow:inset 0 0 0 2px var(--rule)"></i></span>
+      <span>Away</span>
+    </div>
+    <div class="scroller wide"><div id="fdrgrid"></div></div>
+    <p class="hint" id="fdrfoot"></p>
+  </section>
 <section class="card" id="c-big">
     <div class="cardbar">
       <h2>The matches that matter most</h2>
@@ -80,7 +106,7 @@
 <script type="module">
 import { data, pct, esc, initChrome, tip, tipRows, chipColor, initPalette, matchModal,
          lg, withLg, setMeta, eventLabels, roundLabel, roundShort,
-         isMatchweek, cardUrl, initTabs, replaceQuery } from './assets/app.js';
+         isMatchweek, cardUrl, initTabs, replaceQuery, url } from './assets/app.js';
 initChrome('matches');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
@@ -215,7 +241,7 @@ function draw() {
       [...sel].sort((a, b) => key(a) - key(b)).map(row).join('') + '</section>';
   }
 }
-window.addEventListener('themechange', draw);
+window.addEventListener('themechange', () => { draw(); drawFdr(); });
 ['change', 'input'].forEach((ev) => {
   fteam.addEventListener(ev, draw);
   document.getElementById('fmw').addEventListener(ev, draw);
@@ -290,12 +316,79 @@ document.getElementById('bigmatches').addEventListener('click', (e) => {
    past a card every time you wanted the list. The button between them keeps the
    old path: it switches tab, drops the matchweek filter and sorts the whole
    season by stakes. */
+/* Every club's next few opponents at once, hardest run first. The club page
+   answers this for one club; the question people ask is which club has the
+   worst of it, and that needs the whole division on one screen. */
+function drawFdr() {
+  const sel = document.getElementById('fdrn');
+  /* Late in a season there are fewer games left than the longest option offers,
+     and a select that keeps offering eight while drawing six is the quiet kind
+     of wrong: it reads as a run of eight. Options past what the fixtures hold
+     are removed, and a value stranded above the cap drops to the longest that
+     is real. */
+  const cap = Math.max(0, ...fc.teams.map((t) => (t.next || []).length));
+  [...sel.options].forEach((o) => { o.hidden = +o.value > cap; });
+  if (+sel.value > cap) {
+    const live = [...sel.options].filter((o) => !o.hidden);
+    if (!live.length) { document.getElementById('c-fdr').hidden = true; return; }
+    sel.value = live[live.length - 1].value;
+  }
+  const n = +sel.value;
+  const runs = fc.teams
+    .map((t) => ({ t, next: (t.next || []).slice(0, n) }))
+    .filter((r) => r.next.length);
+  if (!runs.length) { document.getElementById('c-fdr').hidden = true; return; }
+  const all = runs.flatMap((r) => r.next.map((x) => x.difficulty));
+  const lo = Math.min(...all), hi = Math.max(...all);
+  const avg = (r) => r.next.reduce((a, x) => a + x.difficulty, 0) / r.next.length;
+  runs.sort((a, b) => avg(b) - avg(a));
+  const width = Math.max(...runs.map((r) => r.next.length));
+  document.getElementById('fdrgrid').innerHTML = `
+    <div class="fdrgrid" style="--n:${width}">
+      <div class="fh l"></div>
+      ${Array.from({ length: width }, (_, i) => `<div class="fh">${i + 1}</div>`).join('')}
+      <div class="fh">Avg</div>
+      ${runs.map(({ t, next }) => `
+        <div class="fc l"><span class="club">
+          <span class="chip" style="background:${chipColor(t.primary)}"></span>
+          <a href="${url(`team.html?t=${t.id}`)}">${esc(t.short)}</a>
+          <span class="full">${esc(t.name)}</span>
+        </span></div>
+        ${Array.from({ length: width }, (_, i) => {
+          const x = next[i];
+          if (!x) return '<div class="fc"></div>';
+          const f = (x.difficulty - lo) / ((hi - lo) || 1);
+          const step = Math.min(6, Math.max(1, Math.ceil(f * 6)));
+          return `<div class="fc"><span class="box ${x.home ? '' : 'away'}"
+            style="background:var(--ramp-${step});color:var(--ink-${step})"
+            title="${esc(roundLabel(x.md))}, ${x.home ? 'home to' : 'away at'} ${
+              esc(meta[x.opp].name)}, opponent rating ${x.difficulty}"
+            >${esc(meta[x.opp].short)}<i>${x.home ? 'H' : 'A'}</i></span></div>`;
+        }).join('')}
+        <div class="fc avg"><b>${avg({ next }).toFixed(1)}</b></div>`).join('')}
+    </div>`;
+  const worst = runs[0], best = runs[runs.length - 1];
+  document.getElementById('fdrsub').innerHTML =
+    `Every club's next ${n} matches, hardest run at the top. Each cell is shaded by the `
+    + `opponent's rating adjusted for venue, since the same opponent away is a harder `
+    + `night than at home; <b>H</b> and <b>A</b> mark which. The last column averages them.`;
+  document.getElementById('fdrfoot').innerHTML =
+    `<b>${esc(worst.t.name)}</b> have the hardest next ${n} at ${avg(worst).toFixed(1)}, `
+    + `<b>${esc(best.t.name)}</b> the kindest at ${avg(best).toFixed(1)}. A club's own `
+    + `schedule excludes itself, so the strongest clubs get an easier one by construction.`;
+  document.getElementById('c-fdr').hidden = false;
+}
+drawFdr();
+document.getElementById('fdrn').addEventListener('change', drawFdr);
+
 const showTab = initTabs(document.getElementById('tabs'), [
   { id: 'all', label: 'Fixtures', short: 'Fixtures',
     sections: [document.getElementById('c-all')] },
   { id: 'big', label: 'Matches that matter', short: 'Key games',
     sections: [document.getElementById('c-big')] },
-]);
+  { id: 'difficulty', label: 'Fixture difficulty', short: 'Difficulty',
+    sections: [document.getElementById('c-fdr')] },
+].filter((g) => g.sections.every((el) => el && !el.hidden)));
 
 document.getElementById('jumpstakes').addEventListener('click', () => {
   document.getElementById('fmw').value = '';

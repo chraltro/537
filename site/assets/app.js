@@ -728,6 +728,26 @@ export function chipColor(hex) {
   return `rgb(${c.join(',')})`;
 }
 
+/* A colour picked to read as a fill is not a colour that reads as text.
+   `chipColor` stops at 2.4:1, which is right for a ten-pixel block and wrong
+   for a thirteen-pixel number: the winning rating on the comparison table came
+   out at 3.88:1 in Arsenal red and 1.88:1 in Manchester City sky. This walks
+   the same colour further toward the page's own foreground until it clears
+   4.5:1, so the table and the radar still agree on whose colour is whose. A
+   `var(--accent)` or `var(--away)` handed back by `distinctPair` is already
+   tuned to be read as text and is returned untouched. */
+export function inkColor(c) {
+  if (typeof c === 'string' && c.trim().startsWith('var(')) return c;
+  const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const surface = dark ? [26, 26, 25] : [252, 252, 251];
+  const target = dark ? [255, 255, 255] : [11, 11, 11];
+  let v = _hex(chipColor(c)) || _hex('#7A8290');
+  for (let i = 0; i < 30 && _ratio(v, surface) < 4.6; i++) {
+    v = v.map((x, k) => Math.round(x + (target[k] - x) * 0.12));
+  }
+  return `rgb(${v.join(',')})`;
+}
+
 /* ---------------- sequential ramp ----------------
    One hue, light to dark, seven steps. Cells near zero recede into the
    surface so the eye lands on where a club actually finishes.        */

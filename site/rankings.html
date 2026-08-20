@@ -124,6 +124,17 @@ document.getElementById('lgf').insertAdjacentHTML('beforeend',
   [...byLeague.entries()].sort((a, b) => b[1] - a[1])
     .map(([k, v]) => `<option value="${esc(k)}">${esc(k)} (${v})</option>`).join(''));
 
+/* A club whose league has stopped publishing carries the season it is rated
+   to, rather than a number of months. "15MO OLD" in warning amber reads as a
+   fault in the club; "rated to 24-25" says the same thing as a fact about the
+   feed, which is what it is. */
+const seasonOf = (iso) => {
+  if (!iso) return 'an unknown season';
+  const d = new Date(`${iso}T12:00:00`);
+  const y = d.getFullYear() - (d.getMonth() < 6 ? 1 : 0);
+  return `${String(y).slice(2)}-${String(y + 1).slice(2)}`;
+};
+
 const maxSpi = Math.max(...rows.map((r) => r.spi));
 const body = document.getElementById('rkbody');
 const count = document.getElementById('count');
@@ -152,7 +163,9 @@ function render(list) {
         ${t.slug
           ? `<a href="team.html?t=${encodeURIComponent(t.id)}&lg=${encodeURIComponent(t.slug)}">${esc(t.name)}</a>`
           : `<span>${esc(t.name)}</span>`}
-        ${t.stale > 13 ? `<span class="stale-tag" title="Newest result in the corpus is ${t.stale} months old">${Math.round(t.stale)}mo old</span>` : ''}
+        ${t.stale > 13 ? `<span class="stale-tag" title="No result newer than ${
+          esc(t.last || 'unknown')}: this club's league has published nothing since, so its rating is as old as the tag and the simulation widens its interval to match">rated to ${
+          esc(seasonOf(t.last))}</span>` : ''}
       </span></td>
       <td class="l lgname">${esc(t.league)}${t.country ? ` <span>${esc(t.country)}</span>` : ''}</td>
       <td class="spi"><b>${t.spi.toFixed(1)}</b>

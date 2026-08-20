@@ -606,7 +606,9 @@ function render() {
     `<span>${ticks.has(i + 1) ? i + 1 : ''}</span>`).join('');
 
   /* run of fixtures */
-  const nxt = t.next || [];
+  /* `next` carries eight for the division-wide grid on the matches page; six
+     is what this strip has room for on a phone. */
+  const nxt = (t.next || []).slice(0, 6);
   const allDiff = fc.teams.flatMap((x) => (x.next || []).map((r) => r.difficulty));
   const lo = Math.min(...allDiff), hi = Math.max(...allDiff);
   /* The shade says how strong the opponent is. What a reader wants next is the

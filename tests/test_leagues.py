@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import collections
 import datetime as dt
+import glob
 import json
 import os
 import re
@@ -580,6 +581,36 @@ def test_every_competition_country_has_a_club_register():
         assert lg.country in clubmeta.REGISTERS, (
             f"{lg.slug} plays in {lg.country}, which has no entry in "
             "clubmeta.REGISTERS -- its clubs will silently have no founding year")
+
+
+def test_no_page_reaches_for_an_element_it_never_renders():
+    """A page script that looks up an id the markup does not carry throws on the
+    first line that touches it, and every line after it in the module is dead.
+
+    The fixture-difficulty grid landed this way: the drawing function was
+    written but the section it draws into was not, so `getElementById('fdrn')`
+    returned null, the module died before `initTabs` ran, and the matches page
+    lost all three of its tabs. Nothing in the build noticed, because the HTML
+    was still valid and the JSON was still correct.
+
+    So this reads every page the way the browser does: collect the ids a page
+    asks for, collect the ids it can produce (its own markup, plus any id inside
+    a template string it renders), and require the first set to sit inside the
+    second.
+    """
+    asked = re.compile(r"""getElementById\(\s*['"]([A-Za-z0-9_-]+)['"]"""
+                       r"""|querySelector\(\s*['"]#([A-Za-z0-9_-]+)['"]""")
+    made = re.compile(r"""\bid=["']?([A-Za-z0-9_-]+)""")
+    pages = sorted(glob.glob(os.path.join(HERE, "site", "*.html")))
+    assert len(pages) > 5, "the site pages moved; this test is looking in the wrong place"
+    for path in pages:
+        src = open(path, encoding="utf-8").read()
+        want = {a or b for a, b in asked.findall(src)}
+        have = set(made.findall(src))
+        missing = sorted(want - have)
+        assert not missing, (
+            f"{os.path.basename(path)} looks up {missing}, which nothing on the "
+            "page ever renders -- its script will throw and stop there")
 
 
 def test_the_sitemap_and_the_navigation_list_the_same_pages():

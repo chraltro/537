@@ -3,6 +3,12 @@
   "entries": [
     {
       "date": "2026-08-20",
+      "title": "Fixture difficulty for a whole division at once",
+      "effect": "No change to any number. The ratings shown are the ones the club pages already used.",
+      "body": "The club page could say how hard one club's next few games looked. The question people actually ask is who has the worst of it, and that needs every club on one screen. The matches page gains a third tab: one row per club, one cell per upcoming match, shaded by the opponent's rating adjusted for venue, with the run average in the last column and the hardest run at the top. Three, five or eight games ahead. A club's own schedule cannot contain itself, so the strongest clubs get a kinder average by construction, and the footnote says so."
+    },
+    {
+      "date": "2026-08-20",
       "title": "Every tab below 620 pixels was blank",
       "effect": "No change to any number.",
       "body": "Tabs carry a long label and a short one, and CSS picks which to show. The rule hiding the short spelling was written after the media query that reveals it, at the same specificity, so it won the cascade and hid both: below 620 pixels every tab with a short label rendered as an empty button. On the method page that left Accuracy and Data named with two blanks between them. The geometry check written to catch exactly this kind of thing passed, because blank tabs fit beautifully; it now requires visible text as well as a fit. The matches page also opens on the fixture list again rather than on the stakes card, and the footer is one line of links instead of three paragraphs repeated on nine pages."

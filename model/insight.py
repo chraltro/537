@@ -50,7 +50,10 @@ def strength_of_schedule(fixtures, teams, spi: dict[str, float],
         out[t] = {
             "remaining": round(float(np.mean([r["difficulty"] for r in left])), 1) if left else None,
             "played": round(float(np.mean([r["difficulty"] for r in played])), 1) if played else None,
-            "next": left[:6],
+            # Eight, because the matches page draws a whole division's next run
+            # side by side and offers three, five or eight games ahead. The club
+            # page shows six and slices for itself.
+            "next": left[:8],
             "fixtures": played + left,
         }
     ranked = sorted((t for t in teams if out[t]["remaining"] is not None),

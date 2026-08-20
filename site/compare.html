@@ -79,7 +79,7 @@
 <script type="module">
 import { siteData, data, esc, ord, pct, initChrome, initPalette, setMeta, chipColor,
          scoreGrid, dcGrid, dcOutcome, neutralLambdas, spiCompare,
-         distinctPair, copyLink, initTabs, radar, DIMS,
+         distinctPair, inkColor, copyLink, initTabs, radar, DIMS,
          replaceQuery } from './assets/app.js';
 initChrome('compare');
 
@@ -400,7 +400,7 @@ async function render() {
            the table and the radar say the same thing. A single accent colour
            marked Liverpool's wins in Manchester City's blue. */
         const win = (v, o, col) => (v == null || o == null || v <= o ? ''
-          : ` style="color:${col}"`);
+          : ` style="color:${inkColor(col)}"`);
         return `<tr><td class="v"${win(x, y, both[0].color)}>${x ?? '—'}</td>
           <td style="text-align:center" title="${esc(d.hint)}">${esc(d.label)}</td>
           <td class="v"${both.length > 1 ? win(y, x, both[1].color) : ''}>${
