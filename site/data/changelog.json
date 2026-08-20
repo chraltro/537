@@ -3,6 +3,24 @@
  "entries": [
   {
    "date": "2026-08-20",
+   "title": "Shooting, from a column the feed has carried since 2000 and nothing read",
+   "effect": "New numbers. No forecast changed.",
+   "body": "The results mirror has carried shots and shots on target for every big-five match since 2000-01, and this pipeline read them for exactly one purpose: fitting a single league-wide conversion rate into the ratings. Per club they were never aggregated at all. Club pages now show shots, shots on target, accuracy, conversion, shots faced and the share of shots on target saved, all against the league average; the head-to-head page compares the same six. Big five only \u2014 no other feed this build can reach has a shot in it, so a club from the other four competitions is absent rather than shown a zero. Crosses, possession and passes are in no feed available here, and expected goals is approximated by whether a shot was on target rather than by where it was taken from."
+  },
+  {
+   "date": "2026-08-20",
+   "title": "The discipline card was comparing a club against two clubs",
+   "effect": "Changes the league-average figures beside cards, fouls and corners on every club page.",
+   "body": "A club's card rate is per club-match; the league average printed beside it was per fixture, counting both sides. So Liverpool's 1.54 yellows sat next to a \"league average 3.55\" and every club in every competition looked half as dirty as average. That is arithmetic, not discipline. The averages are now per club, and corners gained one."
+  },
+  {
+   "date": "2026-08-20",
+   "title": "A Ratings view, and a trajectory chart that can actually be compared",
+   "effect": "No change to any number.",
+   "body": "The \u201cshow ratings and schedule\u201d button on the table did nothing below 1100 pixels wide: every column it revealed was also marked low priority, and a media query hid them again. So on a phone, and on most laptops, it was a no-op. Ratings now have a tab of their own \u2014 every club's SPI, attack, defence, goals for and against, goal difference and remaining schedule in one sortable view, with bars drawn on the 35-95 rating scale rather than stretched to the division's own range. The head-to-head page is four tabs, and its two rating trajectories became one chart on one axis: two panels with different vertical scales invited exactly the reading they could not support. Where two clubs' colours are too close to tell apart \u2014 half of Europe plays in red \u2014 the chart falls back to the two colours this site already uses for the sides of a match, and says so."
+  },
+  {
+   "date": "2026-08-20",
    "title": "Attack and defence are ratings out of 100",
    "effect": "A new way of reading two numbers that already existed. No forecast changed.",
    "body": "The model thinks in goals \u2014 1.91 expected against an average opponent, 0.55 conceded \u2014 and those are still what every probability is computed from. But the defence column was backwards against every other column on the page: the smaller number was the better club. Both are now also published out of 100, higher better, sitting roughly between 40 and 90. On a competition page 65 is an average club there; on the global rankings 65 is an average big-five club, which is why most of Europe sits below 50. The spread each is measured against is a fixed constant, so a club's rating does not move when a rival's does."
