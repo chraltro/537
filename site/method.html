@@ -9,6 +9,7 @@
 <meta property="og:image" content="og/premier-league.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="og/premier-league.png">
+<link rel="canonical" href="https://chraltro.github.io/537/method.html">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -31,6 +32,8 @@
       match results to a simulated league table. This page explains each step and then shows
       what happens when the model is made to predict the past without being allowed to see it.</p>
   </div>
+
+  <div id="tabs"></div>
 
   <section class="card" id="freshcard">
     <h2>How current is this?</h2>
@@ -76,6 +79,37 @@
       that has not been played. It is not an input to any forecast on this site.</p>
   </section>
 
+  <section class="card" id="glosscard" hidden>
+    <h2>Glossary</h2>
+    <p class="sub">Every number this site prints, in one place, in the words it means.</p>
+    <dl class="gloss" id="glossbody"></dl>
+  </section>
+
+  <section class="card" id="compcard" hidden>
+    <h2>What this competition is built from</h2>
+    <p class="sub" id="compsub"></p>
+    <div class="scroller">
+      <table id="comptbl">
+        <thead><tr>
+          <th class="l">Competition</th>
+          <th>Seasons</th>
+          <th>Matches fitted</th>
+          <th>Second tier</th>
+          <th class="l">Feed</th>
+        </tr></thead>
+        <tbody id="compbody"></tbody>
+      </table>
+    </div>
+    <p class="hint" id="compnote" style="margin-top:14px"></p>
+  </section>
+
+  <section class="card" id="changecard" hidden>
+    <h2>What changed, and when</h2>
+    <p class="sub">Every change that moved a published number, newest first. A forecast that
+      changes without saying why is indistinguishable from one that is wrong.</p>
+    <ol class="changelog" id="changebody"></ol>
+  </section>
+
   <section class="card" id="seasoncard" hidden>
     <h2>How it is doing this season</h2>
     <p class="sub" id="seasonsub"></p>
@@ -92,7 +126,7 @@
     </div>
   </section>
 
-  <section class="card">
+  <section class="card" id="acccard">
     <h2>Out-of-sample accuracy</h2>
     <p class="hint" id="leaguenote" style="margin:0 0 10px"></p>
     <p class="sub" id="btsub">Loading backtest…</p>
@@ -132,7 +166,7 @@
     <div id="movechart"></div>
   </section>
 
-  <section class="card">
+  <section class="card" id="calcard">
     <h2>Is it calibrated?</h2>
     <p class="sub">A forecast can rank teams correctly and still lie about how sure it is.
       The test: gather every outcome the model called <em>x</em>% likely, and check how often
@@ -141,7 +175,7 @@
     <p style="color:var(--muted);font-size:12px;margin:8px 0 0" id="calibnote"></p>
   </section>
 
-  <div class="prose">
+  <div class="prose" id="prosecard">
     <h2>The model</h2>
     <p>The engine is a time-weighted <b>Dixon–Coles</b> model. Every club gets an attack
       rating and a defence rating, which are exactly the two quantities FiveThirtyEight's
@@ -301,8 +335,8 @@
 </main>
 
 <script type="module">
-import { data, pct, esc, initChrome, tip, tipRows, initPalette, lineChart, chipColor,
-         probBar, lg, ord, setMeta, cardUrl } from './assets/app.js';
+import { data, siteData, pct, esc, initChrome, tip, tipRows, initPalette, lineChart,
+         chipColor, probBar, lg, ord, setMeta, cardUrl, initTabs, url } from './assets/app.js';
 initChrome('method');
 
 const fc = await data('forecast');
@@ -523,14 +557,26 @@ if (!bt) {
                     : 'is compared against three baselines'}.`;
 
   /* ---- the two baselines worth losing to ---- */
+  /* The snapshot's span comes from the extract itself. A month written into
+     the page is a claim that goes quietly wrong the first time the file is
+     refreshed, and this one had already drifted. */
+  const snapSpan = () => {
+    const x = bt.external || {};
+    if (!x.from || !x.to) return '';
+    const d = (iso) => new Date(iso + 'T12:00:00')
+      .toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    return ` of ${x.matches.toLocaleString()} matches running from `
+      + `${d(x.from)} to ${d(x.to)}`;
+  };
+
   const ext = EXTERNAL.map((k) => [k, bt.baselines[k]]).filter(([, v]) => v);
   if (ext.length) {
     document.getElementById('extcard').hidden = false;
     document.getElementById('extsub').innerHTML =
       `The three baselines the model builds for itself only establish a floor. These two are
        harder: the <b>closing bookmaker price</b>, which is set with injuries, lineups and
-       money at stake, and <b>ClubElo</b>, an independently published rating. Both come from a frozen
-       snapshot that stops in June 2025, so each is scored only on the matches it actually
+       money at stake, and <b>ClubElo</b>, an independently published rating. Both come from a
+       frozen snapshot${snapSpan()}, so each is scored only on the matches it actually
        covers, with the model re-scored on exactly those matches beside it. Comparing two
        different samples would prove nothing.`;
     document.getElementById('extbody').innerHTML = ext.map(([k, v]) => {
@@ -671,6 +717,142 @@ if (!bt) {
     + `Home advantage currently multiplies home goals by ${fc.home_advantage}. `
     + `Generated ${fc.generated}.`;
 }
+
+/* ================= reference =================
+   Three things a reader has to leave the site to find out otherwise: what a
+   word on it means, what a given competition's forecast is actually built on,
+   and what changed since the last time they looked. */
+
+/* ---- glossary ---- */
+/* Written from this competition's own vocabulary, so "Top 5" is a top-five
+   finish in the Premier League and automatic promotion in the Championship,
+   and neither has to be guessed at from the column head. */
+const GLOSS = [
+  ['SPI', `Expected share of the points a club would take against an average
+    ${esc(W.name)} club, home and away. 50 is exactly average. It is a rating,
+    not a forecast: it says how good a club is, not where it will finish.
+    <b>It is not comparable between competitions</b> — a 60 in the Championship
+    and a 60 in the Premier League both mean "well above the clubs around
+    them", and those are different clubs. The
+    <a href="${url('rankings.html')}">global rankings</a> page is the one that
+    compares across borders, and it is built on a different fit: one that uses
+    UEFA competition matches as the only evidence joining one league to
+    another.`],
+  ['Attack / Defence', `Goals a club is expected to score, and concede, per
+    match against an average opponent. The two numbers the match model is built
+    from; everything else on the site is simulated out of them.`],
+  ['Projected points', `The mean points total across every simulated season —
+    which is why it carries a decimal and why no club is ever projected to a
+    round number. The 80% range beside it is the 10th to 90th percentile.`],
+  [W.winN, `Chance of ${esc(W.winWord)}, across every simulated season.`],
+  [W.topN, `Chance of ${esc(W.topFinish)}.`],
+  ['Down', `Chance of ${esc(W.downWord)}. Where a competition plays a tie for
+    the last place — Germany, France — this counts losing that tie as well as
+    finishing in the automatic places, and the tooltip splits the two.`],
+  ['Sched', `Average rating of the opponents a club has left to play. Higher is
+    harder. The rank beside it is out of ${W.nTeams} — 1st is the hardest run
+    remaining, not the easiest.`],
+  ['Log-loss', `How wrong the forecast was, in the units the forecast is made
+    in. A confident wrong call costs far more than a hedged one, which is the
+    point: it cannot be improved by being vague. Lower is better, and the only
+    meaningful comparison is between two forecasts over the same matches.`],
+  ['RPS', `Ranked probability score. Like log-loss, but it knows a draw sits
+    between a home win and an away win, so calling a home win when it was a
+    draw costs less than calling one when it was an away win. Lower is better.`],
+  ['Calibration', `Whether the numbers mean what they say. Of every match this
+    model called at 30%, close to 30% should happen. A model can be well
+    calibrated and still useless — always saying 33/33/33 is perfectly
+    calibrated — so it is read alongside log-loss, never instead of it.`],
+  ['Market weight', `How much of a club's preseason rating comes from the
+    bookmakers' published season prices rather than from its own results. It
+    starts high, because in July the market knows about transfers and this
+    model does not, and decays to nothing as real matches arrive.`],
+  ['Leverage', `How much a single fixture moves someone's season. Measured by
+    simulating it both ways and taking the difference in what follows.`],
+];
+document.getElementById('glossbody').innerHTML = GLOSS.map(
+  ([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('');
+document.getElementById('glosscard').hidden = false;
+
+/* ---- what each competition is built from ---- */
+try {
+  const cov = await siteData('coverage');
+  const rows = cov.leagues || [];
+  if (rows.length) {
+    const FEED = {
+      mirror: 'results mirror — goals, shots, cards, half-time, referee',
+      openfootball: 'openfootball — goals only',
+    };
+    document.getElementById('compsub').innerHTML =
+      `Nine competitions, and they do not rest on the same evidence. Every forecast on
+       this site produces a table of probabilities that looks identical; this is what
+       is behind each one. ${esc(W.name)} is highlighted.`;
+    document.getElementById('compbody').innerHTML = rows.map((r) => {
+      const gaps = [];
+      if (r.missing_seasons?.length) {
+        gaps.push(`${r.missing_seasons.length} season${r.missing_seasons.length === 1 ? '' : 's'}
+                   missing upstream (${r.missing_seasons.map(esc).join(', ')})`);
+      }
+      if (r.partial_seasons?.length) {
+        gaps.push(`${r.partial_seasons.map(esc).join(', ')} left unfinished by the feed`);
+      }
+      return `<tr${r.slug === W.slug ? ' class="me"' : ''}>
+        <td class="l"><a href="method.html?lg=${esc(r.slug)}#data">${esc(r.name)}</a>
+          <span class="hint">${esc(r.country)}</span></td>
+        <td>${r.seasons}<span class="hint">${esc(r.first_season)} to ${esc(r.last_season)}</span></td>
+        <td>${r.matches.toLocaleString()}</td>
+        <td>${r.second_tier ? r.second_tier.toLocaleString() : '<span class="hint">none</span>'}</td>
+        <td class="l"><span class="hint">${esc(FEED[r.source] || r.source)}</span>
+          ${gaps.length ? `<br><span class="warn">${gaps.join('; ')}</span>` : ''}</td>
+      </tr>`;
+    }).join('');
+    const thin = rows.filter((r) => r.missing_seasons?.length || r.partial_seasons?.length);
+    document.getElementById('compnote').innerHTML =
+      `"Matches fitted" counts completed seasons of the competition itself; the second-tier
+       column is what is available to rate a promoted club, and where it reads <b>none</b>
+       the promoted-club correction falls back to the one measured on the Premier League
+       and says so above. `
+      + (thin.length
+        ? `${thin.map((r) => esc(r.name)).join(' and ')} ${thin.length === 1 ? 'is' : 'are'}
+           built on a feed with holes in it, which is worth knowing before reading
+           ${thin.length === 1 ? 'its' : 'their'} probabilities as closely as the rest.`
+        : 'Every feed here is complete over the seasons it covers.');
+    document.getElementById('compcard').hidden = false;
+  }
+} catch { /* coverage.json predates this build */ }
+
+/* ---- changelog ---- */
+try {
+  const log = await siteData('changelog');
+  const entries = log.entries || [];
+  if (entries.length) {
+    document.getElementById('changebody').innerHTML = entries.map((e) => `
+      <li>
+        <div class="when">${esc(e.date)}</div>
+        <div class="what"><b>${esc(e.title)}</b>
+          <span class="hint">${esc(e.effect || '')}</span>
+          <p>${esc(e.body)}</p></div>
+      </li>`).join('');
+    document.getElementById('changecard').hidden = false;
+  }
+} catch { /* changelog.json predates this build */ }
+
+/* Ten screens of prose and charts, grouped into three. Everything the page is
+   *for* — how accurate it is — is the first tab and the default, so the answer
+   is still what loads. The panels are hidden by CSS when printing. */
+initTabs(document.getElementById('tabs'), [
+  { id: 'accuracy', label: 'Accuracy',
+    sections: ['seasoncard', 'acccard', 'extcard', 'linescard', 'movecard', 'calcard']
+      .map((x) => document.getElementById(x)).filter(Boolean) },
+  { id: 'model', label: 'The model',
+    sections: [document.getElementById('prosecard')].filter(Boolean) },
+  { id: 'data', label: 'Data',
+    sections: ['freshcard', 'compcard', 'refcard'].map((x) => document.getElementById(x))
+      .filter(Boolean) },
+  { id: 'reference', label: 'Reference',
+    sections: ['glosscard', 'changecard'].map((x) => document.getElementById(x))
+      .filter(Boolean) },
+].filter((g) => g.sections.some((el) => !el.hidden)));
 </script>
 </body>
 </html>

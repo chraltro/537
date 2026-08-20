@@ -11,6 +11,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta property="og:image" content="og/premier-league.png">
 <meta name="twitter:image" content="og/premier-league.png">
+<link rel="canonical" href="https://chraltro.github.io/537/index.html">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -47,7 +48,8 @@
             <th data-k="title" id="winhead">Title</th>
             <th class="p2" data-k="ucl" id="uclhead">Top 5</th>
             <th class="cuponly p2" data-k="p_playoff" id="pohead">Play-off</th>
-            <th data-k="releg" id="downhead">Down</th>
+            <th class="promoonly" data-k="p_up" id="uphead"><span class="full">Promoted</span><span class="abbr">Up</span></th>
+            <th data-k="down" id="downhead">Down</th>
             <th class="x p3" data-k="spi" title="Expected share of points against an average team">SPI</th>
             <th class="x p3" data-k="off" title="Goals expected to score vs an average team">Att</th>
             <th class="x p3" data-k="def" title="Goals expected to concede vs an average team">Def</th>
@@ -161,11 +163,22 @@ document.getElementById('uclhead').title = W.isCup
   : `Chance of ${W.topFinish}`;
 document.getElementById('pohead').title =
   `Chance of finishing in the places that go into ${W.playoffWord}`;
+document.getElementById('uphead').title =
+  'Promoted by either route: automatically, or through the play-off';
 document.getElementById('downhead').textContent = W.downN;
-document.getElementById('downhead').title = `Bottom ${W.relegPlaces}`;
+document.getElementById('downhead').title = fc.teams.some((t) => t.p_down != null)
+  ? `Bottom ${W.relegPlaces}, plus losing the relegation play-off`
+  : `Bottom ${W.relegPlaces}`;
 /* The cup's own column is the one worth keeping on a phone, so the top-places
    column gives up its low-priority marker and the play-off column takes it. */
 if (W.isCup) document.getElementById('uclhead').classList.remove('p2');
+/* A second tier has four probability columns and a phone has room for two.
+   Which two is not a close call: a club in this division is trying to go up,
+   and "Promoted" answers that in one number. The title is the least of the
+   three questions here — nobody follows the Championship for the trophy — so
+   it drops to the same priority as the two columns that break "Promoted"
+   apart, and the phone shows Promoted and Down. */
+if (W.isPromotion) document.getElementById('winhead').classList.add('p2');
 document.getElementById('alllink').textContent = `All ${nMatches} matches →`;
 document.getElementById('deepermatches').textContent =
   `Win, draw and loss probabilities for all ${nMatches} fixtures, sorted by what is at stake.`;
@@ -181,10 +194,22 @@ document.getElementById('bandnote').textContent = W.isCup
 const ARRIVED = { up: 'Promoted', down: 'Relegated' };
 fc.teams.forEach((t) => { t.arrived = t.arrived || (t.promoted ? 'up' : 'stayed'); });
 
+/* Two probabilities have been published all along and neither was shown.
+   `releg` is the chance of finishing in the automatic places; where a league
+   plays a relegation tie -- Germany, France -- the chance of actually going
+   down is higher than that, and `p_down` is the one a reader means by "down".
+   Same at the other end: `ucl` is automatic promotion, `p_up` counts the
+   play-off as well. Derive both once, here, so the table, the sort, the
+   sentence and the tiles all read the same number. */
+fc.teams.forEach((t) => {
+  t.down = t.p_down ?? t.releg;
+  if (t.p_up != null) t.up = t.p_up;
+});
+
 const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
 const rows = fc.teams.map((t, i) => ({ ...t, rank: i + 1 }));
 const byTitle = [...rows].sort((a, b) => b.title - a.title);
-const byReleg = [...rows].sort((a, b) => b.releg - a.releg);
+const byReleg = [...rows].sort((a, b) => b.down - a.down);
 
 const fmtStamp = (iso) => new Date(iso).toLocaleDateString('en-GB',
   { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -198,7 +223,7 @@ document.getElementById('answer').innerHTML =
   `<b>${esc(lead.name)}</b> are favourites at ${pct(lead.title)}, `
   + (close ? `with ${esc(second.name)} close behind on ${pct(second.title)}. `
            : `clear of ${esc(second.name)} on ${pct(second.title)}. `)
-  + `<b>${esc(drop.name)}</b> are the most likely to ${W.downVerb}, at ${pct(drop.releg)}. `
+  + `<b>${esc(drop.name)}</b> are the most likely to ${W.downVerb}, at ${pct(drop.down)}. `
   + `Everything here comes from ${fc.n_sims.toLocaleString()} simulations of the season, `
   + 'rebuilt from public data every six hours.';
 
@@ -224,7 +249,7 @@ document.getElementById('tiles').innerHTML = [
   [W.isCup ? 'Projected phase leader' : 'Projected champion', `${rows[0].pts.toFixed(0)} pts`,
     `80% of seasons land ${rows[0].pts_lo}–${rows[0].pts_hi}`],
   [W.isCup ? 'Most likely out' : 'Most likely down', esc(drop.name),
-    `${pct(drop.releg)}, then ${esc(byReleg[1].name)} at ${pct(byReleg[1].releg)}`],
+    `${pct(drop.down)}, then ${esc(byReleg[1].name)} at ${pct(byReleg[1].down)}`],
 ].map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div>
     <div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
 
@@ -233,6 +258,7 @@ const maxPts = Math.max(...rows.map((r) => r.pts));
 const tbody = document.getElementById('tbody');
 const cls = (p) => (p >= 0.10 ? 'p-hi' : 'p-lo');
 const uclCls = W.isCup ? '' : 'p2';
+const titleCls = W.isPromotion ? 'p2' : '';
 
 function render(list) {
   tbody.innerHTML = list.map((t) => `
@@ -245,11 +271,14 @@ function render(list) {
       </span></td>
       <td><b>${t.pts.toFixed(1)}</b>
         <span class="minibar" style="width:${(t.pts / maxPts * 100).toFixed(1)}%"></span></td>
-      <td class="${cls(t.title)}">${pct(t.title)}</td>
+      <td class="${titleCls} ${cls(t.title)}">${pct(t.title)}</td>
       <td class="${uclCls} ${cls(t.ucl)}">${pct(t.ucl)}</td>
       <td class="cuponly p2 ${cls(t.p_playoff)}">${pct(t.p_playoff ?? 0)}</td>
-      <td class="${cls(t.releg)}">${pct(t.releg)}</td>
-      <td class="x p3"><b>${t.spi.toFixed(1)}</b></td>
+      <td class="promoonly ${cls(t.p_up ?? 0)}">${pct(t.p_up ?? 0)}</td>
+      <td class="${cls(t.down)}">${pct(t.down)}</td>
+      <td class="x p3" title="${t.spi_lo != null
+        ? `One standard deviation either way: ${t.spi_lo}–${t.spi_hi}` : ''}">
+        <b>${t.spi.toFixed(1)}</b></td>
       <td class="x p3">${t.off.toFixed(2)}</td>
       <td class="x p3">${t.def.toFixed(2)}</td>
       <td class="x p3">${signed(t.gd)}</td>
@@ -273,8 +302,17 @@ tbody.addEventListener('mousemove', (e) => {
       pct(t.ucl, 1)],
     ...(W.isCup ? [['Knockout play-off', pct(t.p_playoff ?? 0, 1)],
                    ['Reach the final', pct(t.p_final ?? 0, 1)]] : []),
-    [W.isCup ? 'Out at the league phase' : 'Relegated', pct(t.releg, 1)],
+    ...(t.p_playoff_won != null
+      ? [['Up through the play-off', pct(t.p_playoff_won, 1)],
+         ['Promoted, either way', pct(t.p_up ?? 0, 1)]] : []),
+    [W.isCup ? 'Out at the league phase' : `Bottom ${W.relegPlaces}`, pct(t.releg, 1)],
+    ...(t.p_releg_playoff != null
+      ? [['Down through the play-off', pct(t.p_releg_playoff, 1)],
+         ['Relegated, either way', pct(t.down, 1)]] : []),
+    ['Rating (SPI)', t.spi_lo != null ? `${t.spi.toFixed(1)} (${t.spi_lo}–${t.spi_hi})`
+                                      : t.spi.toFixed(1)],
     ['Schedule left', t.sos ? `${t.sos} avg opponent (${ord(t.sos_rank)} hardest)` : '—'],
+    ['Schedule played', t.sos_played != null ? `${t.sos_played} avg opponent` : '—'],
   ]), e);
 });
 tbody.addEventListener('mouseleave', () => tip(null));

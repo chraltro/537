@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+# The share cards are for link previews, not for crawling.
+Disallow: /537/og/
+Sitemap: https://chraltro.github.io/537/sitemap.xml

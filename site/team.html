@@ -9,6 +9,7 @@
 <meta property="og:image" content="og/premier-league.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="og/premier-league.png">
+<link rel="canonical" href="https://chraltro.github.io/537/team.html">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -53,7 +54,9 @@
 
   <div class="tiles" id="tiles"></div>
 
-  <div class="split">
+  <div id="tabs"></div>
+
+  <div class="split" id="c-season">
     <section class="card">
       <h2>Rating trajectory</h2>
       <p class="sub" id="sparksub">SPI at the start of each season: the share of points this
@@ -104,7 +107,7 @@
     <div class="statgrid" id="discgrid" style="margin-top:12px"></div>
   </section>
 
-  <section class="card">
+  <section class="card" id="c-fdr">
     <h2>The run of fixtures</h2>
     <p class="sub">Difficulty of each of the next matches, shaded by the opponent's rating
       adjusted for venue, since the same opponent away is a harder night than at home.
@@ -113,14 +116,14 @@
     <div id="fdrnote" class="hint" style="margin-top:12px"></div>
   </section>
 
-  <section class="card">
+  <section class="card" id="c-big">
     <h2>The matches that will decide their season</h2>
     <p class="sub" id="bigsub">Ranked by how far the result moves this club's own title,
       qualification or relegation chances. Click one for the full picture.</p>
     <div id="clubbig"></div>
   </section>
 
-  <section class="card">
+  <section class="card" id="c-fixtures">
     <div class="cardbar">
       <h2>Every fixture</h2>
       <a class="morelink" id="callink" href="#">Subscribe in your calendar →</a>
@@ -134,7 +137,7 @@
 <script type="module">
 import { data, pct, signed, esc, ord, initChrome, tip, tipRows, timeline, chipColor,
          initPalette, matchModal, lg, withLg, setMeta, eventLabels, cardUrl,
-         bracketStrip, roundLabel, roundShort } from './assets/app.js';
+         bracketStrip, roundLabel, roundShort, initTabs } from './assets/app.js';
 initChrome('team');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
@@ -182,6 +185,25 @@ pick.addEventListener('change', () => {
 });
 
 window.addEventListener('themechange', render);
+/* Three tabs instead of eight stacked cards. Everything above the strip — the
+   name, the tiles, the one-line answer — stays unconditional; only the depth is
+   switched. `scencard` and `statecard` hide themselves when a competition has no
+   data for them, and a tab whose sections are all hidden is dropped rather than
+   offered as an empty panel. */
+const TAB_GROUPS = [
+  { id: 'season', label: 'Season', ids: ['c-season', 'bracketcard'] },
+  { id: 'fixtures', label: 'Fixtures', ids: ['c-fdr', 'c-big', 'c-fixtures'] },
+  { id: 'form', label: 'Form', ids: ['scencard', 'statecard'] },
+];
+const showTab = initTabs(
+  document.getElementById('tabs'),
+  TAB_GROUPS.map((g) => ({
+    id: g.id,
+    label: g.label,
+    sections: g.ids.map((id) => document.getElementById(id)).filter(Boolean),
+  })).filter((g) => g.sections.length),
+);
+
 initPalette(fc.teams);
 document.getElementById('clubbig').addEventListener('click', (e) => {
   const el = e.target.closest('.bigmatch');
@@ -307,6 +329,18 @@ function renderState(t) {
   ].join('');
 }
 
+/* Where a club arrived from, when it did not simply stay. A second tier
+   receives clubs from both directions and the difference matters: a relegated
+   club is rated on the division above, a promoted one on the division below.
+   Older forecast files carry only `promoted`, so fall back to it. */
+const ARRIVED_FROM = {
+  up: '<span><b>Promoted</b> from the division below</span>',
+  down: '<span><b>Relegated</b> from the division above</span>',
+};
+Object.values(meta).forEach((t) => {
+  t.arrived = t.arrived || (t.promoted ? 'up' : 'stayed');
+});
+
 function render() {
   const t = meta[current];
   const rank = fc.teams.findIndex((x) => x.id === current) + 1;
@@ -321,10 +355,12 @@ function render() {
     : `Projected to finish ${ord(rank)} on ${t.pts.toFixed(1)} points, `
       + `with 80% of simulations between ${t.pts_lo} and ${t.pts_hi}.`;
   document.getElementById('stamp').innerHTML =
-    `<span>SPI <b>${t.spi.toFixed(1)}</b></span>
+    `<span title="Expected share of points against an average club in this competition">SPI
+       <b>${t.spi.toFixed(1)}</b>${t.spi_lo != null
+         ? ` <span class="muted">${t.spi_lo}–${t.spi_hi}</span>` : ''}</span>
      <span>Attack <b>${t.off.toFixed(2)}</b> goals/game vs average</span>
      <span>Defence <b>${t.def.toFixed(2)}</b> conceded/game vs average</span>
-     ${t.promoted ? '<span><b>Promoted</b> from the division below</span>' : ''}`;
+     ${ARRIVED_FROM[t.arrived] || ''}`;
 
   document.getElementById('tiles').innerHTML = (W.isCup ? [
     ['Projected phase finish', ord(rank), `${t.pts.toFixed(1)} points, GD ${signed(t.gd)}`],
@@ -332,11 +368,24 @@ function render() {
       t.title < 0.005 ? 'Effectively out of reach' : 'Across all simulated brackets'],
     [W.topN, pct(t.ucl, 1), 'Straight into the last 16'],
     ['Out at the league phase', pct(t.releg, 1), `Bottom ${W.relegPlaces} go out`],
+  ] : W.isPromotion ? [
+    ['Projected finish', ord(rank), `${t.pts.toFixed(1)} points, GD ${signed(t.gd)}`],
+    ['Win the title', pct(t.title, 1), t.title < 0.005 ? 'Effectively out of reach' : 'Across all simulations'],
+    /* Both routes up, because a club in this division is trying to be promoted
+       and does not much mind which way. The split is underneath. */
+    ['Promoted', pct(t.p_up ?? t.ucl, 1),
+      `${pct(t.ucl, 1)} automatically, ${pct(t.p_playoff_won ?? 0, 1)} via the play-off`],
+    ['Relegated', pct(t.releg, 1), `Best case ${t.pts_max} pts, worst ${t.pts_min}`],
   ] : [
     ['Projected finish', ord(rank), `${t.pts.toFixed(1)} points, GD ${signed(t.gd)}`],
     ['Win the title', pct(t.title, 1), t.title < 0.005 ? 'Effectively out of reach' : 'Across all simulations'],
     ['Champions League', pct(t.ucl, 1), `${W.topN} qualifies`],
-    ['Relegated', pct(t.releg, 1), `Best case ${t.pts_max} pts, worst ${t.pts_min}`],
+    /* Germany and France play a tie for the last place, so "relegated" is the
+       bottom two *plus* losing that -- and the note says which is which. */
+    ['Relegated', pct(t.p_down ?? t.releg, 1),
+      t.p_releg_playoff != null
+        ? `${pct(t.releg, 1)} in the bottom ${W.relegPlaces}, ${pct(t.p_releg_playoff, 1)} via the play-off`
+        : `Best case ${t.pts_max} pts, worst ${t.pts_min}`],
   ]).map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
 
   /* The cup's own question: not where they finish, but how far they get. */

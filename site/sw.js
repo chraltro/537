@@ -12,7 +12,7 @@
    somebody has looked at, which is the honest scope of "offline support" for a
    site with eight of them.                                                  */
 
-const CACHE = 'ninety-v1';
+const CACHE = '537-v2';
 
 /* Same-origin GETs only. A cross-origin request has nothing to do with this
    site's data and should not be quietly served from its cache. */

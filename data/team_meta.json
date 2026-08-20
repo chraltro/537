@@ -1,1816 +1,4 @@
 {
- "arsenal": {
-  "id": "arsenal",
-  "name": "Arsenal",
-  "short": "ARS",
-  "primary": "#EF0107",
-  "secondary": "#DB0007",
-  "aliases": []
- },
- "aston-villa": {
-  "id": "aston-villa",
-  "name": "Aston Villa",
-  "short": "AVL",
-  "primary": "#95BFE5",
-  "secondary": "#670E36",
-  "aliases": []
- },
- "bournemouth": {
-  "id": "bournemouth",
-  "name": "Bournemouth",
-  "short": "BOU",
-  "primary": "#DA291C",
-  "secondary": "#000000",
-  "aliases": [
-   "afc bournemouth"
-  ]
- },
- "brentford": {
-  "id": "brentford",
-  "name": "Brentford",
-  "short": "BRE",
-  "primary": "#E30613",
-  "secondary": "#FBB800",
-  "aliases": []
- },
- "brighton": {
-  "id": "brighton",
-  "name": "Brighton & Hove Albion",
-  "short": "BHA",
-  "primary": "#0057B8",
-  "secondary": "#FFCD00",
-  "aliases": [
-   "brighton and hove albion",
-   "brighton hove albion"
-  ]
- },
- "burnley": {
-  "id": "burnley",
-  "name": "Burnley",
-  "short": "BUR",
-  "primary": "#6C1D45",
-  "secondary": "#99D6EA",
-  "aliases": []
- },
- "chelsea": {
-  "id": "chelsea",
-  "name": "Chelsea",
-  "short": "CHE",
-  "primary": "#034694",
-  "secondary": "#DBA111",
-  "aliases": []
- },
- "coventry": {
-  "id": "coventry",
-  "name": "Coventry City",
-  "short": "COV",
-  "primary": "#59B4E4",
-  "secondary": "#003057",
-  "aliases": [
-   "coventry city"
-  ]
- },
- "crystal-palace": {
-  "id": "crystal-palace",
-  "name": "Crystal Palace",
-  "short": "CRY",
-  "primary": "#1B458F",
-  "secondary": "#C4122E",
-  "aliases": []
- },
- "everton": {
-  "id": "everton",
-  "name": "Everton",
-  "short": "EVE",
-  "primary": "#003399",
-  "secondary": "#FFFFFF",
-  "aliases": []
- },
- "fulham": {
-  "id": "fulham",
-  "name": "Fulham",
-  "short": "FUL",
-  "primary": "#000000",
-  "secondary": "#CC0000",
-  "aliases": []
- },
- "hull": {
-  "id": "hull",
-  "name": "Hull City",
-  "short": "HUL",
-  "primary": "#F5A12D",
-  "secondary": "#000000",
-  "aliases": [
-   "hull city"
-  ]
- },
- "ipswich": {
-  "id": "ipswich",
-  "name": "Ipswich Town",
-  "short": "IPS",
-  "primary": "#3A64A3",
-  "secondary": "#DE2C37",
-  "aliases": [
-   "ipswich town"
-  ]
- },
- "leeds": {
-  "id": "leeds",
-  "name": "Leeds United",
-  "short": "LEE",
-  "primary": "#FFCD00",
-  "secondary": "#1D428A",
-  "aliases": [
-   "leeds united"
-  ]
- },
- "leicester": {
-  "id": "leicester",
-  "name": "Leicester City",
-  "short": "LEI",
-  "primary": "#003090",
-  "secondary": "#FDBE11",
-  "aliases": [
-   "leicester city"
-  ]
- },
- "liverpool": {
-  "id": "liverpool",
-  "name": "Liverpool",
-  "short": "LIV",
-  "primary": "#C8102E",
-  "secondary": "#00B2A9",
-  "aliases": []
- },
- "man-city": {
-  "id": "man-city",
-  "name": "Manchester City",
-  "short": "MCI",
-  "primary": "#6CABDD",
-  "secondary": "#1C2C5B",
-  "aliases": [
-   "man city",
-   "manchester city"
-  ]
- },
- "man-united": {
-  "id": "man-united",
-  "name": "Manchester United",
-  "short": "MUN",
-  "primary": "#DA291C",
-  "secondary": "#FBE122",
-  "aliases": [
-   "man united",
-   "manchester united",
-   "man utd"
-  ]
- },
- "newcastle": {
-  "id": "newcastle",
-  "name": "Newcastle United",
-  "short": "NEW",
-  "primary": "#241F20",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "newcastle united",
-   "newcastle utd"
-  ]
- },
- "nott-forest": {
-  "id": "nott-forest",
-  "name": "Nottingham Forest",
-  "short": "NFO",
-  "primary": "#DD0000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "nottm forest",
-   "nott m forest",
-   "nottingham forest"
-  ]
- },
- "sunderland": {
-  "id": "sunderland",
-  "name": "Sunderland",
-  "short": "SUN",
-  "primary": "#EB172B",
-  "secondary": "#211E1F",
-  "aliases": []
- },
- "tottenham": {
-  "id": "tottenham",
-  "name": "Tottenham Hotspur",
-  "short": "TOT",
-  "primary": "#132257",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "tottenham hotspur",
-   "spurs"
-  ]
- },
- "west-ham": {
-  "id": "west-ham",
-  "name": "West Ham United",
-  "short": "WHU",
-  "primary": "#7A263A",
-  "secondary": "#1BB1E7",
-  "aliases": [
-   "west ham united",
-   "west ham"
-  ]
- },
- "wolves": {
-  "id": "wolves",
-  "name": "Wolverhampton Wanderers",
-  "short": "WOL",
-  "primary": "#FDB913",
-  "secondary": "#231F20",
-  "aliases": [
-   "wolverhampton wanderers",
-   "wolverhampton"
-  ]
- },
- "southampton": {
-  "id": "southampton",
-  "name": "Southampton",
-  "short": "SOU",
-  "primary": "#D71920",
-  "secondary": "#130C0E",
-  "aliases": []
- },
- "west-brom": {
-  "id": "west-brom",
-  "name": "West Bromwich Albion",
-  "short": "WBA",
-  "primary": "#122F67",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "west brom",
-   "west bromwich albion"
-  ]
- },
- "sheffield-united": {
-  "id": "sheffield-united",
-  "name": "Sheffield United",
-  "short": "SHU",
-  "primary": "#EE2737",
-  "secondary": "#000000",
-  "aliases": [
-   "sheffield united"
-  ]
- },
- "luton": {
-  "id": "luton",
-  "name": "Luton Town",
-  "short": "LUT",
-  "primary": "#F78F1E",
-  "secondary": "#002D62",
-  "aliases": [
-   "luton town"
-  ]
- },
- "norwich": {
-  "id": "norwich",
-  "name": "Norwich City",
-  "short": "NOR",
-  "primary": "#FFF200",
-  "secondary": "#00A650",
-  "aliases": [
-   "norwich city"
-  ]
- },
- "watford": {
-  "id": "watford",
-  "name": "Watford",
-  "short": "WAT",
-  "primary": "#FBEE23",
-  "secondary": "#ED2127",
-  "aliases": []
- },
- "swansea": {
-  "id": "swansea",
-  "name": "Swansea City",
-  "short": "SWA",
-  "primary": "#121212",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "swansea city"
-  ]
- },
- "stoke": {
-  "id": "stoke",
-  "name": "Stoke City",
-  "short": "STK",
-  "primary": "#E03A3E",
-  "secondary": "#1B449C",
-  "aliases": [
-   "stoke city"
-  ]
- },
- "middlesbrough": {
-  "id": "middlesbrough",
-  "name": "Middlesbrough",
-  "short": "MID",
-  "primary": "#E21C38",
-  "secondary": "#FFFFFF",
-  "aliases": []
- },
- "cardiff": {
-  "id": "cardiff",
-  "name": "Cardiff City",
-  "short": "CAR",
-  "primary": "#0070B5",
-  "secondary": "#D11524",
-  "aliases": [
-   "cardiff city"
-  ]
- },
- "huddersfield": {
-  "id": "huddersfield",
-  "name": "Huddersfield Town",
-  "short": "HUD",
-  "primary": "#0E63AD",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "huddersfield town"
-  ]
- },
- "qpr": {
-  "id": "qpr",
-  "name": "Queens Park Rangers",
-  "short": "QPR",
-  "primary": "#1D5BA4",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "queens park rangers"
-  ]
- },
- "reading": {
-  "id": "reading",
-  "name": "Reading",
-  "short": "RDG",
-  "primary": "#004494",
-  "secondary": "#FFFFFF",
-  "aliases": []
- },
- "wigan": {
-  "id": "wigan",
-  "name": "Wigan Athletic",
-  "short": "WIG",
-  "primary": "#1D59AF",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "wigan athletic"
-  ]
- },
- "blackburn": {
-  "id": "blackburn",
-  "name": "Blackburn Rovers",
-  "short": "BLB",
-  "primary": "#009EE0",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "blackburn rovers"
-  ]
- },
- "bolton": {
-  "id": "bolton",
-  "name": "Bolton Wanderers",
-  "short": "BOL",
-  "primary": "#263C7E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "bolton wanderers"
-  ]
- },
- "birmingham": {
-  "id": "birmingham",
-  "name": "Birmingham City",
-  "short": "BIR",
-  "primary": "#0000FF",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "birmingham city"
-  ]
- },
- "blackpool": {
-  "id": "blackpool",
-  "name": "Blackpool",
-  "short": "BLP",
-  "primary": "#F68B1F",
-  "secondary": "#FFFFFF",
-  "aliases": []
- },
- "charlton": {
-  "id": "charlton",
-  "name": "Charlton Athletic",
-  "short": "CHA",
-  "primary": "#D4021D",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "charlton athletic"
-  ]
- },
- "derby": {
-  "id": "derby",
-  "name": "Derby County",
-  "short": "DER",
-  "primary": "#000000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "derby county"
-  ]
- },
- "portsmouth": {
-  "id": "portsmouth",
-  "name": "Portsmouth",
-  "short": "POR",
-  "primary": "#001489",
-  "secondary": "#FFFFFF",
-  "aliases": []
- },
- "bradford": {
-  "id": "bradford",
-  "name": "Bradford City",
-  "short": "BRA",
-  "primary": "#8B0000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "bradford",
-   "bradford city"
-  ]
- },
- "athletic-bilbao": {
-  "id": "athletic-bilbao",
-  "name": "Athletic Club",
-  "short": "ATH",
-  "primary": "#EE2523",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Ath Bilbao",
-   "Athletic Bilbao",
-   "Athletic Club Bilbao"
-  ]
- },
- "osasuna": {
-  "id": "osasuna",
-  "name": "CA Osasuna",
-  "short": "OSA",
-  "primary": "#D91A21",
-  "secondary": "#0A346F",
-  "aliases": [
-   "CA Osasuna"
-  ]
- },
- "atletico-madrid": {
-  "id": "atletico-madrid",
-  "name": "Atletico Madrid",
-  "short": "ATM",
-  "primary": "#CB3524",
-  "secondary": "#1C2D5A",
-  "aliases": [
-   "Ath Madrid",
-   "Club Atlético de Madrid",
-   "Atlético de Madrid",
-   "Atlético Madrid",
-   "Atletico de Madrid"
-  ]
- },
- "alaves": {
-  "id": "alaves",
-  "name": "Deportivo Alaves",
-  "short": "ALA",
-  "primary": "#0761AF",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Alaves",
-   "Deportivo Alavés",
-   "CD Alavés",
-   "Alavés"
-  ]
- },
- "elche": {
-  "id": "elche",
-  "name": "Elche CF",
-  "short": "ELC",
-  "primary": "#00913F",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Elche",
-   "Elche CF"
-  ]
- },
- "barcelona": {
-  "id": "barcelona",
-  "name": "FC Barcelona",
-  "short": "BAR",
-  "primary": "#A50044",
-  "secondary": "#004D98",
-  "aliases": [
-   "Barcelona"
-  ]
- },
- "getafe": {
-  "id": "getafe",
-  "name": "Getafe CF",
-  "short": "GET",
-  "primary": "#005999",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Getafe"
-  ]
- },
- "levante": {
-  "id": "levante",
-  "name": "Levante UD",
-  "short": "LEV",
-  "primary": "#0053A0",
-  "secondary": "#B4053F",
-  "aliases": [
-   "Levante"
-  ]
- },
- "malaga": {
-  "id": "malaga",
-  "name": "Malaga CF",
-  "short": "MAL",
-  "primary": "#0069B4",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Malaga",
-   "Málaga CF",
-   "Málaga"
-  ]
- },
- "celta": {
-  "id": "celta",
-  "name": "Celta Vigo",
-  "short": "CEL",
-  "primary": "#8AC3EE",
-  "secondary": "#E5254E",
-  "aliases": [
-   "Celta",
-   "RC Celta de Vigo",
-   "Celta de Vigo",
-   "RC Celta"
-  ]
- },
- "deportivo": {
-  "id": "deportivo",
-  "name": "Deportivo La Coruna",
-  "short": "DEP",
-  "primary": "#0055A5",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "La Coruna",
-   "Deportivo La Coruña",
-   "RC Deportivo La Coruña",
-   "Deportivo"
-  ]
- },
- "espanyol": {
-  "id": "espanyol",
-  "name": "RCD Espanyol",
-  "short": "ESP",
-  "primary": "#007FC8",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Espanol",
-   "RCD Espanyol de Barcelona",
-   "Espanyol Barcelona",
-   "Espanyol"
-  ]
- },
- "rayo-vallecano": {
-  "id": "rayo-vallecano",
-  "name": "Rayo Vallecano",
-  "short": "RAY",
-  "primary": "#E53027",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Vallecano",
-   "Rayo Vallecano de Madrid"
-  ]
- },
- "betis": {
-  "id": "betis",
-  "name": "Real Betis",
-  "short": "BET",
-  "primary": "#00954C",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Betis",
-   "Real Betis Balompié"
-  ]
- },
- "real-madrid": {
-  "id": "real-madrid",
-  "name": "Real Madrid",
-  "short": "RMA",
-  "primary": "#00529F",
-  "secondary": "#FEBE10",
-  "aliases": [
-   "Real Madrid CF"
-  ]
- },
- "racing-santander": {
-  "id": "racing-santander",
-  "name": "Racing Santander",
-  "short": "RAC",
-  "primary": "#009A44",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Santander",
-   "Real Racing Club de Santander",
-   "Racing de Santander"
-  ]
- },
- "real-sociedad": {
-  "id": "real-sociedad",
-  "name": "Real Sociedad",
-  "short": "RSO",
-  "primary": "#0067B1",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Sociedad",
-   "Real Sociedad de Fútbol"
-  ]
- },
- "sevilla": {
-  "id": "sevilla",
-  "name": "Sevilla FC",
-  "short": "SEV",
-  "primary": "#D81920",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Sevilla"
-  ]
- },
- "valencia": {
-  "id": "valencia",
-  "name": "Valencia CF",
-  "short": "VAL",
-  "primary": "#F7A800",
-  "secondary": "#000000",
-  "aliases": [
-   "Valencia"
-  ]
- },
- "villarreal": {
-  "id": "villarreal",
-  "name": "Villarreal CF",
-  "short": "VIL",
-  "primary": "#FFE667",
-  "secondary": "#005187",
-  "aliases": [
-   "Villarreal"
-  ]
- },
- "mallorca": {
-  "id": "mallorca",
-  "name": "RCD Mallorca",
-  "short": "MLL",
-  "primary": "#E20613",
-  "secondary": "#000000",
-  "aliases": [
-   "Mallorca",
-   "RCD Mallorca"
-  ]
- },
- "valladolid": {
-  "id": "valladolid",
-  "name": "Real Valladolid",
-  "short": "VLL",
-  "primary": "#6F2C91",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Valladolid",
-   "Real Valladolid"
-  ]
- },
- "zaragoza": {
-  "id": "zaragoza",
-  "name": "Real Zaragoza",
-  "short": "ZAR",
-  "primary": "#004B9B",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Zaragoza",
-   "Real Zaragoza"
-  ]
- },
- "granada": {
-  "id": "granada",
-  "name": "Granada CF",
-  "short": "GRA",
-  "primary": "#C4122E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Granada"
-  ]
- },
- "almeria": {
-  "id": "almeria",
-  "name": "UD Almeria",
-  "short": "ALM",
-  "primary": "#E4032E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Almeria",
-   "UD Almería",
-   "Almería"
-  ]
- },
- "las-palmas": {
-  "id": "las-palmas",
-  "name": "UD Las Palmas",
-  "short": "LPA",
-  "primary": "#FFE500",
-  "secondary": "#004B9B",
-  "aliases": [
-   "Las Palmas",
-   "UD Las Palmas"
-  ]
- },
- "eibar": {
-  "id": "eibar",
-  "name": "SD Eibar",
-  "short": "EIB",
-  "primary": "#004B9B",
-  "secondary": "#E4032E",
-  "aliases": [
-   "Eibar"
-  ]
- },
- "sporting-gijon": {
-  "id": "sporting-gijon",
-  "name": "Sporting Gijon",
-  "short": "SPG",
-  "primary": "#E4032E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Sp Gijon",
-   "Sporting Gijón",
-   "Sporting de Gijón"
-  ]
- },
- "girona": {
-  "id": "girona",
-  "name": "Girona FC",
-  "short": "GIR",
-  "primary": "#D31217",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Girona"
-  ]
- },
- "cadiz": {
-  "id": "cadiz",
-  "name": "Cadiz CF",
-  "short": "CAD",
-  "primary": "#FFE500",
-  "secondary": "#004B9B",
-  "aliases": [
-   "Cadiz",
-   "Cádiz CF",
-   "Cádiz"
-  ]
- },
- "leganes": {
-  "id": "leganes",
-  "name": "CD Leganes",
-  "short": "LEG",
-  "primary": "#005BAA",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Leganes",
-   "CD Leganés",
-   "Leganés"
-  ]
- },
- "recreativo": {
-  "id": "recreativo",
-  "name": "Recreativo Huelva",
-  "short": "REC",
-  "primary": "#004B9B",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Recreativo"
-  ]
- },
- "numancia": {
-  "id": "numancia",
-  "name": "CD Numancia",
-  "short": "NUM",
-  "primary": "#E4032E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Numancia"
-  ]
- },
- "oviedo": {
-  "id": "oviedo",
-  "name": "Real Oviedo",
-  "short": "OVI",
-  "primary": "#005BAA",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Oviedo",
-   "Real Oviedo"
-  ]
- },
- "tenerife": {
-  "id": "tenerife",
-  "name": "CD Tenerife",
-  "short": "TEN",
-  "primary": "#005BAA",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Tenerife"
-  ]
- },
- "albacete": {
-  "id": "albacete",
-  "name": "Albacete Balompie",
-  "short": "ALB",
-  "primary": "#1C4E9D",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Albacete"
-  ]
- },
- "real-murcia": {
-  "id": "real-murcia",
-  "name": "Real Murcia",
-  "short": "MUR",
-  "primary": "#E4032E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Murcia",
-   "Real Murcia"
-  ]
- },
- "huesca": {
-  "id": "huesca",
-  "name": "SD Huesca",
-  "short": "HUE",
-  "primary": "#005BAA",
-  "secondary": "#E4032E",
-  "aliases": [
-   "Huesca"
-  ]
- },
- "gimnastic": {
-  "id": "gimnastic",
-  "name": "Gimnastic Tarragona",
-  "short": "GIM",
-  "primary": "#E4032E",
-  "secondary": "#000000",
-  "aliases": [
-   "Gimnastic",
-   "Gimnàstic de Tarragona"
-  ]
- },
- "xerez": {
-  "id": "xerez",
-  "name": "Xerez CD",
-  "short": "XER",
-  "primary": "#005BAA",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Xerez"
-  ]
- },
- "hercules": {
-  "id": "hercules",
-  "name": "Hercules CF",
-  "short": "HER",
-  "primary": "#005BAA",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Hercules",
-   "Hércules CF"
-  ]
- },
- "cordoba": {
-  "id": "cordoba",
-  "name": "Cordoba CF",
-  "short": "COR",
-  "primary": "#007A33",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Cordoba",
-   "Córdoba CF"
-  ]
- },
- "milan": {
-  "id": "milan",
-  "name": "AC Milan",
-  "short": "MIL",
-  "primary": "#FB090B",
-  "secondary": "#000000",
-  "aliases": [
-   "Milan"
-  ]
- },
- "monza": {
-  "id": "monza",
-  "name": "AC Monza",
-  "short": "MON",
-  "primary": "#E30613",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Monza"
-  ]
- },
- "fiorentina": {
-  "id": "fiorentina",
-  "name": "Fiorentina",
-  "short": "FIO",
-  "primary": "#592C82",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "ACF Fiorentina"
-  ]
- },
- "roma": {
-  "id": "roma",
-  "name": "AS Roma",
-  "short": "ROM",
-  "primary": "#8E1F2F",
-  "secondary": "#F0BC42",
-  "aliases": [
-   "Roma"
-  ]
- },
- "atalanta": {
-  "id": "atalanta",
-  "name": "Atalanta",
-  "short": "ATA",
-  "primary": "#1E71B8",
-  "secondary": "#000000",
-  "aliases": [
-   "Atalanta BC"
-  ]
- },
- "bologna": {
-  "id": "bologna",
-  "name": "Bologna",
-  "short": "BOL",
-  "primary": "#A21C22",
-  "secondary": "#1A2F4B",
-  "aliases": [
-   "Bologna FC 1909",
-   "Bologna FC"
-  ]
- },
- "cagliari": {
-  "id": "cagliari",
-  "name": "Cagliari",
-  "short": "CAG",
-  "primary": "#B01B2E",
-  "secondary": "#0C2340",
-  "aliases": [
-   "Cagliari Calcio"
-  ]
- },
- "como": {
-  "id": "como",
-  "name": "Como",
-  "short": "COM",
-  "primary": "#005BAC",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Como 1907",
-   "Como Calcio"
-  ]
- },
- "inter": {
-  "id": "inter",
-  "name": "Inter",
-  "short": "INT",
-  "primary": "#0068A8",
-  "secondary": "#000000",
-  "aliases": [
-   "FC Internazionale Milano",
-   "Internazionale",
-   "Inter Milan"
-  ]
- },
- "frosinone": {
-  "id": "frosinone",
-  "name": "Frosinone",
-  "short": "FRO",
-  "primary": "#F9C300",
-  "secondary": "#005EB8",
-  "aliases": [
-   "Frosinone Calcio"
-  ]
- },
- "genoa": {
-  "id": "genoa",
-  "name": "Genoa",
-  "short": "GEN",
-  "primary": "#A21C25",
-  "secondary": "#10284B",
-  "aliases": [
-   "Genoa CFC"
-  ]
- },
- "juventus": {
-  "id": "juventus",
-  "name": "Juventus",
-  "short": "JUV",
-  "primary": "#000000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Juventus FC"
-  ]
- },
- "parma": {
-  "id": "parma",
-  "name": "Parma",
-  "short": "PAR",
-  "primary": "#FFD800",
-  "secondary": "#1A3A6B",
-  "aliases": [
-   "Parma Calcio 1913"
-  ]
- },
- "lazio": {
-  "id": "lazio",
-  "name": "Lazio",
-  "short": "LAZ",
-  "primary": "#87D8F7",
-  "secondary": "#0B2D5B",
-  "aliases": [
-   "Lazio Roma",
-   "SS Lazio",
-   "SS Lazio Roma"
-  ]
- },
- "napoli": {
-  "id": "napoli",
-  "name": "Napoli",
-  "short": "NAP",
-  "primary": "#12A5DC",
-  "secondary": "#003C82",
-  "aliases": [
-   "SSC Napoli"
-  ]
- },
- "torino": {
-  "id": "torino",
-  "name": "Torino",
-  "short": "TOR",
-  "primary": "#8A1E03",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Torino FC"
-  ]
- },
- "lecce": {
-  "id": "lecce",
-  "name": "Lecce",
-  "short": "LEC",
-  "primary": "#F7D417",
-  "secondary": "#E4002B",
-  "aliases": [
-   "US Lecce"
-  ]
- },
- "sassuolo": {
-  "id": "sassuolo",
-  "name": "Sassuolo",
-  "short": "SAS",
-  "primary": "#00A752",
-  "secondary": "#000000",
-  "aliases": [
-   "US Sassuolo Calcio",
-   "Sassuolo Calcio"
-  ]
- },
- "udinese": {
-  "id": "udinese",
-  "name": "Udinese",
-  "short": "UDI",
-  "primary": "#231F20",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Udinese Calcio"
-  ]
- },
- "venezia": {
-  "id": "venezia",
-  "name": "Venezia",
-  "short": "VEN",
-  "primary": "#101820",
-  "secondary": "#F58220",
-  "aliases": [
-   "Venezia FC"
-  ]
- },
- "sampdoria": {
-  "id": "sampdoria",
-  "name": "Sampdoria",
-  "short": "SAM",
-  "primary": "#0B3B8C",
-  "secondary": "#E4032E",
-  "aliases": [
-   "UC Sampdoria"
-  ]
- },
- "chievo": {
-  "id": "chievo",
-  "name": "Chievo Verona",
-  "short": "CHV",
-  "primary": "#FFE500",
-  "secondary": "#005BAA",
-  "aliases": [
-   "Chievo"
-  ]
- },
- "verona": {
-  "id": "verona",
-  "name": "Hellas Verona",
-  "short": "VER",
-  "primary": "#F5C518",
-  "secondary": "#003C82",
-  "aliases": [
-   "Verona"
-  ]
- },
- "empoli": {
-  "id": "empoli",
-  "name": "Empoli",
-  "short": "EMP",
-  "primary": "#005BAA",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Empoli FC"
-  ]
- },
- "palermo": {
-  "id": "palermo",
-  "name": "Palermo",
-  "short": "PAL",
-  "primary": "#F49AC1",
-  "secondary": "#000000",
-  "aliases": [
-   "Palermo FC",
-   "US Palermo"
-  ]
- },
- "siena": {
-  "id": "siena",
-  "name": "Siena",
-  "short": "SIE",
-  "primary": "#000000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "AC Siena"
-  ]
- },
- "catania": {
-  "id": "catania",
-  "name": "Catania",
-  "short": "CAT",
-  "primary": "#E4032E",
-  "secondary": "#005BAA",
-  "aliases": [
-   "Calcio Catania"
-  ]
- },
- "reggina": {
-  "id": "reggina",
-  "name": "Reggina",
-  "short": "REG",
-  "primary": "#7B1F3A",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Reggina 1914",
-   "Reggina Calcio"
-  ]
- },
- "brescia": {
-  "id": "brescia",
-  "name": "Brescia",
-  "short": "BRC",
-  "primary": "#005BAA",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Brescia Calcio"
-  ]
- },
- "livorno": {
-  "id": "livorno",
-  "name": "Livorno",
-  "short": "LVN",
-  "primary": "#8B1A1A",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "AS Livorno"
-  ]
- },
- "perugia": {
-  "id": "perugia",
-  "name": "Perugia",
-  "short": "PER",
-  "primary": "#E4032E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "AC Perugia Calcio"
-  ]
- },
- "messina": {
-  "id": "messina",
-  "name": "Messina",
-  "short": "MES",
-  "primary": "#F5C518",
-  "secondary": "#E4032E",
-  "aliases": []
- },
- "cesena": {
-  "id": "cesena",
-  "name": "Cesena",
-  "short": "CES",
-  "primary": "#000000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "AC Cesena",
-   "Cesena FC"
-  ]
- },
- "crotone": {
-  "id": "crotone",
-  "name": "Crotone",
-  "short": "CRO",
-  "primary": "#E4032E",
-  "secondary": "#005BAA",
-  "aliases": [
-   "FC Crotone"
-  ]
- },
- "spal": {
-  "id": "spal",
-  "name": "SPAL",
-  "short": "SPA",
-  "primary": "#005BAA",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Spal",
-   "SPAL 2013 Ferrara"
-  ]
- },
- "spezia": {
-  "id": "spezia",
-  "name": "Spezia",
-  "short": "SPZ",
-  "primary": "#000000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Spezia Calcio"
-  ]
- },
- "salernitana": {
-  "id": "salernitana",
-  "name": "Salernitana",
-  "short": "SAL",
-  "primary": "#7B1F3A",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "US Salernitana 1919"
-  ]
- },
- "bari": {
-  "id": "bari",
-  "name": "Bari",
-  "short": "BRI",
-  "primary": "#E4032E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "AS Bari",
-   "SSC Bari",
-   "FC Bari 1908"
-  ]
- },
- "ascoli": {
-  "id": "ascoli",
-  "name": "Ascoli",
-  "short": "ASC",
-  "primary": "#000000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Ascoli Calcio",
-   "Ascoli Picchio FC"
-  ]
- },
- "pescara": {
-  "id": "pescara",
-  "name": "Pescara",
-  "short": "PES",
-  "primary": "#005BAA",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Delfino Pescara"
-  ]
- },
- "benevento": {
-  "id": "benevento",
-  "name": "Benevento",
-  "short": "BEN",
-  "primary": "#F5C518",
-  "secondary": "#E4032E",
-  "aliases": [
-   "Benevento Calcio"
-  ]
- },
- "cremonese": {
-  "id": "cremonese",
-  "name": "Cremonese",
-  "short": "CRE",
-  "primary": "#E4032E",
-  "secondary": "#808080",
-  "aliases": [
-   "US Cremonese"
-  ]
- },
- "piacenza": {
-  "id": "piacenza",
-  "name": "Piacenza",
-  "short": "PIA",
-  "primary": "#E4032E",
-  "secondary": "#FFFFFF",
-  "aliases": []
- },
- "modena": {
-  "id": "modena",
-  "name": "Modena",
-  "short": "MOD",
-  "primary": "#F5C518",
-  "secondary": "#005BAA",
-  "aliases": [
-   "Modena FC"
-  ]
- },
- "treviso": {
-  "id": "treviso",
-  "name": "Treviso",
-  "short": "TRE",
-  "primary": "#005BAA",
-  "secondary": "#FFFFFF",
-  "aliases": []
- },
- "novara": {
-  "id": "novara",
-  "name": "Novara",
-  "short": "NOV",
-  "primary": "#005BAA",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Novara Calcio"
-  ]
- },
- "carpi": {
-  "id": "carpi",
-  "name": "Carpi",
-  "short": "CRP",
-  "primary": "#E4032E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Carpi FC"
-  ]
- },
- "pisa": {
-  "id": "pisa",
-  "name": "Pisa",
-  "short": "PIS",
-  "primary": "#005BAA",
-  "secondary": "#000000",
-  "aliases": [
-   "AC Pisa",
-   "Pisa SC"
-  ]
- },
- "vicenza": {
-  "id": "vicenza",
-  "name": "Vicenza",
-  "short": "VIC",
-  "primary": "#E4032E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "L.R. Vicenza",
-   "L.R. Vicenza Virtus",
-   "Vicenza Calcio"
-  ]
- },
- "ancona": {
-  "id": "ancona",
-  "name": "Ancona",
-  "short": "ANC",
-  "primary": "#E4032E",
-  "secondary": "#FFFFFF",
-  "aliases": []
- },
- "koln": {
-  "id": "koln",
-  "name": "1. FC Koln",
-  "short": "KOE",
-  "primary": "#ED1C24",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "FC Koln",
-   "1. FC Köln",
-   "FC Köln",
-   "Koln",
-   "Köln"
-  ]
- },
- "union-berlin": {
-  "id": "union-berlin",
-  "name": "Union Berlin",
-  "short": "FCU",
-  "primary": "#EB1923",
-  "secondary": "#FFF200",
-  "aliases": [
-   "1. FC Union Berlin"
-  ]
- },
- "mainz": {
-  "id": "mainz",
-  "name": "Mainz 05",
-  "short": "M05",
-  "primary": "#C3141E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Mainz",
-   "1. FSV Mainz 05"
-  ]
- },
- "leverkusen": {
-  "id": "leverkusen",
-  "name": "Bayer Leverkusen",
-  "short": "B04",
-  "primary": "#E32221",
-  "secondary": "#000000",
-  "aliases": [
-   "Leverkusen",
-   "Bayer 04 Leverkusen"
-  ]
- },
- "dortmund": {
-  "id": "dortmund",
-  "name": "Borussia Dortmund",
-  "short": "BVB",
-  "primary": "#FDE100",
-  "secondary": "#000000",
-  "aliases": [
-   "Dortmund"
-  ]
- },
- "monchengladbach": {
-  "id": "monchengladbach",
-  "name": "Borussia Monchengladbach",
-  "short": "BMG",
-  "primary": "#1D1D1B",
-  "secondary": "#00A94F",
-  "aliases": [
-   "Bor. Monchengladbach",
-   "Bor. Mönchengladbach",
-   "Borussia Mönchengladbach",
-   "Gladbach",
-   "M'gladbach",
-   "Monchengladbach",
-   "Mönchengladbach"
-  ]
- },
- "eintracht-frankfurt": {
-  "id": "eintracht-frankfurt",
-  "name": "Eintracht Frankfurt",
-  "short": "SGE",
-  "primary": "#E1000F",
-  "secondary": "#000000",
-  "aliases": [
-   "Ein Frankfurt"
-  ]
- },
- "augsburg": {
-  "id": "augsburg",
-  "name": "FC Augsburg",
-  "short": "FCA",
-  "primary": "#BA3733",
-  "secondary": "#46714D",
-  "aliases": [
-   "Augsburg"
-  ]
- },
- "bayern": {
-  "id": "bayern",
-  "name": "Bayern Munich",
-  "short": "FCB",
-  "primary": "#DC052D",
-  "secondary": "#0066B2",
-  "aliases": [
-   "Bayern Munich",
-   "FC Bayern München",
-   "Bayern München",
-   "Bayern Munchen",
-   "FC Bayern Munich",
-   "Bayern"
-  ]
- },
- "schalke": {
-  "id": "schalke",
-  "name": "Schalke 04",
-  "short": "S04",
-  "primary": "#004D9D",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "FC Schalke 04",
-   "Schalke"
-  ]
- },
- "hamburg": {
-  "id": "hamburg",
-  "name": "Hamburger SV",
-  "short": "HSV",
-  "primary": "#005CA9",
-  "secondary": "#000000",
-  "aliases": [
-   "Hamburg",
-   "HSV"
-  ]
- },
- "rb-leipzig": {
-  "id": "rb-leipzig",
-  "name": "RB Leipzig",
-  "short": "RBL",
-  "primary": "#DD0741",
-  "secondary": "#001F47",
-  "aliases": [
-   "RasenBallsport Leipzig",
-   "Leipzig"
-  ]
- },
- "freiburg": {
-  "id": "freiburg",
-  "name": "SC Freiburg",
-  "short": "SCF",
-  "primary": "#E2001A",
-  "secondary": "#000000",
-  "aliases": [
-   "Freiburg"
-  ]
- },
- "paderborn": {
-  "id": "paderborn",
-  "name": "SC Paderborn 07",
-  "short": "SCP",
-  "primary": "#0055A5",
-  "secondary": "#000000",
-  "aliases": [
-   "Paderborn",
-   "SC Paderborn"
-  ]
- },
- "elversberg": {
-  "id": "elversberg",
-  "name": "SV Elversberg",
-  "short": "SVE",
-  "primary": "#000000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "SV 07 Elversberg",
-   "Elversberg"
-  ]
- },
- "werder": {
-  "id": "werder",
-  "name": "Werder Bremen",
-  "short": "SVW",
-  "primary": "#1D9053",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "SV Werder Bremen",
-   "Werder"
-  ]
- },
- "hoffenheim": {
-  "id": "hoffenheim",
-  "name": "TSG Hoffenheim",
-  "short": "TSG",
-  "primary": "#1C63B7",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "1899 Hoffenheim",
-   "Hoffenheim",
-   "TSG 1899 Hoffenheim"
-  ]
- },
- "stuttgart": {
-  "id": "stuttgart",
-  "name": "VfB Stuttgart",
-  "short": "VFB",
-  "primary": "#E32219",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Stuttgart"
-  ]
- },
- "wolfsburg": {
-  "id": "wolfsburg",
-  "name": "VfL Wolfsburg",
-  "short": "WOB",
-  "primary": "#65B32E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Wolfsburg"
-  ]
- },
- "hertha": {
-  "id": "hertha",
-  "name": "Hertha BSC",
-  "short": "BSC",
-  "primary": "#005CA9",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Hertha"
-  ]
- },
- "hannover": {
-  "id": "hannover",
-  "name": "Hannover 96",
-  "short": "H96",
-  "primary": "#009E3D",
-  "secondary": "#000000",
-  "aliases": [
-   "Hannover"
-  ]
- },
- "bochum": {
-  "id": "bochum",
-  "name": "VfL Bochum",
-  "short": "BOC",
-  "primary": "#005CA9",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Bochum"
-  ]
- },
- "nurnberg": {
-  "id": "nurnberg",
-  "name": "1. FC Nurnberg",
-  "short": "FCN",
-  "primary": "#AD1220",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Nurnberg",
-   "1. FC Nürnberg",
-   "Nürnberg"
-  ]
- },
- "kaiserslautern": {
-  "id": "kaiserslautern",
-  "name": "1. FC Kaiserslautern",
-  "short": "FCK",
-  "primary": "#E30613",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Kaiserslautern"
-  ]
- },
- "bielefeld": {
-  "id": "bielefeld",
-  "name": "Arminia Bielefeld",
-  "short": "DSC",
-  "primary": "#00518F",
-  "secondary": "#000000",
-  "aliases": [
-   "Bielefeld"
-  ]
- },
- "cottbus": {
-  "id": "cottbus",
-  "name": "Energie Cottbus",
-  "short": "FCE",
-  "primary": "#E30613",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Cottbus"
-  ]
- },
- "hansa-rostock": {
-  "id": "hansa-rostock",
-  "name": "Hansa Rostock",
-  "short": "HRO",
-  "primary": "#005CA9",
-  "secondary": "#FFFFFF",
-  "aliases": []
- },
- "munich-1860": {
-  "id": "munich-1860",
-  "name": "TSV 1860 Munich",
-  "short": "M60",
-  "primary": "#009EE0",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Munich 1860",
-   "TSV 1860 München"
-  ]
- },
- "st-pauli": {
-  "id": "st-pauli",
-  "name": "FC St. Pauli",
-  "short": "STP",
-  "primary": "#614335",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "St Pauli",
-   "St. Pauli"
-  ]
- },
- "fortuna-dusseldorf": {
-  "id": "fortuna-dusseldorf",
-  "name": "Fortuna Dusseldorf",
-  "short": "F95",
-  "primary": "#E30613",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Fortuna Düsseldorf"
-  ]
- },
- "darmstadt": {
-  "id": "darmstadt",
-  "name": "SV Darmstadt 98",
-  "short": "D98",
-  "primary": "#004E9E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Darmstadt"
-  ]
- },
- "heidenheim": {
-  "id": "heidenheim",
-  "name": "1. FC Heidenheim",
-  "short": "FCH",
-  "primary": "#E30613",
-  "secondary": "#005CA9",
-  "aliases": [
-   "Heidenheim",
-   "1. FC Heidenheim 1846"
-  ]
- },
- "duisburg": {
-  "id": "duisburg",
-  "name": "MSV Duisburg",
-  "short": "MSV",
-  "primary": "#005CA9",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Duisburg"
-  ]
- },
- "karlsruhe": {
-  "id": "karlsruhe",
-  "name": "Karlsruher SC",
-  "short": "KSC",
-  "primary": "#005CA9",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Karlsruhe"
-  ]
- },
- "greuther-furth": {
-  "id": "greuther-furth",
-  "name": "Greuther Furth",
-  "short": "SGF",
-  "primary": "#009036",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Greuther Furth",
-   "SpVgg Greuther Fürth",
-   "Greuther Fürth"
-  ]
- },
- "ingolstadt": {
-  "id": "ingolstadt",
-  "name": "FC Ingolstadt 04",
-  "short": "FCI",
-  "primary": "#E30613",
-  "secondary": "#000000",
-  "aliases": [
-   "Ingolstadt"
-  ]
- },
- "unterhaching": {
-  "id": "unterhaching",
-  "name": "Unterhaching",
-  "short": "SPU",
-  "primary": "#E30613",
-  "secondary": "#005CA9",
-  "aliases": [
-   "SpVgg Unterhaching"
-  ]
- },
  "aachen": {
   "id": "aachen",
   "name": "Alemannia Aachen",
@@ -1819,1243 +7,6 @@
   "secondary": "#000000",
   "aliases": [
    "Aachen"
-  ]
- },
- "braunschweig": {
-  "id": "braunschweig",
-  "name": "Eintracht Braunschweig",
-  "short": "EBS",
-  "primary": "#FFE500",
-  "secondary": "#005CA9",
-  "aliases": [
-   "Braunschweig"
-  ]
- },
- "holstein-kiel": {
-  "id": "holstein-kiel",
-  "name": "Holstein Kiel",
-  "short": "KSV",
-  "primary": "#005CA9",
-  "secondary": "#E30613",
-  "aliases": []
- },
- "auxerre": {
-  "id": "auxerre",
-  "name": "AJ Auxerre",
-  "short": "AUX",
-  "primary": "#0055A4",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Auxerre"
-  ]
- },
- "monaco": {
-  "id": "monaco",
-  "name": "AS Monaco",
-  "short": "ASM",
-  "primary": "#E31837",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Monaco",
-   "AS Monaco FC"
-  ]
- },
- "angers": {
-  "id": "angers",
-  "name": "Angers SCO",
-  "short": "ANG",
-  "primary": "#1D1D1B",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Angers"
-  ]
- },
- "troyes": {
-  "id": "troyes",
-  "name": "Troyes",
-  "short": "TRO",
-  "primary": "#009EE0",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "ES Troyes AC",
-   "ESTAC Troyes"
-  ]
- },
- "lorient": {
-  "id": "lorient",
-  "name": "FC Lorient",
-  "short": "LOR",
-  "primary": "#F58220",
-  "secondary": "#000000",
-  "aliases": [
-   "Lorient"
-  ]
- },
- "le-havre": {
-  "id": "le-havre",
-  "name": "Le Havre",
-  "short": "HAC",
-  "primary": "#00529F",
-  "secondary": "#7EC0EE",
-  "aliases": [
-   "Le Havre AC",
-   "Havre AC"
-  ]
- },
- "le-mans": {
-  "id": "le-mans",
-  "name": "Le Mans",
-  "short": "LMS",
-  "primary": "#E30613",
-  "secondary": "#FFE500",
-  "aliases": [
-   "Le Mans FC"
-  ]
- },
- "lille": {
-  "id": "lille",
-  "name": "Lille",
-  "short": "LIL",
-  "primary": "#E01E13",
-  "secondary": "#002E5D",
-  "aliases": [
-   "Lille OSC",
-   "LOSC"
-  ]
- },
- "nice": {
-  "id": "nice",
-  "name": "OGC Nice",
-  "short": "NIC",
-  "primary": "#C8102E",
-  "secondary": "#000000",
-  "aliases": [
-   "Nice"
-  ]
- },
- "lyon": {
-  "id": "lyon",
-  "name": "Olympique Lyonnais",
-  "short": "LYO",
-  "primary": "#DA291C",
-  "secondary": "#0B3E8C",
-  "aliases": [
-   "Lyon",
-   "Olympique Lyon"
-  ]
- },
- "marseille": {
-  "id": "marseille",
-  "name": "Marseille",
-  "short": "MAR",
-  "primary": "#2FAEE0",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Olympique de Marseille",
-   "Olympique Marseille"
-  ]
- },
- "paris-fc": {
-  "id": "paris-fc",
-  "name": "Paris FC",
-  "short": "PFC",
-  "primary": "#002654",
-  "secondary": "#DA291C",
-  "aliases": [
-   "Paris FC"
-  ]
- },
- "psg": {
-  "id": "psg",
-  "name": "Paris Saint-Germain",
-  "short": "PSG",
-  "primary": "#004170",
-  "secondary": "#DA291C",
-  "aliases": [
-   "Paris SG",
-   "Paris Saint-Germain FC",
-   "PSG",
-   "Paris Saint Germain"
-  ]
- },
- "strasbourg": {
-  "id": "strasbourg",
-  "name": "RC Strasbourg",
-  "short": "STR",
-  "primary": "#0072CE",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Strasbourg",
-   "RC Strasbourg Alsace"
-  ]
- },
- "lens": {
-  "id": "lens",
-  "name": "RC Lens",
-  "short": "LEN",
-  "primary": "#EE1C25",
-  "secondary": "#FFE500",
-  "aliases": [
-   "Lens",
-   "Racing Club de Lens"
-  ]
- },
- "brest": {
-  "id": "brest",
-  "name": "Stade Brestois",
-  "short": "BRE",
-  "primary": "#E4022A",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Brest",
-   "Stade Brestois 29"
-  ]
- },
- "rennes": {
-  "id": "rennes",
-  "name": "Stade Rennais",
-  "short": "REN",
-  "primary": "#E23A34",
-  "secondary": "#000000",
-  "aliases": [
-   "Rennes",
-   "Stade Rennais FC 1901"
-  ]
- },
- "toulouse": {
-  "id": "toulouse",
-  "name": "Toulouse FC",
-  "short": "TOU",
-  "primary": "#6D2C7F",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Toulouse"
-  ]
- },
- "bordeaux": {
-  "id": "bordeaux",
-  "name": "Girondins Bordeaux",
-  "short": "BOR",
-  "primary": "#003A70",
-  "secondary": "#E30613",
-  "aliases": [
-   "Bordeaux",
-   "Girondins de Bordeaux"
-  ]
- },
- "nantes": {
-  "id": "nantes",
-  "name": "FC Nantes",
-  "short": "NAN",
-  "primary": "#FFE500",
-  "secondary": "#009639",
-  "aliases": [
-   "Nantes"
-  ]
- },
- "saint-etienne": {
-  "id": "saint-etienne",
-  "name": "Saint-Etienne",
-  "short": "STE",
-  "primary": "#009639",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "St Etienne",
-   "AS Saint-Étienne",
-   "Saint-Étienne",
-   "AS Saint-Etienne"
-  ]
- },
- "montpellier": {
-  "id": "montpellier",
-  "name": "Montpellier",
-  "short": "MHS",
-  "primary": "#F58220",
-  "secondary": "#003A70",
-  "aliases": [
-   "Montpellier HSC"
-  ]
- },
- "metz": {
-  "id": "metz",
-  "name": "FC Metz",
-  "short": "MET",
-  "primary": "#7B1F3A",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Metz"
-  ]
- },
- "sochaux": {
-  "id": "sochaux",
-  "name": "FC Sochaux",
-  "short": "SOC",
-  "primary": "#FFE500",
-  "secondary": "#003A70",
-  "aliases": [
-   "Sochaux"
-  ]
- },
- "reims": {
-  "id": "reims",
-  "name": "Stade de Reims",
-  "short": "REI",
-  "primary": "#E30613",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Reims"
-  ]
- },
- "caen": {
-  "id": "caen",
-  "name": "SM Caen",
-  "short": "CAE",
-  "primary": "#E30613",
-  "secondary": "#003A70",
-  "aliases": [
-   "Caen"
-  ]
- },
- "guingamp": {
-  "id": "guingamp",
-  "name": "EA Guingamp",
-  "short": "GUI",
-  "primary": "#E30613",
-  "secondary": "#000000",
-  "aliases": [
-   "Guingamp"
-  ]
- },
- "bastia": {
-  "id": "bastia",
-  "name": "SC Bastia",
-  "short": "BAS",
-  "primary": "#009639",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Bastia"
-  ]
- },
- "nancy": {
-  "id": "nancy",
-  "name": "AS Nancy Lorraine",
-  "short": "NCY",
-  "primary": "#E30613",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Nancy"
-  ]
- },
- "ajaccio": {
-  "id": "ajaccio",
-  "name": "AC Ajaccio",
-  "short": "AJA",
-  "primary": "#E30613",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Ajaccio"
-  ]
- },
- "valenciennes": {
-  "id": "valenciennes",
-  "name": "Valenciennes",
-  "short": "VAF",
-  "primary": "#E30613",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Valenciennes FC"
-  ]
- },
- "dijon": {
-  "id": "dijon",
-  "name": "Dijon FCO",
-  "short": "DIJ",
-  "primary": "#E30613",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Dijon"
-  ]
- },
- "evian": {
-  "id": "evian",
-  "name": "Evian Thonon Gaillard",
-  "short": "ETG",
-  "primary": "#E30613",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Évian Thonon Gaillard"
-  ]
- },
- "sedan": {
-  "id": "sedan",
-  "name": "CS Sedan",
-  "short": "SED",
-  "primary": "#009639",
-  "secondary": "#E30613",
-  "aliases": [
-   "Sedan"
-  ]
- },
- "clermont": {
-  "id": "clermont",
-  "name": "Clermont Foot",
-  "short": "CLE",
-  "primary": "#E30613",
-  "secondary": "#003A70",
-  "aliases": [
-   "Clermont",
-   "Clermont Foot 63"
-  ]
- },
- "amiens": {
-  "id": "amiens",
-  "name": "Amiens SC",
-  "short": "AMI",
-  "primary": "#009639",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Amiens"
-  ]
- },
- "nimes": {
-  "id": "nimes",
-  "name": "Nimes Olympique",
-  "short": "NIM",
-  "primary": "#E30613",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Nimes",
-   "Nîmes Olympique",
-   "Nîmes"
-  ]
- },
- "grenoble": {
-  "id": "grenoble",
-  "name": "Grenoble Foot",
-  "short": "GRE",
-  "primary": "#003A70",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Grenoble",
-   "Grenoble Foot 38"
-  ]
- },
- "istres": {
-  "id": "istres",
-  "name": "FC Istres",
-  "short": "IST",
-  "primary": "#003A70",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Istres"
-  ]
- },
- "boulogne": {
-  "id": "boulogne",
-  "name": "US Boulogne",
-  "short": "BLG",
-  "primary": "#E30613",
-  "secondary": "#000000",
-  "aliases": [
-   "Boulogne"
-  ]
- },
- "arles": {
-  "id": "arles",
-  "name": "AC Arles-Avignon",
-  "short": "ARL",
-  "primary": "#E30613",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Arles",
-   "Arles-Avignon"
-  ]
- },
- "gfc-ajaccio": {
-  "id": "gfc-ajaccio",
-  "name": "Gazelec Ajaccio",
-  "short": "GFC",
-  "primary": "#E30613",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Ajaccio GFCO",
-   "Gazélec FC Ajaccio"
-  ]
- },
- "ajax": {
-  "id": "ajax",
-  "name": "Ajax",
-  "short": "AJA",
-  "primary": "#D2122E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "AFC Ajax",
-   "Ajax Amsterdam"
-  ]
- },
- "psv": {
-  "id": "psv",
-  "name": "PSV",
-  "short": "PSV",
-  "primary": "#EE2223",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "PSV Eindhoven"
-  ]
- },
- "feyenoord": {
-  "id": "feyenoord",
-  "name": "Feyenoord",
-  "short": "FEY",
-  "primary": "#DA020E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Feyenoord Rotterdam"
-  ]
- },
- "az-alkmaar": {
-  "id": "az-alkmaar",
-  "name": "AZ Alkmaar",
-  "short": "AZA",
-  "primary": "#E4022D",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "AZ",
-   "AZ 67 Alkmaar"
-  ]
- },
- "twente": {
-  "id": "twente",
-  "name": "FC Twente",
-  "short": "TWE",
-  "primary": "#E30613",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "FC Twente Enschede",
-   "Twente Enschede",
-   "FC Twente '65",
-   "Twente '65"
-  ]
- },
- "benfica": {
-  "id": "benfica",
-  "name": "Benfica",
-  "short": "BEN",
-  "primary": "#E31B23",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Benfica Lisbon",
-   "SL Benfica",
-   "Sport Lisboa e Benfica"
-  ]
- },
- "porto": {
-  "id": "porto",
-  "name": "Porto",
-  "short": "POR",
-  "primary": "#00428C",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "FC Porto",
-   "Futebol Clube do Porto"
-  ]
- },
- "sporting-cp": {
-  "id": "sporting-cp",
-  "name": "Sporting CP",
-  "short": "SPO",
-  "primary": "#008057",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Sporting",
-   "Sporting Clube de Portugal",
-   "Sporting Lisbon",
-   "Sporting Lissabon"
-  ]
- },
- "braga": {
-  "id": "braga",
-  "name": "Braga",
-  "short": "BRG",
-  "primary": "#B4131E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "SC Braga",
-   "Sporting Braga",
-   "Sporting Clube de Braga"
-  ]
- },
- "club-brugge": {
-  "id": "club-brugge",
-  "name": "Club Brugge",
-  "short": "CLB",
-  "primary": "#0A50A1",
-  "secondary": "#000000",
-  "aliases": [
-   "Club Bruges",
-   "Club Brugge KV",
-   "FC Bruegge"
-  ]
- },
- "union-sg": {
-  "id": "union-sg",
-  "name": "Union Saint-Gilloise",
-  "short": "USG",
-  "primary": "#FFC72C",
-  "secondary": "#003DA5",
-  "aliases": [
-   "Royale Union SG",
-   "Royale Union Saint-Gilloise",
-   "Union SG"
-  ]
- },
- "anderlecht": {
-  "id": "anderlecht",
-  "name": "Anderlecht",
-  "short": "AND",
-  "primary": "#3C2C6E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "RSC Anderlecht"
-  ]
- },
- "gent": {
-  "id": "gent",
-  "name": "Gent",
-  "short": "GEN",
-  "primary": "#0E4C92",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "AA Gent",
-   "KAA Gent"
-  ]
- },
- "genk": {
-  "id": "genk",
-  "name": "Genk",
-  "short": "GNK",
-  "primary": "#005CA9",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "KRC Genk",
-   "RC Genk"
-  ]
- },
- "celtic": {
-  "id": "celtic",
-  "name": "Celtic",
-  "short": "CEL",
-  "primary": "#016A3A",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Celtic FC",
-   "Celtic Glasgow"
-  ]
- },
- "rangers": {
-  "id": "rangers",
-  "name": "Rangers",
-  "short": "RAN",
-  "primary": "#1B458F",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Glasgow Rangers",
-   "Rangers FC"
-  ]
- },
- "salzburg": {
-  "id": "salzburg",
-  "name": "Red Bull Salzburg",
-  "short": "RBS",
-  "primary": "#D1002E",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "FC Red Bull Salzburg",
-   "RB Salzburg",
-   "Red Bull Salzburg"
-  ]
- },
- "sturm-graz": {
-  "id": "sturm-graz",
-  "name": "Sturm Graz",
-  "short": "STG",
-  "primary": "#000000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "SK Sturm Graz"
-  ]
- },
- "lask": {
-  "id": "lask",
-  "name": "LASK",
-  "short": "LSK",
-  "primary": "#000000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "LASK Linz",
-   "LASK Linz AG"
-  ]
- },
- "rapid-wien": {
-  "id": "rapid-wien",
-  "name": "Rapid Wien",
-  "short": "RAP",
-  "primary": "#008E51",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Rapid Vienna",
-   "SK Rapid Wien"
-  ]
- },
- "galatasaray": {
-  "id": "galatasaray",
-  "name": "Galatasaray",
-  "short": "GAL",
-  "primary": "#A90432",
-  "secondary": "#FBB717",
-  "aliases": [
-   "Galatasaray SK"
-  ]
- },
- "fenerbahce": {
-  "id": "fenerbahce",
-  "name": "Fenerbahce",
-  "short": "FEN",
-  "primary": "#00296B",
-  "secondary": "#FFED00",
-  "aliases": [
-   "Fenerbahce SK",
-   "Fenerbahçe",
-   "Fenerbahçe SK"
-  ]
- },
- "besiktas": {
-  "id": "besiktas",
-  "name": "Besiktas",
-  "short": "BJK",
-  "primary": "#000000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Besiktas JK",
-   "Beşiktaş"
-  ]
- },
- "trabzonspor": {
-  "id": "trabzonspor",
-  "name": "Trabzonspor",
-  "short": "TRA",
-  "primary": "#7B1420",
-  "secondary": "#63C4E8",
-  "aliases": []
- },
- "olympiakos": {
-  "id": "olympiakos",
-  "name": "Olympiakos",
-  "short": "OLY",
-  "primary": "#D50000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Olympiacos",
-   "Olympiakos Piraeus",
-   "Olympiakos Pireus",
-   "PAE Olympiakos SFP"
-  ]
- },
- "panathinaikos": {
-  "id": "panathinaikos",
-  "name": "Panathinaikos",
-  "short": "PAN",
-  "primary": "#007A3D",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Panathinaikos FC"
-  ]
- },
- "paok": {
-  "id": "paok",
-  "name": "PAOK",
-  "short": "PAK",
-  "primary": "#000000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "PAOK FC",
-   "PAOK Saloniki",
-   "PAOK Thessaloniki"
-  ]
- },
- "aek-athens": {
-  "id": "aek-athens",
-  "name": "AEK Athens",
-  "short": "AEK",
-  "primary": "#FFCC00",
-  "secondary": "#000000",
-  "aliases": [
-   "AEK Athen",
-   "AEK Athens FC",
-   "AEK Athina"
-  ]
- },
- "slavia-praha": {
-  "id": "slavia-praha",
-  "name": "Slavia Praha",
-  "short": "SLA",
-  "primary": "#D01317",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "SK Slavia Praha",
-   "Slavia Prag",
-   "Slavia Prague"
-  ]
- },
- "sparta-praha": {
-  "id": "sparta-praha",
-  "name": "Sparta Praha",
-  "short": "SPP",
-  "primary": "#8B1A1A",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "AC Sparta Praha",
-   "Sparta Prag",
-   "Sparta Prague"
-  ]
- },
- "viktoria-plzen": {
-  "id": "viktoria-plzen",
-  "name": "Viktoria Plzen",
-  "short": "PLZ",
-  "primary": "#D0021B",
-  "secondary": "#0B3C8C",
-  "aliases": [
-   "FC Viktoria Plzen",
-   "Viktoria Pilsen",
-   "Viktoria Plzeň"
-  ]
- },
- "slovan-bratislava": {
-  "id": "slovan-bratislava",
-  "name": "Slovan Bratislava",
-  "short": "SLB",
-  "primary": "#003DA5",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "SK Slovan Bratislava",
-   "ŠK Slovan Bratislava"
-  ]
- },
- "young-boys": {
-  "id": "young-boys",
-  "name": "Young Boys",
-  "short": "YBB",
-  "primary": "#FFED00",
-  "secondary": "#000000",
-  "aliases": [
-   "BSC Young Boys",
-   "Young Boys Bern"
-  ]
- },
- "basel": {
-  "id": "basel",
-  "name": "Basel",
-  "short": "BAS",
-  "primary": "#D2001F",
-  "secondary": "#0B2A6B",
-  "aliases": [
-   "Basel 1893",
-   "FC Basel",
-   "FC Basel 1893"
-  ]
- },
- "servette": {
-  "id": "servette",
-  "name": "Servette",
-  "short": "SRV",
-  "primary": "#8B1A1A",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Servette FC"
-  ]
- },
- "lugano": {
-  "id": "lugano",
-  "name": "Lugano",
-  "short": "LUG",
-  "primary": "#000000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "FC Lugano"
-  ]
- },
- "shakhtar-donetsk": {
-  "id": "shakhtar-donetsk",
-  "name": "Shakhtar Donetsk",
-  "short": "SHA",
-  "primary": "#F47B20",
-  "secondary": "#000000",
-  "aliases": [
-   "FK Shakhtar Donetsk",
-   "Shakhtar Donezk"
-  ]
- },
- "dynamo-kyiv": {
-  "id": "dynamo-kyiv",
-  "name": "Dynamo Kyiv",
-  "short": "DYK",
-  "primary": "#0057B8",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Dinamo Kiev",
-   "Dynamo Kiev",
-   "Dynamo Kyjiw",
-   "FC Dynamo Kyiv"
-  ]
- },
- "crvena-zvezda": {
-  "id": "crvena-zvezda",
-  "name": "Crvena Zvezda",
-  "short": "CRZ",
-  "primary": "#D8232A",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "FK Crvena Zvezda",
-   "Red Star Belgrade",
-   "Roter Stern Belgrad"
-  ]
- },
- "partizan": {
-  "id": "partizan",
-  "name": "Partizan",
-  "short": "PTZ",
-  "primary": "#000000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "FK Partizan",
-   "Partizan Belgrade"
-  ]
- },
- "dinamo-zagreb": {
-  "id": "dinamo-zagreb",
-  "name": "Dinamo Zagreb",
-  "short": "DZG",
-  "primary": "#0057B8",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "GNK Dinamo Zagreb",
-   "NK Dinamo Zagreb"
-  ]
- },
- "hajduk-split": {
-  "id": "hajduk-split",
-  "name": "Hajduk Split",
-  "short": "HAJ",
-  "primary": "#0057B8",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "HNK Hajduk Split"
-  ]
- },
- "rijeka": {
-  "id": "rijeka",
-  "name": "Rijeka",
-  "short": "RIJ",
-  "primary": "#0B2A6B",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "HNK Rijeka",
-   "NK Rijeka"
-  ]
- },
- "celje": {
-  "id": "celje",
-  "name": "Celje",
-  "short": "CEJ",
-  "primary": "#F5C400",
-  "secondary": "#003DA5",
-  "aliases": [
-   "NK Celje"
-  ]
- },
- "olimpija-ljubljana": {
-  "id": "olimpija-ljubljana",
-  "name": "Olimpija Ljubljana",
-  "short": "OLL",
-  "primary": "#00A651",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "NK Olimpija Ljubljana"
-  ]
- },
- "borac-banja-luka": {
-  "id": "borac-banja-luka",
-  "name": "Borac Banja Luka",
-  "short": "BBL",
-  "primary": "#D0021B",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "FK Borac Banja Luka"
-  ]
- },
- "ferencvaros": {
-  "id": "ferencvaros",
-  "name": "Ferencvaros",
-  "short": "FTC",
-  "primary": "#008751",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Ferencvaros TC",
-   "Ferencvarosi TC Budapest",
-   "Ferencvárosi TC"
-  ]
- },
- "legia-warszawa": {
-  "id": "legia-warszawa",
-  "name": "Legia Warszawa",
-  "short": "LEG",
-  "primary": "#004A32",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Legia Warsaw"
-  ]
- },
- "lech-poznan": {
-  "id": "lech-poznan",
-  "name": "Lech Poznan",
-  "short": "LEC",
-  "primary": "#0057B8",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "KKS Lech Poznan",
-   "Lech Poznań"
-  ]
- },
- "fcsb": {
-  "id": "fcsb",
-  "name": "FCSB",
-  "short": "FCS",
-  "primary": "#D0021B",
-  "secondary": "#0B2A6B",
-  "aliases": [
-   "FC Steaua Bucuresti",
-   "Steaua Bucuresti"
-  ]
- },
- "cluj": {
-  "id": "cluj",
-  "name": "CFR Cluj",
-  "short": "CFR",
-  "primary": "#8B1A1A",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "CFR 1907 Cluj"
-  ]
- },
- "ludogorets": {
-  "id": "ludogorets",
-  "name": "Ludogorets Razgrad",
-  "short": "LUD",
-  "primary": "#00713C",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Ludogorets",
-   "PFC Ludogorets Razgrad"
-  ]
- },
- "levski-sofia": {
-  "id": "levski-sofia",
-  "name": "Levski Sofia",
-  "short": "LEV",
-  "primary": "#0057B8",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "PFC Levski Sofia"
-  ]
- },
- "bodo-glimt": {
-  "id": "bodo-glimt",
-  "name": "Bodo/Glimt",
-  "short": "BOD",
-  "primary": "#FFD400",
-  "secondary": "#000000",
-  "aliases": [
-   "Bodo/Glimt",
-   "Bodø/Glimt",
-   "FK Bodo/Glimt",
-   "FK Bodø/Glimt"
-  ]
- },
- "molde": {
-  "id": "molde",
-  "name": "Molde",
-  "short": "MOL",
-  "primary": "#0057B8",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Molde FK"
-  ]
- },
- "brann": {
-  "id": "brann",
-  "name": "Brann",
-  "short": "BRN",
-  "primary": "#D0021B",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Brann Bergen",
-   "SK Brann"
-  ]
- },
- "rosenborg": {
-  "id": "rosenborg",
-  "name": "Rosenborg",
-  "short": "ROS",
-  "primary": "#FFFFFF",
-  "secondary": "#000000",
-  "aliases": [
-   "Rosenborg BK",
-   "Rosenborg Trondheim"
-  ]
- },
- "malmo": {
-  "id": "malmo",
-  "name": "Malmo FF",
-  "short": "MFF",
-  "primary": "#54B3E4",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Malmoe FF",
-   "Malmö FF"
-  ]
- },
- "djurgarden": {
-  "id": "djurgarden",
-  "name": "Djurgarden",
-  "short": "DJU",
-  "primary": "#003DA5",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Djurgardens IF",
-   "Djurgårdens IF"
-  ]
- },
- "kobenhavn": {
-  "id": "kobenhavn",
-  "name": "FC Kobenhavn",
-  "short": "FCK",
-  "primary": "#122E5A",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Copenhagen",
-   "FC Copenhagen",
-   "FC Kopenhagen",
-   "FC København"
-  ]
- },
- "midtjylland": {
-  "id": "midtjylland",
-  "name": "Midtjylland",
-  "short": "MID",
-  "primary": "#000000",
-  "secondary": "#D0021B",
-  "aliases": [
-   "FC Midtjylland"
-  ]
- },
- "shamrock-rovers": {
-  "id": "shamrock-rovers",
-  "name": "Shamrock Rovers",
-  "short": "SHR",
-  "primary": "#008751",
-  "secondary": "#FFFFFF",
-  "aliases": []
- },
- "qarabag": {
-  "id": "qarabag",
-  "name": "Qarabag",
-  "short": "QAR",
-  "primary": "#000000",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Qarabag Agdam FK",
-   "Qarabag FK",
-   "Qarabağ Ağdam FK",
-   "Qarabağ FK"
-  ]
- },
- "sabah": {
-  "id": "sabah",
-  "name": "Sabah",
-  "short": "SAB",
-  "primary": "#0057B8",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Sabah Baku",
-   "Sabah FK"
-  ]
- },
- "kairat": {
-  "id": "kairat",
-  "name": "Kairat Almaty",
-  "short": "KAI",
-  "primary": "#FFD400",
-  "secondary": "#000000",
-  "aliases": [
-   "FK Kairat",
-   "Kairat"
-  ]
- },
- "paphos": {
-  "id": "paphos",
-  "name": "Paphos",
-  "short": "PAF",
-  "primary": "#0057B8",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Pafos",
-   "Pafos FC",
-   "Paphos FC"
-  ]
- },
- "apoel": {
-  "id": "apoel",
-  "name": "APOEL",
-  "short": "APO",
-  "primary": "#F5C400",
-  "secondary": "#003DA5",
-  "aliases": [
-   "APOEL Nicosia",
-   "APOEL Nikosia"
-  ]
- },
- "omonia": {
-  "id": "omonia",
-  "name": "Omonia Nicosia",
-  "short": "OMO",
-  "primary": "#00A651",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "AC Omonia",
-   "Omonia Nicosia",
-   "Omonia Nikosia"
-  ]
- },
- "maccabi-tel-aviv": {
-  "id": "maccabi-tel-aviv",
-  "name": "Maccabi Tel Aviv",
-  "short": "MTA",
-  "primary": "#FFD400",
-  "secondary": "#003DA5",
-  "aliases": [
-   "Maccabi Tel Aviv FC"
-  ]
- },
- "hapoel-beer-sheva": {
-  "id": "hapoel-beer-sheva",
-  "name": "Hapoel Be'er Sheva",
-  "short": "HBS",
-  "primary": "#D0021B",
-  "secondary": "#FFFFFF",
-  "aliases": [
-   "Hapoel Be'er Sheva FC",
-   "Hapoel Beer Sheva"
   ]
  },
  "academico-de-viseu": {
@@ -3081,6 +32,74 @@
    "Den Haag"
   ]
  },
+ "aek-athens": {
+  "id": "aek-athens",
+  "name": "AEK Athens",
+  "short": "AEK",
+  "primary": "#FFCC00",
+  "secondary": "#000000",
+  "aliases": [
+   "AEK Athen",
+   "AEK Athens FC",
+   "AEK Athina"
+  ]
+ },
+ "ajaccio": {
+  "id": "ajaccio",
+  "name": "AC Ajaccio",
+  "short": "AJA",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Ajaccio"
+  ]
+ },
+ "ajax": {
+  "id": "ajax",
+  "name": "Ajax",
+  "short": "AJA",
+  "primary": "#D2122E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "AFC Ajax",
+   "Ajax Amsterdam"
+  ]
+ },
+ "alaves": {
+  "id": "alaves",
+  "name": "Deportivo Alaves",
+  "short": "ALA",
+  "primary": "#0761AF",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Alaves",
+   "Deportivo Alavés",
+   "CD Alavés",
+   "Alavés"
+  ]
+ },
+ "albacete": {
+  "id": "albacete",
+  "name": "Albacete Balompie",
+  "short": "ALB",
+  "primary": "#1C4E9D",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Albacete"
+  ]
+ },
+ "almeria": {
+  "id": "almeria",
+  "name": "UD Almeria",
+  "short": "ALM",
+  "primary": "#E4032E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Almeria",
+   "UD Almería",
+   "Almería"
+  ]
+ },
  "alverca": {
   "id": "alverca",
   "name": "FC Alverca",
@@ -3090,6 +109,66 @@
   "aliases": [
    "FC Alverca",
    "Alverca"
+  ]
+ },
+ "amiens": {
+  "id": "amiens",
+  "name": "Amiens SC",
+  "short": "AMI",
+  "primary": "#009639",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Amiens"
+  ]
+ },
+ "ancona": {
+  "id": "ancona",
+  "name": "Ancona",
+  "short": "ANC",
+  "primary": "#E4032E",
+  "secondary": "#FFFFFF",
+  "aliases": []
+ },
+ "anderlecht": {
+  "id": "anderlecht",
+  "name": "Anderlecht",
+  "short": "AND",
+  "primary": "#3C2C6E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "RSC Anderlecht"
+  ]
+ },
+ "angers": {
+  "id": "angers",
+  "name": "Angers SCO",
+  "short": "ANG",
+  "primary": "#1D1D1B",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Angers"
+  ]
+ },
+ "apoel": {
+  "id": "apoel",
+  "name": "APOEL",
+  "short": "APO",
+  "primary": "#F5C400",
+  "secondary": "#003DA5",
+  "aliases": [
+   "APOEL Nicosia",
+   "APOEL Nikosia"
+  ]
+ },
+ "arles": {
+  "id": "arles",
+  "name": "AC Arles-Avignon",
+  "short": "ARL",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Arles",
+   "Arles-Avignon"
   ]
  },
  "arouca": {
@@ -3103,6 +182,410 @@
    "Arouca"
   ]
  },
+ "arsenal": {
+  "id": "arsenal",
+  "name": "Arsenal",
+  "short": "ARS",
+  "primary": "#EF0107",
+  "secondary": "#DB0007",
+  "aliases": []
+ },
+ "ascoli": {
+  "id": "ascoli",
+  "name": "Ascoli",
+  "short": "ASC",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Ascoli Calcio",
+   "Ascoli Picchio FC"
+  ]
+ },
+ "aston-villa": {
+  "id": "aston-villa",
+  "name": "Aston Villa",
+  "short": "AVL",
+  "primary": "#95BFE5",
+  "secondary": "#670E36",
+  "aliases": []
+ },
+ "atalanta": {
+  "id": "atalanta",
+  "name": "Atalanta",
+  "short": "ATA",
+  "primary": "#1E71B8",
+  "secondary": "#000000",
+  "aliases": [
+   "Atalanta BC"
+  ]
+ },
+ "athletic-bilbao": {
+  "id": "athletic-bilbao",
+  "name": "Athletic Club",
+  "short": "ATH",
+  "primary": "#EE2523",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Ath Bilbao",
+   "Athletic Bilbao",
+   "Athletic Club Bilbao"
+  ]
+ },
+ "atletico-madrid": {
+  "id": "atletico-madrid",
+  "name": "Atletico Madrid",
+  "short": "ATM",
+  "primary": "#CB3524",
+  "secondary": "#1C2D5A",
+  "aliases": [
+   "Ath Madrid",
+   "Club Atlético de Madrid",
+   "Atlético de Madrid",
+   "Atlético Madrid",
+   "Atletico de Madrid"
+  ]
+ },
+ "augsburg": {
+  "id": "augsburg",
+  "name": "FC Augsburg",
+  "short": "FCA",
+  "primary": "#BA3733",
+  "secondary": "#46714D",
+  "aliases": [
+   "Augsburg"
+  ]
+ },
+ "auxerre": {
+  "id": "auxerre",
+  "name": "AJ Auxerre",
+  "short": "AUX",
+  "primary": "#0055A4",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Auxerre"
+  ]
+ },
+ "az-alkmaar": {
+  "id": "az-alkmaar",
+  "name": "AZ Alkmaar",
+  "short": "AZA",
+  "primary": "#E4022D",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "AZ",
+   "AZ 67 Alkmaar"
+  ]
+ },
+ "barcelona": {
+  "id": "barcelona",
+  "name": "FC Barcelona",
+  "short": "BAR",
+  "primary": "#A50044",
+  "secondary": "#004D98",
+  "aliases": [
+   "Barcelona"
+  ]
+ },
+ "bari": {
+  "id": "bari",
+  "name": "Bari",
+  "short": "BRI",
+  "primary": "#E4032E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "AS Bari",
+   "SSC Bari",
+   "FC Bari 1908"
+  ]
+ },
+ "basel": {
+  "id": "basel",
+  "name": "Basel",
+  "short": "BAS",
+  "primary": "#D2001F",
+  "secondary": "#0B2A6B",
+  "aliases": [
+   "Basel 1893",
+   "FC Basel",
+   "FC Basel 1893"
+  ]
+ },
+ "bastia": {
+  "id": "bastia",
+  "name": "SC Bastia",
+  "short": "BAS",
+  "primary": "#009639",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Bastia"
+  ]
+ },
+ "bayern": {
+  "id": "bayern",
+  "name": "Bayern Munich",
+  "short": "FCB",
+  "primary": "#DC052D",
+  "secondary": "#0066B2",
+  "aliases": [
+   "Bayern Munich",
+   "FC Bayern München",
+   "Bayern München",
+   "Bayern Munchen",
+   "FC Bayern Munich",
+   "Bayern"
+  ]
+ },
+ "benevento": {
+  "id": "benevento",
+  "name": "Benevento",
+  "short": "BEN",
+  "primary": "#F5C518",
+  "secondary": "#E4032E",
+  "aliases": [
+   "Benevento Calcio"
+  ]
+ },
+ "benfica": {
+  "id": "benfica",
+  "name": "Benfica",
+  "short": "BEN",
+  "primary": "#E31B23",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Benfica Lisbon",
+   "SL Benfica",
+   "Sport Lisboa e Benfica"
+  ]
+ },
+ "besiktas": {
+  "id": "besiktas",
+  "name": "Besiktas",
+  "short": "BJK",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Besiktas JK",
+   "Beşiktaş"
+  ]
+ },
+ "betis": {
+  "id": "betis",
+  "name": "Real Betis",
+  "short": "BET",
+  "primary": "#00954C",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Betis",
+   "Real Betis Balompié"
+  ]
+ },
+ "bielefeld": {
+  "id": "bielefeld",
+  "name": "Arminia Bielefeld",
+  "short": "DSC",
+  "primary": "#00518F",
+  "secondary": "#000000",
+  "aliases": [
+   "Bielefeld"
+  ]
+ },
+ "birmingham": {
+  "id": "birmingham",
+  "name": "Birmingham City",
+  "short": "BIR",
+  "primary": "#0000FF",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "birmingham city"
+  ]
+ },
+ "blackburn": {
+  "id": "blackburn",
+  "name": "Blackburn Rovers",
+  "short": "BLB",
+  "primary": "#009EE0",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "blackburn rovers"
+  ]
+ },
+ "blackpool": {
+  "id": "blackpool",
+  "name": "Blackpool",
+  "short": "BLP",
+  "primary": "#F68B1F",
+  "secondary": "#FFFFFF",
+  "aliases": []
+ },
+ "bochum": {
+  "id": "bochum",
+  "name": "VfL Bochum",
+  "short": "BOC",
+  "primary": "#005CA9",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Bochum"
+  ]
+ },
+ "bodo-glimt": {
+  "id": "bodo-glimt",
+  "name": "Bodo/Glimt",
+  "short": "BOD",
+  "primary": "#FFD400",
+  "secondary": "#000000",
+  "aliases": [
+   "Bodo/Glimt",
+   "Bodø/Glimt",
+   "FK Bodo/Glimt",
+   "FK Bodø/Glimt"
+  ]
+ },
+ "bologna": {
+  "id": "bologna",
+  "name": "Bologna",
+  "short": "BOL",
+  "primary": "#A21C22",
+  "secondary": "#1A2F4B",
+  "aliases": [
+   "Bologna FC 1909",
+   "Bologna FC"
+  ]
+ },
+ "bolton": {
+  "id": "bolton",
+  "name": "Bolton Wanderers",
+  "short": "BOL",
+  "primary": "#263C7E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "bolton wanderers"
+  ]
+ },
+ "borac-banja-luka": {
+  "id": "borac-banja-luka",
+  "name": "Borac Banja Luka",
+  "short": "BBL",
+  "primary": "#D0021B",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FK Borac Banja Luka"
+  ]
+ },
+ "bordeaux": {
+  "id": "bordeaux",
+  "name": "Girondins Bordeaux",
+  "short": "BOR",
+  "primary": "#003A70",
+  "secondary": "#E30613",
+  "aliases": [
+   "Bordeaux",
+   "Girondins de Bordeaux"
+  ]
+ },
+ "boulogne": {
+  "id": "boulogne",
+  "name": "US Boulogne",
+  "short": "BLG",
+  "primary": "#E30613",
+  "secondary": "#000000",
+  "aliases": [
+   "Boulogne"
+  ]
+ },
+ "bournemouth": {
+  "id": "bournemouth",
+  "name": "Bournemouth",
+  "short": "BOU",
+  "primary": "#DA291C",
+  "secondary": "#000000",
+  "aliases": [
+   "afc bournemouth"
+  ]
+ },
+ "bradford": {
+  "id": "bradford",
+  "name": "Bradford City",
+  "short": "BRA",
+  "primary": "#8B0000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "bradford",
+   "bradford city"
+  ]
+ },
+ "braga": {
+  "id": "braga",
+  "name": "Braga",
+  "short": "BRG",
+  "primary": "#B4131E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "SC Braga",
+   "Sporting Braga",
+   "Sporting Clube de Braga"
+  ]
+ },
+ "brann": {
+  "id": "brann",
+  "name": "Brann",
+  "short": "BRN",
+  "primary": "#D0021B",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Brann Bergen",
+   "SK Brann"
+  ]
+ },
+ "braunschweig": {
+  "id": "braunschweig",
+  "name": "Eintracht Braunschweig",
+  "short": "EBS",
+  "primary": "#FFE500",
+  "secondary": "#005CA9",
+  "aliases": [
+   "Braunschweig"
+  ]
+ },
+ "brentford": {
+  "id": "brentford",
+  "name": "Brentford",
+  "short": "BRE",
+  "primary": "#E30613",
+  "secondary": "#FBB800",
+  "aliases": []
+ },
+ "brescia": {
+  "id": "brescia",
+  "name": "Brescia",
+  "short": "BRC",
+  "primary": "#005BAA",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Brescia Calcio"
+  ]
+ },
+ "brest": {
+  "id": "brest",
+  "name": "Stade Brestois",
+  "short": "BRE",
+  "primary": "#E4022A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Brest",
+   "Stade Brestois 29"
+  ]
+ },
+ "brighton": {
+  "id": "brighton",
+  "name": "Brighton & Hove Albion",
+  "short": "BHA",
+  "primary": "#0057B8",
+  "secondary": "#FFCD00",
+  "aliases": [
+   "brighton and hove albion",
+   "brighton hove albion"
+  ]
+ },
  "bristol-city": {
   "id": "bristol-city",
   "name": "Bristol City",
@@ -3114,6 +597,66 @@
    "Bristol City"
   ]
  },
+ "burnley": {
+  "id": "burnley",
+  "name": "Burnley",
+  "short": "BUR",
+  "primary": "#6C1D45",
+  "secondary": "#99D6EA",
+  "aliases": []
+ },
+ "cadiz": {
+  "id": "cadiz",
+  "name": "Cadiz CF",
+  "short": "CAD",
+  "primary": "#FFE500",
+  "secondary": "#004B9B",
+  "aliases": [
+   "Cadiz",
+   "Cádiz CF",
+   "Cádiz"
+  ]
+ },
+ "caen": {
+  "id": "caen",
+  "name": "SM Caen",
+  "short": "CAE",
+  "primary": "#E30613",
+  "secondary": "#003A70",
+  "aliases": [
+   "Caen"
+  ]
+ },
+ "cagliari": {
+  "id": "cagliari",
+  "name": "Cagliari",
+  "short": "CAG",
+  "primary": "#B01B2E",
+  "secondary": "#0C2340",
+  "aliases": [
+   "Cagliari Calcio"
+  ]
+ },
+ "cardiff": {
+  "id": "cardiff",
+  "name": "Cardiff City",
+  "short": "CAR",
+  "primary": "#0070B5",
+  "secondary": "#D11524",
+  "aliases": [
+   "cardiff city"
+  ]
+ },
+ "carpi": {
+  "id": "carpi",
+  "name": "Carpi",
+  "short": "CRP",
+  "primary": "#E4032E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Carpi FC"
+  ]
+ },
  "casa-pia-ac": {
   "id": "casa-pia-ac",
   "name": "Casa Pia",
@@ -3123,6 +666,16 @@
   "aliases": [
    "Casa Pia AC",
    "Casa Pia"
+  ]
+ },
+ "catania": {
+  "id": "catania",
+  "name": "Catania",
+  "short": "CAT",
+  "primary": "#E4032E",
+  "secondary": "#005BAA",
+  "aliases": [
+   "Calcio Catania"
   ]
  },
  "cd-nacional": {
@@ -3148,6 +701,62 @@
    "Santa Clara"
   ]
  },
+ "celje": {
+  "id": "celje",
+  "name": "Celje",
+  "short": "CEJ",
+  "primary": "#F5C400",
+  "secondary": "#003DA5",
+  "aliases": [
+   "NK Celje"
+  ]
+ },
+ "celta": {
+  "id": "celta",
+  "name": "Celta Vigo",
+  "short": "CEL",
+  "primary": "#8AC3EE",
+  "secondary": "#E5254E",
+  "aliases": [
+   "Celta",
+   "RC Celta de Vigo",
+   "Celta de Vigo",
+   "RC Celta"
+  ]
+ },
+ "celtic": {
+  "id": "celtic",
+  "name": "Celtic",
+  "short": "CEL",
+  "primary": "#016A3A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Celtic FC",
+   "Celtic Glasgow"
+  ]
+ },
+ "cercle-brugge": {
+  "id": "cercle-brugge",
+  "name": "Cercle Brugge",
+  "short": "CER",
+  "primary": "#00A64F",
+  "secondary": "#000000",
+  "aliases": [
+   "Cercle Brugge",
+   "Cercle Brugge KSV"
+  ]
+ },
+ "cesena": {
+  "id": "cesena",
+  "name": "Cesena",
+  "short": "CES",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "AC Cesena",
+   "Cesena FC"
+  ]
+ },
  "cf-estrela-da-amadora": {
   "id": "cf-estrela-da-amadora",
   "name": "Estrela da Amadora",
@@ -3160,6 +769,149 @@
    "Estrela Amadora"
   ]
  },
+ "charlton": {
+  "id": "charlton",
+  "name": "Charlton Athletic",
+  "short": "CHA",
+  "primary": "#D4021D",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "charlton athletic"
+  ]
+ },
+ "chelsea": {
+  "id": "chelsea",
+  "name": "Chelsea",
+  "short": "CHE",
+  "primary": "#034694",
+  "secondary": "#DBA111",
+  "aliases": []
+ },
+ "chievo": {
+  "id": "chievo",
+  "name": "Chievo Verona",
+  "short": "CHV",
+  "primary": "#FFE500",
+  "secondary": "#005BAA",
+  "aliases": [
+   "Chievo"
+  ]
+ },
+ "clermont": {
+  "id": "clermont",
+  "name": "Clermont Foot",
+  "short": "CLE",
+  "primary": "#E30613",
+  "secondary": "#003A70",
+  "aliases": [
+   "Clermont",
+   "Clermont Foot 63"
+  ]
+ },
+ "club-brugge": {
+  "id": "club-brugge",
+  "name": "Club Brugge",
+  "short": "CLB",
+  "primary": "#0A50A1",
+  "secondary": "#000000",
+  "aliases": [
+   "Club Bruges",
+   "Club Brugge KV",
+   "FC Bruegge"
+  ]
+ },
+ "cluj": {
+  "id": "cluj",
+  "name": "CFR Cluj",
+  "short": "CFR",
+  "primary": "#8B1A1A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "CFR 1907 Cluj"
+  ]
+ },
+ "como": {
+  "id": "como",
+  "name": "Como",
+  "short": "COM",
+  "primary": "#005BAC",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Como 1907",
+   "Como Calcio"
+  ]
+ },
+ "cordoba": {
+  "id": "cordoba",
+  "name": "Cordoba CF",
+  "short": "COR",
+  "primary": "#007A33",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Cordoba",
+   "Córdoba CF"
+  ]
+ },
+ "cottbus": {
+  "id": "cottbus",
+  "name": "Energie Cottbus",
+  "short": "FCE",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Cottbus"
+  ]
+ },
+ "coventry": {
+  "id": "coventry",
+  "name": "Coventry City",
+  "short": "COV",
+  "primary": "#59B4E4",
+  "secondary": "#003057",
+  "aliases": [
+   "coventry city"
+  ]
+ },
+ "cremonese": {
+  "id": "cremonese",
+  "name": "Cremonese",
+  "short": "CRE",
+  "primary": "#E4032E",
+  "secondary": "#808080",
+  "aliases": [
+   "US Cremonese"
+  ]
+ },
+ "crotone": {
+  "id": "crotone",
+  "name": "Crotone",
+  "short": "CRO",
+  "primary": "#E4032E",
+  "secondary": "#005BAA",
+  "aliases": [
+   "FC Crotone"
+  ]
+ },
+ "crvena-zvezda": {
+  "id": "crvena-zvezda",
+  "name": "Crvena Zvezda",
+  "short": "CRZ",
+  "primary": "#D8232A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FK Crvena Zvezda",
+   "Red Star Belgrade",
+   "Roter Stern Belgrad"
+  ]
+ },
+ "crystal-palace": {
+  "id": "crystal-palace",
+  "name": "Crystal Palace",
+  "short": "CRY",
+  "primary": "#1B458F",
+  "secondary": "#C4122E",
+  "aliases": []
+ },
  "cs-maritimo": {
   "id": "cs-maritimo",
   "name": "Marítimo",
@@ -3170,6 +922,187 @@
    "CS Marítimo",
    "Maritimo",
    "Marítimo"
+  ]
+ },
+ "darmstadt": {
+  "id": "darmstadt",
+  "name": "SV Darmstadt 98",
+  "short": "D98",
+  "primary": "#004E9E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Darmstadt"
+  ]
+ },
+ "deportivo": {
+  "id": "deportivo",
+  "name": "Deportivo La Coruna",
+  "short": "DEP",
+  "primary": "#0055A5",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "La Coruna",
+   "Deportivo La Coruña",
+   "RC Deportivo La Coruña",
+   "Deportivo"
+  ]
+ },
+ "derby": {
+  "id": "derby",
+  "name": "Derby County",
+  "short": "DER",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "derby county"
+  ]
+ },
+ "dijon": {
+  "id": "dijon",
+  "name": "Dijon FCO",
+  "short": "DIJ",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Dijon"
+  ]
+ },
+ "dinamo-zagreb": {
+  "id": "dinamo-zagreb",
+  "name": "Dinamo Zagreb",
+  "short": "DZG",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "GNK Dinamo Zagreb",
+   "NK Dinamo Zagreb"
+  ]
+ },
+ "djurgarden": {
+  "id": "djurgarden",
+  "name": "Djurgarden",
+  "short": "DJU",
+  "primary": "#003DA5",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Djurgardens IF",
+   "Djurgårdens IF"
+  ]
+ },
+ "dortmund": {
+  "id": "dortmund",
+  "name": "Borussia Dortmund",
+  "short": "BVB",
+  "primary": "#FDE100",
+  "secondary": "#000000",
+  "aliases": [
+   "Dortmund"
+  ]
+ },
+ "duisburg": {
+  "id": "duisburg",
+  "name": "MSV Duisburg",
+  "short": "MSV",
+  "primary": "#005CA9",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Duisburg"
+  ]
+ },
+ "dynamo-kyiv": {
+  "id": "dynamo-kyiv",
+  "name": "Dynamo Kyiv",
+  "short": "DYK",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Dinamo Kiev",
+   "Dynamo Kiev",
+   "Dynamo Kyjiw",
+   "FC Dynamo Kyiv"
+  ]
+ },
+ "eibar": {
+  "id": "eibar",
+  "name": "SD Eibar",
+  "short": "EIB",
+  "primary": "#004B9B",
+  "secondary": "#E4032E",
+  "aliases": [
+   "Eibar"
+  ]
+ },
+ "eintracht-frankfurt": {
+  "id": "eintracht-frankfurt",
+  "name": "Eintracht Frankfurt",
+  "short": "SGE",
+  "primary": "#E1000F",
+  "secondary": "#000000",
+  "aliases": [
+   "Ein Frankfurt"
+  ]
+ },
+ "elche": {
+  "id": "elche",
+  "name": "Elche CF",
+  "short": "ELC",
+  "primary": "#00913F",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Elche",
+   "Elche CF"
+  ]
+ },
+ "elversberg": {
+  "id": "elversberg",
+  "name": "SV Elversberg",
+  "short": "SVE",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "SV 07 Elversberg",
+   "Elversberg"
+  ]
+ },
+ "empoli": {
+  "id": "empoli",
+  "name": "Empoli",
+  "short": "EMP",
+  "primary": "#005BAA",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Empoli FC"
+  ]
+ },
+ "espanyol": {
+  "id": "espanyol",
+  "name": "RCD Espanyol",
+  "short": "ESP",
+  "primary": "#007FC8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Espanol",
+   "RCD Espanyol de Barcelona",
+   "Espanyol Barcelona",
+   "Espanyol"
+  ]
+ },
+ "everton": {
+  "id": "everton",
+  "name": "Everton",
+  "short": "EVE",
+  "primary": "#003399",
+  "secondary": "#FFFFFF",
+  "aliases": []
+ },
+ "evian": {
+  "id": "evian",
+  "name": "Evian Thonon Gaillard",
+  "short": "ETG",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Évian Thonon Gaillard"
   ]
  },
  "famalicao": {
@@ -3184,6 +1117,71 @@
    "Famalicão"
   ]
  },
+ "fcsb": {
+  "id": "fcsb",
+  "name": "FCSB",
+  "short": "FCS",
+  "primary": "#D0021B",
+  "secondary": "#0B2A6B",
+  "aliases": [
+   "FC Steaua Bucuresti",
+   "Steaua Bucuresti"
+  ]
+ },
+ "fenerbahce": {
+  "id": "fenerbahce",
+  "name": "Fenerbahce",
+  "short": "FEN",
+  "primary": "#00296B",
+  "secondary": "#FFED00",
+  "aliases": [
+   "Fenerbahce SK",
+   "Fenerbahçe",
+   "Fenerbahçe SK"
+  ]
+ },
+ "ferencvaros": {
+  "id": "ferencvaros",
+  "name": "Ferencvaros",
+  "short": "FTC",
+  "primary": "#008751",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Ferencvaros TC",
+   "Ferencvarosi TC Budapest",
+   "Ferencvárosi TC"
+  ]
+ },
+ "feyenoord": {
+  "id": "feyenoord",
+  "name": "Feyenoord",
+  "short": "FEY",
+  "primary": "#DA020E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Feyenoord Rotterdam"
+  ]
+ },
+ "fiorentina": {
+  "id": "fiorentina",
+  "name": "Fiorentina",
+  "short": "FIO",
+  "primary": "#592C82",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "ACF Fiorentina"
+  ]
+ },
+ "fortuna-dusseldorf": {
+  "id": "fortuna-dusseldorf",
+  "name": "Fortuna Dusseldorf",
+  "short": "F95",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Fortuna Düsseldorf"
+  ]
+ },
  "fortuna-sittard": {
   "id": "fortuna-sittard",
   "name": "Fortuna Sittard",
@@ -3193,6 +1191,44 @@
   "aliases": [
    "Fortuna Sittard",
    "Fortuna"
+  ]
+ },
+ "freiburg": {
+  "id": "freiburg",
+  "name": "SC Freiburg",
+  "short": "SCF",
+  "primary": "#E2001A",
+  "secondary": "#000000",
+  "aliases": [
+   "Freiburg"
+  ]
+ },
+ "frosinone": {
+  "id": "frosinone",
+  "name": "Frosinone",
+  "short": "FRO",
+  "primary": "#F9C300",
+  "secondary": "#005EB8",
+  "aliases": [
+   "Frosinone Calcio"
+  ]
+ },
+ "fulham": {
+  "id": "fulham",
+  "name": "Fulham",
+  "short": "FUL",
+  "primary": "#000000",
+  "secondary": "#CC0000",
+  "aliases": []
+ },
+ "galatasaray": {
+  "id": "galatasaray",
+  "name": "Galatasaray",
+  "short": "GAL",
+  "primary": "#A90432",
+  "secondary": "#FBB717",
+  "aliases": [
+   "Galatasaray SK"
   ]
  },
  "gd-estoril-praia": {
@@ -3207,6 +1243,59 @@
    "Estoril"
   ]
  },
+ "genk": {
+  "id": "genk",
+  "name": "Genk",
+  "short": "GNK",
+  "primary": "#005CA9",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "KRC Genk",
+   "RC Genk"
+  ]
+ },
+ "genoa": {
+  "id": "genoa",
+  "name": "Genoa",
+  "short": "GEN",
+  "primary": "#A21C25",
+  "secondary": "#10284B",
+  "aliases": [
+   "Genoa CFC"
+  ]
+ },
+ "gent": {
+  "id": "gent",
+  "name": "Gent",
+  "short": "GEN",
+  "primary": "#0E4C92",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "AA Gent",
+   "KAA Gent"
+  ]
+ },
+ "getafe": {
+  "id": "getafe",
+  "name": "Getafe CF",
+  "short": "GET",
+  "primary": "#005999",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Getafe"
+  ]
+ },
+ "gfc-ajaccio": {
+  "id": "gfc-ajaccio",
+  "name": "Gazelec Ajaccio",
+  "short": "GFC",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Ajaccio GFCO",
+   "Gazélec FC Ajaccio"
+  ]
+ },
  "gil-vicente": {
   "id": "gil-vicente",
   "name": "Gil Vicente",
@@ -3216,6 +1305,27 @@
   "aliases": [
    "Gil Vicente FC",
    "Gil Vicente"
+  ]
+ },
+ "gimnastic": {
+  "id": "gimnastic",
+  "name": "Gimnastic Tarragona",
+  "short": "GIM",
+  "primary": "#E4032E",
+  "secondary": "#000000",
+  "aliases": [
+   "Gimnastic",
+   "Gimnàstic de Tarragona"
+  ]
+ },
+ "girona": {
+  "id": "girona",
+  "name": "Girona FC",
+  "short": "GIR",
+  "primary": "#D31217",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Girona"
   ]
  },
  "go-ahead-eagles": {
@@ -3229,6 +1339,39 @@
    "Go Ahead"
   ]
  },
+ "granada": {
+  "id": "granada",
+  "name": "Granada CF",
+  "short": "GRA",
+  "primary": "#C4122E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Granada"
+  ]
+ },
+ "grenoble": {
+  "id": "grenoble",
+  "name": "Grenoble Foot",
+  "short": "GRE",
+  "primary": "#003A70",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Grenoble",
+   "Grenoble Foot 38"
+  ]
+ },
+ "greuther-furth": {
+  "id": "greuther-furth",
+  "name": "Greuther Furth",
+  "short": "SGF",
+  "primary": "#009036",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Greuther Furth",
+   "SpVgg Greuther Fürth",
+   "Greuther Fürth"
+  ]
+ },
  "groningen": {
   "id": "groningen",
   "name": "FC Groningen",
@@ -3238,6 +1381,462 @@
   "aliases": [
    "FC Groningen",
    "Groningen"
+  ]
+ },
+ "guingamp": {
+  "id": "guingamp",
+  "name": "EA Guingamp",
+  "short": "GUI",
+  "primary": "#E30613",
+  "secondary": "#000000",
+  "aliases": [
+   "Guingamp"
+  ]
+ },
+ "hajduk-split": {
+  "id": "hajduk-split",
+  "name": "Hajduk Split",
+  "short": "HAJ",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "HNK Hajduk Split"
+  ]
+ },
+ "hamburg": {
+  "id": "hamburg",
+  "name": "Hamburger SV",
+  "short": "HSV",
+  "primary": "#005CA9",
+  "secondary": "#000000",
+  "aliases": [
+   "Hamburg",
+   "HSV"
+  ]
+ },
+ "hannover": {
+  "id": "hannover",
+  "name": "Hannover 96",
+  "short": "H96",
+  "primary": "#009E3D",
+  "secondary": "#000000",
+  "aliases": [
+   "Hannover"
+  ]
+ },
+ "hansa-rostock": {
+  "id": "hansa-rostock",
+  "name": "Hansa Rostock",
+  "short": "HRO",
+  "primary": "#005CA9",
+  "secondary": "#FFFFFF",
+  "aliases": []
+ },
+ "hapoel-beer-sheva": {
+  "id": "hapoel-beer-sheva",
+  "name": "Hapoel Be'er Sheva",
+  "short": "HBS",
+  "primary": "#D0021B",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Hapoel Be'er Sheva FC",
+   "Hapoel Beer Sheva"
+  ]
+ },
+ "heidenheim": {
+  "id": "heidenheim",
+  "name": "1. FC Heidenheim",
+  "short": "FCH",
+  "primary": "#E30613",
+  "secondary": "#005CA9",
+  "aliases": [
+   "Heidenheim",
+   "1. FC Heidenheim 1846"
+  ]
+ },
+ "hercules": {
+  "id": "hercules",
+  "name": "Hercules CF",
+  "short": "HER",
+  "primary": "#005BAA",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Hercules",
+   "Hércules CF"
+  ]
+ },
+ "hertha": {
+  "id": "hertha",
+  "name": "Hertha BSC",
+  "short": "BSC",
+  "primary": "#005CA9",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Hertha"
+  ]
+ },
+ "hoffenheim": {
+  "id": "hoffenheim",
+  "name": "TSG Hoffenheim",
+  "short": "TSG",
+  "primary": "#1C63B7",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "1899 Hoffenheim",
+   "Hoffenheim",
+   "TSG 1899 Hoffenheim"
+  ]
+ },
+ "holstein-kiel": {
+  "id": "holstein-kiel",
+  "name": "Holstein Kiel",
+  "short": "KSV",
+  "primary": "#005CA9",
+  "secondary": "#E30613",
+  "aliases": []
+ },
+ "huddersfield": {
+  "id": "huddersfield",
+  "name": "Huddersfield Town",
+  "short": "HUD",
+  "primary": "#0E63AD",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "huddersfield town"
+  ]
+ },
+ "huesca": {
+  "id": "huesca",
+  "name": "SD Huesca",
+  "short": "HUE",
+  "primary": "#005BAA",
+  "secondary": "#E4032E",
+  "aliases": [
+   "Huesca"
+  ]
+ },
+ "hull": {
+  "id": "hull",
+  "name": "Hull City",
+  "short": "HUL",
+  "primary": "#F5A12D",
+  "secondary": "#000000",
+  "aliases": [
+   "hull city"
+  ]
+ },
+ "ingolstadt": {
+  "id": "ingolstadt",
+  "name": "FC Ingolstadt 04",
+  "short": "FCI",
+  "primary": "#E30613",
+  "secondary": "#000000",
+  "aliases": [
+   "Ingolstadt"
+  ]
+ },
+ "inter": {
+  "id": "inter",
+  "name": "Inter",
+  "short": "INT",
+  "primary": "#0068A8",
+  "secondary": "#000000",
+  "aliases": [
+   "FC Internazionale Milano",
+   "Internazionale",
+   "Inter Milan"
+  ]
+ },
+ "ipswich": {
+  "id": "ipswich",
+  "name": "Ipswich Town",
+  "short": "IPS",
+  "primary": "#3A64A3",
+  "secondary": "#DE2C37",
+  "aliases": [
+   "ipswich town"
+  ]
+ },
+ "istres": {
+  "id": "istres",
+  "name": "FC Istres",
+  "short": "IST",
+  "primary": "#003A70",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Istres"
+  ]
+ },
+ "juventus": {
+  "id": "juventus",
+  "name": "Juventus",
+  "short": "JUV",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Juventus FC"
+  ]
+ },
+ "kairat": {
+  "id": "kairat",
+  "name": "Kairat Almaty",
+  "short": "KAI",
+  "primary": "#FFD400",
+  "secondary": "#000000",
+  "aliases": [
+   "FK Kairat",
+   "Kairat"
+  ]
+ },
+ "kaiserslautern": {
+  "id": "kaiserslautern",
+  "name": "1. FC Kaiserslautern",
+  "short": "FCK",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Kaiserslautern"
+  ]
+ },
+ "karlsruhe": {
+  "id": "karlsruhe",
+  "name": "Karlsruher SC",
+  "short": "KSC",
+  "primary": "#005CA9",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Karlsruhe"
+  ]
+ },
+ "kobenhavn": {
+  "id": "kobenhavn",
+  "name": "FC Kobenhavn",
+  "short": "FCK",
+  "primary": "#122E5A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Copenhagen",
+   "FC Copenhagen",
+   "FC Kopenhagen",
+   "FC København"
+  ]
+ },
+ "koln": {
+  "id": "koln",
+  "name": "1. FC Koln",
+  "short": "KOE",
+  "primary": "#ED1C24",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FC Koln",
+   "1. FC Köln",
+   "FC Köln",
+   "Koln",
+   "Köln"
+  ]
+ },
+ "kv-kortrijk": {
+  "id": "kv-kortrijk",
+  "name": "KV Kortrijk",
+  "short": "KOR",
+  "primary": "#C8102E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "KV Kortrijk",
+   "Kortrijk"
+  ]
+ },
+ "kv-mechelen": {
+  "id": "kv-mechelen",
+  "name": "KV Mechelen",
+  "short": "MEC",
+  "primary": "#FFD100",
+  "secondary": "#C8102E",
+  "aliases": [
+   "KV Mechelen",
+   "Mechelen"
+  ]
+ },
+ "kvc-westerlo": {
+  "id": "kvc-westerlo",
+  "name": "Westerlo",
+  "short": "WES",
+  "primary": "#FFD100",
+  "secondary": "#003DA5",
+  "aliases": [
+   "KVC Westerlo",
+   "Westerlo"
+  ]
+ },
+ "las-palmas": {
+  "id": "las-palmas",
+  "name": "UD Las Palmas",
+  "short": "LPA",
+  "primary": "#FFE500",
+  "secondary": "#004B9B",
+  "aliases": [
+   "Las Palmas",
+   "UD Las Palmas"
+  ]
+ },
+ "lask": {
+  "id": "lask",
+  "name": "LASK",
+  "short": "LSK",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "LASK Linz",
+   "LASK Linz AG"
+  ]
+ },
+ "lazio": {
+  "id": "lazio",
+  "name": "Lazio",
+  "short": "LAZ",
+  "primary": "#87D8F7",
+  "secondary": "#0B2D5B",
+  "aliases": [
+   "Lazio Roma",
+   "SS Lazio",
+   "SS Lazio Roma"
+  ]
+ },
+ "le-havre": {
+  "id": "le-havre",
+  "name": "Le Havre",
+  "short": "HAC",
+  "primary": "#00529F",
+  "secondary": "#7EC0EE",
+  "aliases": [
+   "Le Havre AC",
+   "Havre AC"
+  ]
+ },
+ "le-mans": {
+  "id": "le-mans",
+  "name": "Le Mans",
+  "short": "LMS",
+  "primary": "#E30613",
+  "secondary": "#FFE500",
+  "aliases": [
+   "Le Mans FC"
+  ]
+ },
+ "lecce": {
+  "id": "lecce",
+  "name": "Lecce",
+  "short": "LEC",
+  "primary": "#F7D417",
+  "secondary": "#E4002B",
+  "aliases": [
+   "US Lecce"
+  ]
+ },
+ "lech-poznan": {
+  "id": "lech-poznan",
+  "name": "Lech Poznan",
+  "short": "LEC",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "KKS Lech Poznan",
+   "Lech Poznań"
+  ]
+ },
+ "leeds": {
+  "id": "leeds",
+  "name": "Leeds United",
+  "short": "LEE",
+  "primary": "#FFCD00",
+  "secondary": "#1D428A",
+  "aliases": [
+   "leeds united"
+  ]
+ },
+ "leganes": {
+  "id": "leganes",
+  "name": "CD Leganes",
+  "short": "LEG",
+  "primary": "#005BAA",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Leganes",
+   "CD Leganés",
+   "Leganés"
+  ]
+ },
+ "legia-warszawa": {
+  "id": "legia-warszawa",
+  "name": "Legia Warszawa",
+  "short": "LEG",
+  "primary": "#004A32",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Legia Warsaw"
+  ]
+ },
+ "leicester": {
+  "id": "leicester",
+  "name": "Leicester City",
+  "short": "LEI",
+  "primary": "#003090",
+  "secondary": "#FDBE11",
+  "aliases": [
+   "leicester city"
+  ]
+ },
+ "lens": {
+  "id": "lens",
+  "name": "RC Lens",
+  "short": "LEN",
+  "primary": "#EE1C25",
+  "secondary": "#FFE500",
+  "aliases": [
+   "Lens",
+   "Racing Club de Lens"
+  ]
+ },
+ "levante": {
+  "id": "levante",
+  "name": "Levante UD",
+  "short": "LEV",
+  "primary": "#0053A0",
+  "secondary": "#B4053F",
+  "aliases": [
+   "Levante"
+  ]
+ },
+ "leverkusen": {
+  "id": "leverkusen",
+  "name": "Bayer Leverkusen",
+  "short": "B04",
+  "primary": "#E32221",
+  "secondary": "#000000",
+  "aliases": [
+   "Leverkusen",
+   "Bayer 04 Leverkusen"
+  ]
+ },
+ "levski-sofia": {
+  "id": "levski-sofia",
+  "name": "Levski Sofia",
+  "short": "LEV",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "PFC Levski Sofia"
+  ]
+ },
+ "lille": {
+  "id": "lille",
+  "name": "Lille",
+  "short": "LIL",
+  "primary": "#E01E13",
+  "secondary": "#002E5D",
+  "aliases": [
+   "Lille OSC",
+   "LOSC"
   ]
  },
  "lincoln-city": {
@@ -3252,6 +1851,222 @@
    "Lincoln"
   ]
  },
+ "liverpool": {
+  "id": "liverpool",
+  "name": "Liverpool",
+  "short": "LIV",
+  "primary": "#C8102E",
+  "secondary": "#00B2A9",
+  "aliases": []
+ },
+ "livorno": {
+  "id": "livorno",
+  "name": "Livorno",
+  "short": "LVN",
+  "primary": "#8B1A1A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "AS Livorno"
+  ]
+ },
+ "lommel-sk": {
+  "id": "lommel-sk",
+  "name": "Lommel SK",
+  "short": "LOM",
+  "primary": "#009639",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Lommel SK",
+   "Lommel"
+  ]
+ },
+ "lorient": {
+  "id": "lorient",
+  "name": "FC Lorient",
+  "short": "LOR",
+  "primary": "#F58220",
+  "secondary": "#000000",
+  "aliases": [
+   "Lorient"
+  ]
+ },
+ "ludogorets": {
+  "id": "ludogorets",
+  "name": "Ludogorets Razgrad",
+  "short": "LUD",
+  "primary": "#00713C",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Ludogorets",
+   "PFC Ludogorets Razgrad"
+  ]
+ },
+ "lugano": {
+  "id": "lugano",
+  "name": "Lugano",
+  "short": "LUG",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FC Lugano"
+  ]
+ },
+ "luton": {
+  "id": "luton",
+  "name": "Luton Town",
+  "short": "LUT",
+  "primary": "#F78F1E",
+  "secondary": "#002D62",
+  "aliases": [
+   "luton town"
+  ]
+ },
+ "lyon": {
+  "id": "lyon",
+  "name": "Olympique Lyonnais",
+  "short": "LYO",
+  "primary": "#DA291C",
+  "secondary": "#0B3E8C",
+  "aliases": [
+   "Lyon",
+   "Olympique Lyon"
+  ]
+ },
+ "maccabi-tel-aviv": {
+  "id": "maccabi-tel-aviv",
+  "name": "Maccabi Tel Aviv",
+  "short": "MTA",
+  "primary": "#FFD400",
+  "secondary": "#003DA5",
+  "aliases": [
+   "Maccabi Tel Aviv FC"
+  ]
+ },
+ "mainz": {
+  "id": "mainz",
+  "name": "Mainz 05",
+  "short": "M05",
+  "primary": "#C3141E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Mainz",
+   "1. FSV Mainz 05"
+  ]
+ },
+ "malaga": {
+  "id": "malaga",
+  "name": "Malaga CF",
+  "short": "MAL",
+  "primary": "#0069B4",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Malaga",
+   "Málaga CF",
+   "Málaga"
+  ]
+ },
+ "mallorca": {
+  "id": "mallorca",
+  "name": "RCD Mallorca",
+  "short": "MLL",
+  "primary": "#E20613",
+  "secondary": "#000000",
+  "aliases": [
+   "Mallorca",
+   "RCD Mallorca"
+  ]
+ },
+ "malmo": {
+  "id": "malmo",
+  "name": "Malmo FF",
+  "short": "MFF",
+  "primary": "#54B3E4",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Malmoe FF",
+   "Malmö FF"
+  ]
+ },
+ "man-city": {
+  "id": "man-city",
+  "name": "Manchester City",
+  "short": "MCI",
+  "primary": "#6CABDD",
+  "secondary": "#1C2C5B",
+  "aliases": [
+   "man city",
+   "manchester city"
+  ]
+ },
+ "man-united": {
+  "id": "man-united",
+  "name": "Manchester United",
+  "short": "MUN",
+  "primary": "#DA291C",
+  "secondary": "#FBE122",
+  "aliases": [
+   "man united",
+   "manchester united",
+   "man utd"
+  ]
+ },
+ "marseille": {
+  "id": "marseille",
+  "name": "Marseille",
+  "short": "MAR",
+  "primary": "#2FAEE0",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Olympique de Marseille",
+   "Olympique Marseille"
+  ]
+ },
+ "messina": {
+  "id": "messina",
+  "name": "Messina",
+  "short": "MES",
+  "primary": "#F5C518",
+  "secondary": "#E4032E",
+  "aliases": []
+ },
+ "metz": {
+  "id": "metz",
+  "name": "FC Metz",
+  "short": "MET",
+  "primary": "#7B1F3A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Metz"
+  ]
+ },
+ "middlesbrough": {
+  "id": "middlesbrough",
+  "name": "Middlesbrough",
+  "short": "MID",
+  "primary": "#E21C38",
+  "secondary": "#FFFFFF",
+  "aliases": []
+ },
+ "midtjylland": {
+  "id": "midtjylland",
+  "name": "Midtjylland",
+  "short": "MID",
+  "primary": "#000000",
+  "secondary": "#D0021B",
+  "aliases": [
+   "FC Midtjylland"
+  ]
+ },
+ "milan": {
+  "id": "milan",
+  "name": "AC Milan",
+  "short": "MIL",
+  "primary": "#FB090B",
+  "secondary": "#000000",
+  "aliases": [
+   "Milan"
+  ]
+ },
  "millwall": {
   "id": "millwall",
   "name": "Millwall",
@@ -3263,6 +2078,73 @@
    "Millwall"
   ]
  },
+ "modena": {
+  "id": "modena",
+  "name": "Modena",
+  "short": "MOD",
+  "primary": "#F5C518",
+  "secondary": "#005BAA",
+  "aliases": [
+   "Modena FC"
+  ]
+ },
+ "molde": {
+  "id": "molde",
+  "name": "Molde",
+  "short": "MOL",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Molde FK"
+  ]
+ },
+ "monaco": {
+  "id": "monaco",
+  "name": "AS Monaco",
+  "short": "ASM",
+  "primary": "#E31837",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Monaco",
+   "AS Monaco FC"
+  ]
+ },
+ "monchengladbach": {
+  "id": "monchengladbach",
+  "name": "Borussia Monchengladbach",
+  "short": "BMG",
+  "primary": "#1D1D1B",
+  "secondary": "#00A94F",
+  "aliases": [
+   "Bor. Monchengladbach",
+   "Bor. Mönchengladbach",
+   "Borussia Mönchengladbach",
+   "Gladbach",
+   "M'gladbach",
+   "Monchengladbach",
+   "Mönchengladbach"
+  ]
+ },
+ "montpellier": {
+  "id": "montpellier",
+  "name": "Montpellier",
+  "short": "MHS",
+  "primary": "#F58220",
+  "secondary": "#003A70",
+  "aliases": [
+   "Montpellier HSC"
+  ]
+ },
+ "monza": {
+  "id": "monza",
+  "name": "AC Monza",
+  "short": "MON",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Monza"
+  ]
+ },
  "moreirense": {
   "id": "moreirense",
   "name": "Moreirense",
@@ -3272,6 +2154,47 @@
   "aliases": [
    "Moreirense FC",
    "Moreirense"
+  ]
+ },
+ "munich-1860": {
+  "id": "munich-1860",
+  "name": "TSV 1860 Munich",
+  "short": "M60",
+  "primary": "#009EE0",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Munich 1860",
+   "TSV 1860 München"
+  ]
+ },
+ "nancy": {
+  "id": "nancy",
+  "name": "AS Nancy Lorraine",
+  "short": "NCY",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Nancy"
+  ]
+ },
+ "nantes": {
+  "id": "nantes",
+  "name": "FC Nantes",
+  "short": "NAN",
+  "primary": "#FFE500",
+  "secondary": "#009639",
+  "aliases": [
+   "Nantes"
+  ]
+ },
+ "napoli": {
+  "id": "napoli",
+  "name": "Napoli",
+  "short": "NAP",
+  "primary": "#12A5DC",
+  "secondary": "#003C82",
+  "aliases": [
+   "SSC Napoli"
   ]
  },
  "nec": {
@@ -3286,6 +2209,248 @@
    "N.E.C."
   ]
  },
+ "newcastle": {
+  "id": "newcastle",
+  "name": "Newcastle United",
+  "short": "NEW",
+  "primary": "#241F20",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "newcastle united",
+   "newcastle utd"
+  ]
+ },
+ "nice": {
+  "id": "nice",
+  "name": "OGC Nice",
+  "short": "NIC",
+  "primary": "#C8102E",
+  "secondary": "#000000",
+  "aliases": [
+   "Nice"
+  ]
+ },
+ "nimes": {
+  "id": "nimes",
+  "name": "Nimes Olympique",
+  "short": "NIM",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Nimes",
+   "Nîmes Olympique",
+   "Nîmes"
+  ]
+ },
+ "norwich": {
+  "id": "norwich",
+  "name": "Norwich City",
+  "short": "NOR",
+  "primary": "#FFF200",
+  "secondary": "#00A650",
+  "aliases": [
+   "norwich city"
+  ]
+ },
+ "nott-forest": {
+  "id": "nott-forest",
+  "name": "Nottingham Forest",
+  "short": "NFO",
+  "primary": "#DD0000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "nottm forest",
+   "nott m forest",
+   "nottingham forest"
+  ]
+ },
+ "novara": {
+  "id": "novara",
+  "name": "Novara",
+  "short": "NOV",
+  "primary": "#005BAA",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Novara Calcio"
+  ]
+ },
+ "numancia": {
+  "id": "numancia",
+  "name": "CD Numancia",
+  "short": "NUM",
+  "primary": "#E4032E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Numancia"
+  ]
+ },
+ "nurnberg": {
+  "id": "nurnberg",
+  "name": "1. FC Nurnberg",
+  "short": "FCN",
+  "primary": "#AD1220",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Nurnberg",
+   "1. FC Nürnberg",
+   "Nürnberg"
+  ]
+ },
+ "oh-leuven": {
+  "id": "oh-leuven",
+  "name": "OH Leuven",
+  "short": "OHL",
+  "primary": "#FFFFFF",
+  "secondary": "#003DA5",
+  "aliases": [
+   "OH Leuven",
+   "Oud-Heverlee Leuven",
+   "Leuven"
+  ]
+ },
+ "olimpija-ljubljana": {
+  "id": "olimpija-ljubljana",
+  "name": "Olimpija Ljubljana",
+  "short": "OLL",
+  "primary": "#00A651",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "NK Olimpija Ljubljana"
+  ]
+ },
+ "olympiakos": {
+  "id": "olympiakos",
+  "name": "Olympiakos",
+  "short": "OLY",
+  "primary": "#D50000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Olympiacos",
+   "Olympiakos Piraeus",
+   "Olympiakos Pireus",
+   "PAE Olympiakos SFP"
+  ]
+ },
+ "omonia": {
+  "id": "omonia",
+  "name": "Omonia Nicosia",
+  "short": "OMO",
+  "primary": "#00A651",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "AC Omonia",
+   "Omonia Nicosia",
+   "Omonia Nikosia"
+  ]
+ },
+ "osasuna": {
+  "id": "osasuna",
+  "name": "CA Osasuna",
+  "short": "OSA",
+  "primary": "#D91A21",
+  "secondary": "#0A346F",
+  "aliases": [
+   "CA Osasuna"
+  ]
+ },
+ "oviedo": {
+  "id": "oviedo",
+  "name": "Real Oviedo",
+  "short": "OVI",
+  "primary": "#005BAA",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Oviedo",
+   "Real Oviedo"
+  ]
+ },
+ "paderborn": {
+  "id": "paderborn",
+  "name": "SC Paderborn 07",
+  "short": "SCP",
+  "primary": "#0055A5",
+  "secondary": "#000000",
+  "aliases": [
+   "Paderborn",
+   "SC Paderborn"
+  ]
+ },
+ "palermo": {
+  "id": "palermo",
+  "name": "Palermo",
+  "short": "PAL",
+  "primary": "#F49AC1",
+  "secondary": "#000000",
+  "aliases": [
+   "Palermo FC",
+   "US Palermo"
+  ]
+ },
+ "panathinaikos": {
+  "id": "panathinaikos",
+  "name": "Panathinaikos",
+  "short": "PAN",
+  "primary": "#007A3D",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Panathinaikos FC"
+  ]
+ },
+ "paok": {
+  "id": "paok",
+  "name": "PAOK",
+  "short": "PAK",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "PAOK FC",
+   "PAOK Saloniki",
+   "PAOK Thessaloniki"
+  ]
+ },
+ "paphos": {
+  "id": "paphos",
+  "name": "Paphos",
+  "short": "PAF",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Pafos",
+   "Pafos FC",
+   "Paphos FC"
+  ]
+ },
+ "paris-fc": {
+  "id": "paris-fc",
+  "name": "Paris FC",
+  "short": "PFC",
+  "primary": "#002654",
+  "secondary": "#DA291C",
+  "aliases": [
+   "Paris FC"
+  ]
+ },
+ "parma": {
+  "id": "parma",
+  "name": "Parma",
+  "short": "PAR",
+  "primary": "#FFD800",
+  "secondary": "#1A3A6B",
+  "aliases": [
+   "Parma Calcio 1913"
+  ]
+ },
+ "partizan": {
+  "id": "partizan",
+  "name": "Partizan",
+  "short": "PTZ",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FK Partizan",
+   "Partizan Belgrade"
+  ]
+ },
  "pec-zwolle": {
   "id": "pec-zwolle",
   "name": "PEC Zwolle",
@@ -3296,6 +2461,64 @@
    "PEC Zwolle",
    "Zwolle"
   ]
+ },
+ "perugia": {
+  "id": "perugia",
+  "name": "Perugia",
+  "short": "PER",
+  "primary": "#E4032E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "AC Perugia Calcio"
+  ]
+ },
+ "pescara": {
+  "id": "pescara",
+  "name": "Pescara",
+  "short": "PES",
+  "primary": "#005BAA",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Delfino Pescara"
+  ]
+ },
+ "piacenza": {
+  "id": "piacenza",
+  "name": "Piacenza",
+  "short": "PIA",
+  "primary": "#E4032E",
+  "secondary": "#FFFFFF",
+  "aliases": []
+ },
+ "pisa": {
+  "id": "pisa",
+  "name": "Pisa",
+  "short": "PIS",
+  "primary": "#005BAA",
+  "secondary": "#000000",
+  "aliases": [
+   "AC Pisa",
+   "Pisa SC"
+  ]
+ },
+ "porto": {
+  "id": "porto",
+  "name": "Porto",
+  "short": "POR",
+  "primary": "#00428C",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FC Porto",
+   "Futebol Clube do Porto"
+  ]
+ },
+ "portsmouth": {
+  "id": "portsmouth",
+  "name": "Portsmouth",
+  "short": "POR",
+  "primary": "#001489",
+  "secondary": "#FFFFFF",
+  "aliases": []
  },
  "preston-north-end": {
   "id": "preston-north-end",
@@ -3309,6 +2532,213 @@
    "Preston"
   ]
  },
+ "psg": {
+  "id": "psg",
+  "name": "Paris Saint-Germain",
+  "short": "PSG",
+  "primary": "#004170",
+  "secondary": "#DA291C",
+  "aliases": [
+   "Paris SG",
+   "Paris Saint-Germain FC",
+   "PSG",
+   "Paris Saint Germain"
+  ]
+ },
+ "psv": {
+  "id": "psv",
+  "name": "PSV",
+  "short": "PSV",
+  "primary": "#EE2223",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "PSV Eindhoven"
+  ]
+ },
+ "qarabag": {
+  "id": "qarabag",
+  "name": "Qarabag",
+  "short": "QAR",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Qarabag Agdam FK",
+   "Qarabag FK",
+   "Qarabağ Ağdam FK",
+   "Qarabağ FK"
+  ]
+ },
+ "qpr": {
+  "id": "qpr",
+  "name": "Queens Park Rangers",
+  "short": "QPR",
+  "primary": "#1D5BA4",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "queens park rangers"
+  ]
+ },
+ "raal-la-louviere": {
+  "id": "raal-la-louviere",
+  "name": "RAAL La Louvière",
+  "short": "LAL",
+  "primary": "#C8102E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "RAAL La Louvière",
+   "La Louviere",
+   "RAAL"
+  ]
+ },
+ "racing-santander": {
+  "id": "racing-santander",
+  "name": "Racing Santander",
+  "short": "RAC",
+  "primary": "#009A44",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Santander",
+   "Real Racing Club de Santander",
+   "Racing de Santander"
+  ]
+ },
+ "rangers": {
+  "id": "rangers",
+  "name": "Rangers",
+  "short": "RAN",
+  "primary": "#1B458F",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Glasgow Rangers",
+   "Rangers FC"
+  ]
+ },
+ "rapid-wien": {
+  "id": "rapid-wien",
+  "name": "Rapid Wien",
+  "short": "RAP",
+  "primary": "#008E51",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Rapid Vienna",
+   "SK Rapid Wien"
+  ]
+ },
+ "rayo-vallecano": {
+  "id": "rayo-vallecano",
+  "name": "Rayo Vallecano",
+  "short": "RAY",
+  "primary": "#E53027",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Vallecano",
+   "Rayo Vallecano de Madrid"
+  ]
+ },
+ "rb-leipzig": {
+  "id": "rb-leipzig",
+  "name": "RB Leipzig",
+  "short": "RBL",
+  "primary": "#DD0741",
+  "secondary": "#001F47",
+  "aliases": [
+   "RasenBallsport Leipzig",
+   "Leipzig"
+  ]
+ },
+ "reading": {
+  "id": "reading",
+  "name": "Reading",
+  "short": "RDG",
+  "primary": "#004494",
+  "secondary": "#FFFFFF",
+  "aliases": []
+ },
+ "real-madrid": {
+  "id": "real-madrid",
+  "name": "Real Madrid",
+  "short": "RMA",
+  "primary": "#00529F",
+  "secondary": "#FEBE10",
+  "aliases": [
+   "Real Madrid CF"
+  ]
+ },
+ "real-murcia": {
+  "id": "real-murcia",
+  "name": "Real Murcia",
+  "short": "MUR",
+  "primary": "#E4032E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Murcia",
+   "Real Murcia"
+  ]
+ },
+ "real-sociedad": {
+  "id": "real-sociedad",
+  "name": "Real Sociedad",
+  "short": "RSO",
+  "primary": "#0067B1",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Sociedad",
+   "Real Sociedad de Fútbol"
+  ]
+ },
+ "recreativo": {
+  "id": "recreativo",
+  "name": "Recreativo Huelva",
+  "short": "REC",
+  "primary": "#004B9B",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Recreativo"
+  ]
+ },
+ "reggina": {
+  "id": "reggina",
+  "name": "Reggina",
+  "short": "REG",
+  "primary": "#7B1F3A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Reggina 1914",
+   "Reggina Calcio"
+  ]
+ },
+ "reims": {
+  "id": "reims",
+  "name": "Stade de Reims",
+  "short": "REI",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Reims"
+  ]
+ },
+ "rennes": {
+  "id": "rennes",
+  "name": "Stade Rennais",
+  "short": "REN",
+  "primary": "#E23A34",
+  "secondary": "#000000",
+  "aliases": [
+   "Rennes",
+   "Stade Rennais FC 1901"
+  ]
+ },
+ "rijeka": {
+  "id": "rijeka",
+  "name": "Rijeka",
+  "short": "RIJ",
+  "primary": "#0B2A6B",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "HNK Rijeka",
+   "NK Rijeka"
+  ]
+ },
  "rio-ave": {
   "id": "rio-ave",
   "name": "Rio Ave",
@@ -3318,6 +2748,106 @@
   "aliases": [
    "Rio Ave FC",
    "Rio Ave"
+  ]
+ },
+ "roma": {
+  "id": "roma",
+  "name": "AS Roma",
+  "short": "ROM",
+  "primary": "#8E1F2F",
+  "secondary": "#F0BC42",
+  "aliases": [
+   "Roma"
+  ]
+ },
+ "rosenborg": {
+  "id": "rosenborg",
+  "name": "Rosenborg",
+  "short": "ROS",
+  "primary": "#FFFFFF",
+  "secondary": "#000000",
+  "aliases": [
+   "Rosenborg BK",
+   "Rosenborg Trondheim"
+  ]
+ },
+ "royal-antwerp": {
+  "id": "royal-antwerp",
+  "name": "Royal Antwerp",
+  "short": "ANT",
+  "primary": "#C8102E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Royal Antwerp FC",
+   "Antwerp",
+   "Royal Antwerp"
+  ]
+ },
+ "sabah": {
+  "id": "sabah",
+  "name": "Sabah",
+  "short": "SAB",
+  "primary": "#0057B8",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Sabah Baku",
+   "Sabah FK"
+  ]
+ },
+ "saint-etienne": {
+  "id": "saint-etienne",
+  "name": "Saint-Etienne",
+  "short": "STE",
+  "primary": "#009639",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "St Etienne",
+   "AS Saint-Étienne",
+   "Saint-Étienne",
+   "AS Saint-Etienne"
+  ]
+ },
+ "salernitana": {
+  "id": "salernitana",
+  "name": "Salernitana",
+  "short": "SAL",
+  "primary": "#7B1F3A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "US Salernitana 1919"
+  ]
+ },
+ "salzburg": {
+  "id": "salzburg",
+  "name": "Red Bull Salzburg",
+  "short": "RBS",
+  "primary": "#D1002E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FC Red Bull Salzburg",
+   "RB Salzburg",
+   "Red Bull Salzburg"
+  ]
+ },
+ "sampdoria": {
+  "id": "sampdoria",
+  "name": "Sampdoria",
+  "short": "SAM",
+  "primary": "#0B3B8C",
+  "secondary": "#E4032E",
+  "aliases": [
+   "UC Sampdoria"
+  ]
+ },
+ "sassuolo": {
+  "id": "sassuolo",
+  "name": "Sassuolo",
+  "short": "SAS",
+  "primary": "#00A752",
+  "secondary": "#000000",
+  "aliases": [
+   "US Sassuolo Calcio",
+   "Sassuolo Calcio"
   ]
  },
  "sbv-excelsior": {
@@ -3355,6 +2885,162 @@
    "Heerenveen"
   ]
  },
+ "schalke": {
+  "id": "schalke",
+  "name": "Schalke 04",
+  "short": "S04",
+  "primary": "#004D9D",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FC Schalke 04",
+   "Schalke"
+  ]
+ },
+ "sedan": {
+  "id": "sedan",
+  "name": "CS Sedan",
+  "short": "SED",
+  "primary": "#009639",
+  "secondary": "#E30613",
+  "aliases": [
+   "Sedan"
+  ]
+ },
+ "servette": {
+  "id": "servette",
+  "name": "Servette",
+  "short": "SRV",
+  "primary": "#8B1A1A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Servette FC"
+  ]
+ },
+ "sevilla": {
+  "id": "sevilla",
+  "name": "Sevilla FC",
+  "short": "SEV",
+  "primary": "#D81920",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Sevilla"
+  ]
+ },
+ "shakhtar-donetsk": {
+  "id": "shakhtar-donetsk",
+  "name": "Shakhtar Donetsk",
+  "short": "SHA",
+  "primary": "#F47B20",
+  "secondary": "#000000",
+  "aliases": [
+   "FK Shakhtar Donetsk",
+   "Shakhtar Donezk"
+  ]
+ },
+ "shamrock-rovers": {
+  "id": "shamrock-rovers",
+  "name": "Shamrock Rovers",
+  "short": "SHR",
+  "primary": "#008751",
+  "secondary": "#FFFFFF",
+  "aliases": []
+ },
+ "sheffield-united": {
+  "id": "sheffield-united",
+  "name": "Sheffield United",
+  "short": "SHU",
+  "primary": "#EE2737",
+  "secondary": "#000000",
+  "aliases": [
+   "sheffield united"
+  ]
+ },
+ "siena": {
+  "id": "siena",
+  "name": "Siena",
+  "short": "SIE",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "AC Siena"
+  ]
+ },
+ "sk-beveren": {
+  "id": "sk-beveren",
+  "name": "SK Beveren",
+  "short": "BEV",
+  "primary": "#FFD100",
+  "secondary": "#003DA5",
+  "aliases": [
+   "SK Beveren",
+   "Beveren",
+   "Waasland-Beveren"
+  ]
+ },
+ "slavia-praha": {
+  "id": "slavia-praha",
+  "name": "Slavia Praha",
+  "short": "SLA",
+  "primary": "#D01317",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "SK Slavia Praha",
+   "Slavia Prag",
+   "Slavia Prague"
+  ]
+ },
+ "slovan-bratislava": {
+  "id": "slovan-bratislava",
+  "name": "Slovan Bratislava",
+  "short": "SLB",
+  "primary": "#003DA5",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "SK Slovan Bratislava",
+   "ŠK Slovan Bratislava"
+  ]
+ },
+ "sochaux": {
+  "id": "sochaux",
+  "name": "FC Sochaux",
+  "short": "SOC",
+  "primary": "#FFE500",
+  "secondary": "#003A70",
+  "aliases": [
+   "Sochaux"
+  ]
+ },
+ "southampton": {
+  "id": "southampton",
+  "name": "Southampton",
+  "short": "SOU",
+  "primary": "#D71920",
+  "secondary": "#130C0E",
+  "aliases": []
+ },
+ "spal": {
+  "id": "spal",
+  "name": "SPAL",
+  "short": "SPA",
+  "primary": "#005BAA",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Spal",
+   "SPAL 2013 Ferrara"
+  ]
+ },
+ "sparta-praha": {
+  "id": "sparta-praha",
+  "name": "Sparta Praha",
+  "short": "SPP",
+  "primary": "#8B1A1A",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "AC Sparta Praha",
+   "Sparta Prag",
+   "Sparta Prague"
+  ]
+ },
  "sparta-rotterdam": {
   "id": "sparta-rotterdam",
   "name": "Sparta Rotterdam",
@@ -3364,6 +3050,159 @@
   "aliases": [
    "Sparta Rotterdam",
    "Sparta"
+  ]
+ },
+ "spezia": {
+  "id": "spezia",
+  "name": "Spezia",
+  "short": "SPZ",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Spezia Calcio"
+  ]
+ },
+ "sporting-charleroi": {
+  "id": "sporting-charleroi",
+  "name": "Charleroi",
+  "short": "CHA",
+  "primary": "#111111",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Sporting Charleroi",
+   "Charleroi",
+   "R Charleroi SC"
+  ]
+ },
+ "sporting-cp": {
+  "id": "sporting-cp",
+  "name": "Sporting CP",
+  "short": "SPO",
+  "primary": "#008057",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Sporting",
+   "Sporting Clube de Portugal",
+   "Sporting Lisbon",
+   "Sporting Lissabon"
+  ]
+ },
+ "sporting-gijon": {
+  "id": "sporting-gijon",
+  "name": "Sporting Gijon",
+  "short": "SPG",
+  "primary": "#E4032E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Sp Gijon",
+   "Sporting Gijón",
+   "Sporting de Gijón"
+  ]
+ },
+ "st-pauli": {
+  "id": "st-pauli",
+  "name": "FC St. Pauli",
+  "short": "STP",
+  "primary": "#614335",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "St Pauli",
+   "St. Pauli"
+  ]
+ },
+ "standard-de-liege": {
+  "id": "standard-de-liege",
+  "name": "Standard Liège",
+  "short": "STA",
+  "primary": "#C8102E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Standard de Liège",
+   "Standard Liege",
+   "Standard Liège"
+  ]
+ },
+ "stoke": {
+  "id": "stoke",
+  "name": "Stoke City",
+  "short": "STK",
+  "primary": "#E03A3E",
+  "secondary": "#1B449C",
+  "aliases": [
+   "stoke city"
+  ]
+ },
+ "strasbourg": {
+  "id": "strasbourg",
+  "name": "RC Strasbourg",
+  "short": "STR",
+  "primary": "#0072CE",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Strasbourg",
+   "RC Strasbourg Alsace"
+  ]
+ },
+ "sturm-graz": {
+  "id": "sturm-graz",
+  "name": "Sturm Graz",
+  "short": "STG",
+  "primary": "#000000",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "SK Sturm Graz"
+  ]
+ },
+ "stuttgart": {
+  "id": "stuttgart",
+  "name": "VfB Stuttgart",
+  "short": "VFB",
+  "primary": "#E32219",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Stuttgart"
+  ]
+ },
+ "stvv": {
+  "id": "stvv",
+  "name": "STVV",
+  "short": "STV",
+  "primary": "#FFD100",
+  "secondary": "#003DA5",
+  "aliases": [
+   "STVV",
+   "Sint-Truiden",
+   "Sint-Truidense VV"
+  ]
+ },
+ "sunderland": {
+  "id": "sunderland",
+  "name": "Sunderland",
+  "short": "SUN",
+  "primary": "#EB172B",
+  "secondary": "#211E1F",
+  "aliases": []
+ },
+ "sv-zulte-waregem": {
+  "id": "sv-zulte-waregem",
+  "name": "Zulte Waregem",
+  "short": "ZUL",
+  "primary": "#C8102E",
+  "secondary": "#009639",
+  "aliases": [
+   "SV Zulte Waregem",
+   "Zulte Waregem",
+   "Zulte-Waregem"
+  ]
+ },
+ "swansea": {
+  "id": "swansea",
+  "name": "Swansea City",
+  "short": "SWA",
+  "primary": "#121212",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "swansea city"
   ]
  },
  "telstar-1963": {
@@ -3378,6 +3217,129 @@
    "SC Telstar"
   ]
  },
+ "tenerife": {
+  "id": "tenerife",
+  "name": "CD Tenerife",
+  "short": "TEN",
+  "primary": "#005BAA",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Tenerife"
+  ]
+ },
+ "torino": {
+  "id": "torino",
+  "name": "Torino",
+  "short": "TOR",
+  "primary": "#8A1E03",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Torino FC"
+  ]
+ },
+ "tottenham": {
+  "id": "tottenham",
+  "name": "Tottenham Hotspur",
+  "short": "TOT",
+  "primary": "#132257",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "tottenham hotspur",
+   "spurs"
+  ]
+ },
+ "toulouse": {
+  "id": "toulouse",
+  "name": "Toulouse FC",
+  "short": "TOU",
+  "primary": "#6D2C7F",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Toulouse"
+  ]
+ },
+ "trabzonspor": {
+  "id": "trabzonspor",
+  "name": "Trabzonspor",
+  "short": "TRA",
+  "primary": "#7B1420",
+  "secondary": "#63C4E8",
+  "aliases": []
+ },
+ "treviso": {
+  "id": "treviso",
+  "name": "Treviso",
+  "short": "TRE",
+  "primary": "#005BAA",
+  "secondary": "#FFFFFF",
+  "aliases": []
+ },
+ "troyes": {
+  "id": "troyes",
+  "name": "Troyes",
+  "short": "TRO",
+  "primary": "#009EE0",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "ES Troyes AC",
+   "ESTAC Troyes"
+  ]
+ },
+ "twente": {
+  "id": "twente",
+  "name": "FC Twente",
+  "short": "TWE",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "FC Twente Enschede",
+   "Twente Enschede",
+   "FC Twente '65",
+   "Twente '65"
+  ]
+ },
+ "udinese": {
+  "id": "udinese",
+  "name": "Udinese",
+  "short": "UDI",
+  "primary": "#231F20",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Udinese Calcio"
+  ]
+ },
+ "union-berlin": {
+  "id": "union-berlin",
+  "name": "Union Berlin",
+  "short": "FCU",
+  "primary": "#EB1923",
+  "secondary": "#FFF200",
+  "aliases": [
+   "1. FC Union Berlin"
+  ]
+ },
+ "union-sg": {
+  "id": "union-sg",
+  "name": "Union Saint-Gilloise",
+  "short": "USG",
+  "primary": "#FFC72C",
+  "secondary": "#003DA5",
+  "aliases": [
+   "Royale Union SG",
+   "Royale Union Saint-Gilloise",
+   "Union SG"
+  ]
+ },
+ "unterhaching": {
+  "id": "unterhaching",
+  "name": "Unterhaching",
+  "short": "SPU",
+  "primary": "#E30613",
+  "secondary": "#005CA9",
+  "aliases": [
+   "SpVgg Unterhaching"
+  ]
+ },
  "utrecht": {
   "id": "utrecht",
   "name": "FC Utrecht",
@@ -3387,6 +3349,91 @@
   "aliases": [
    "FC Utrecht",
    "Utrecht"
+  ]
+ },
+ "valencia": {
+  "id": "valencia",
+  "name": "Valencia CF",
+  "short": "VAL",
+  "primary": "#F7A800",
+  "secondary": "#000000",
+  "aliases": [
+   "Valencia"
+  ]
+ },
+ "valenciennes": {
+  "id": "valenciennes",
+  "name": "Valenciennes",
+  "short": "VAF",
+  "primary": "#E30613",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Valenciennes FC"
+  ]
+ },
+ "valladolid": {
+  "id": "valladolid",
+  "name": "Real Valladolid",
+  "short": "VLL",
+  "primary": "#6F2C91",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Valladolid",
+   "Real Valladolid"
+  ]
+ },
+ "venezia": {
+  "id": "venezia",
+  "name": "Venezia",
+  "short": "VEN",
+  "primary": "#101820",
+  "secondary": "#F58220",
+  "aliases": [
+   "Venezia FC"
+  ]
+ },
+ "verona": {
+  "id": "verona",
+  "name": "Hellas Verona",
+  "short": "VER",
+  "primary": "#F5C518",
+  "secondary": "#003C82",
+  "aliases": [
+   "Verona"
+  ]
+ },
+ "vicenza": {
+  "id": "vicenza",
+  "name": "Vicenza",
+  "short": "VIC",
+  "primary": "#E4032E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "L.R. Vicenza",
+   "L.R. Vicenza Virtus",
+   "Vicenza Calcio"
+  ]
+ },
+ "viktoria-plzen": {
+  "id": "viktoria-plzen",
+  "name": "Viktoria Plzen",
+  "short": "PLZ",
+  "primary": "#D0021B",
+  "secondary": "#0B3C8C",
+  "aliases": [
+   "FC Viktoria Plzen",
+   "Viktoria Pilsen",
+   "Viktoria Plzeň"
+  ]
+ },
+ "villarreal": {
+  "id": "villarreal",
+  "name": "Villarreal CF",
+  "short": "VIL",
+  "primary": "#FFE667",
+  "secondary": "#005187",
+  "aliases": [
+   "Villarreal"
   ]
  },
  "vitoria-guimaraes": {
@@ -3402,6 +3449,57 @@
    "Guimaraes"
   ]
  },
+ "watford": {
+  "id": "watford",
+  "name": "Watford",
+  "short": "WAT",
+  "primary": "#FBEE23",
+  "secondary": "#ED2127",
+  "aliases": []
+ },
+ "werder": {
+  "id": "werder",
+  "name": "Werder Bremen",
+  "short": "SVW",
+  "primary": "#1D9053",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "SV Werder Bremen",
+   "Werder"
+  ]
+ },
+ "west-brom": {
+  "id": "west-brom",
+  "name": "West Bromwich Albion",
+  "short": "WBA",
+  "primary": "#122F67",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "west brom",
+   "west bromwich albion"
+  ]
+ },
+ "west-ham": {
+  "id": "west-ham",
+  "name": "West Ham United",
+  "short": "WHU",
+  "primary": "#7A263A",
+  "secondary": "#1BB1E7",
+  "aliases": [
+   "west ham united",
+   "west ham"
+  ]
+ },
+ "wigan": {
+  "id": "wigan",
+  "name": "Wigan Athletic",
+  "short": "WIG",
+  "primary": "#1D59AF",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "wigan athletic"
+  ]
+ },
  "willem-ii-tilburg": {
   "id": "willem-ii-tilburg",
   "name": "Willem II",
@@ -3413,6 +3511,27 @@
    "Willem II"
   ]
  },
+ "wolfsburg": {
+  "id": "wolfsburg",
+  "name": "VfL Wolfsburg",
+  "short": "WOB",
+  "primary": "#65B32E",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Wolfsburg"
+  ]
+ },
+ "wolves": {
+  "id": "wolves",
+  "name": "Wolverhampton Wanderers",
+  "short": "WOL",
+  "primary": "#FDB913",
+  "secondary": "#231F20",
+  "aliases": [
+   "wolverhampton wanderers",
+   "wolverhampton"
+  ]
+ },
  "wrexham": {
   "id": "wrexham",
   "name": "Wrexham",
@@ -3422,6 +3541,38 @@
   "aliases": [
    "Wrexham AFC",
    "Wrexham"
+  ]
+ },
+ "xerez": {
+  "id": "xerez",
+  "name": "Xerez CD",
+  "short": "XER",
+  "primary": "#005BAA",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Xerez"
+  ]
+ },
+ "young-boys": {
+  "id": "young-boys",
+  "name": "Young Boys",
+  "short": "YBB",
+  "primary": "#FFED00",
+  "secondary": "#000000",
+  "aliases": [
+   "BSC Young Boys",
+   "Young Boys Bern"
+  ]
+ },
+ "zaragoza": {
+  "id": "zaragoza",
+  "name": "Real Zaragoza",
+  "short": "ZAR",
+  "primary": "#004B9B",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Zaragoza",
+   "Real Zaragoza"
   ]
  }
 }

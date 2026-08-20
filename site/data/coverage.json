@@ -1,0 +1,20 @@
+{
+ "generated": "2026-08-20T08:06:15+00:00",
+ "leagues": [
+  {
+   "slug": "championship",
+   "name": "Championship",
+   "country": "England",
+   "source": "openfootball",
+   "seasons": 22,
+   "first_season": "2004-05",
+   "last_season": "2025-26",
+   "matches": 12169,
+   "second_tier": 11796,
+   "above": 9880,
+   "missing_seasons": [],
+   "partial_seasons": [],
+   "has_shots": false
+  }
+ ]
+}

@@ -255,12 +255,13 @@
   }
  ],
  "calibration_priors": {
-  "version": 2,
+  "version": 3,
   "continuing": {
    "slope": 0.8960117817651991,
    "intercept": 0.033388132971706556,
    "n": 29,
-   "source": "eredivisie"
+   "source": "eredivisie",
+   "measured_slope": 0.896
   },
   "promoted": {
    "slope": 0.3225,
@@ -277,7 +278,28 @@
    "reason": "too few pairs"
   },
   "league": "eredivisie",
-  "generated": "2026-08-19"
+  "generated": "2026-08-20"
  },
- "league": "eredivisie"
+ "league": "eredivisie",
+ "table": {
+  "seasons": [
+   {
+    "season": "2024-25",
+    "n_teams": 18,
+    "champion_called": true,
+    "top_overlap": 0.5,
+    "releg_overlap": 0.0,
+    "rank_corr": 0.8142,
+    "mean_rank_error": 2.67,
+    "mean_points_error": 8.63
+   }
+  ],
+  "n": 1,
+  "champion_rate": 1.0,
+  "top_overlap": 0.5,
+  "releg_overlap": 0.0,
+  "rank_corr": 0.814,
+  "mean_rank_error": 2.67,
+  "mean_points_error": 8.63
+ }
 }

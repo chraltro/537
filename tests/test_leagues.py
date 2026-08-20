@@ -47,7 +47,7 @@ def dataset():
 # ---------------------------------------------------------------- registry
 def test_registry_is_internally_consistent():
     assert len(leagues.BIG_FIVE) == 5
-    assert len(leagues.LEAGUES) == 8
+    assert len(leagues.LEAGUES) == 9
     assert len({lg.slug for lg in leagues.LEAGUES}) == len(leagues.LEAGUES)
     assert set(leagues.BIG_FIVE) <= set(leagues.LEAGUES)
     for lg in leagues.LEAGUES:
@@ -55,7 +55,12 @@ def test_registry_is_internally_consistent():
         assert lg.n_matches == lg.n_teams * (lg.n_teams - 1), lg.slug
         assert 1 <= lg.ucl_places < lg.n_teams - lg.releg_places
         assert lg.releg_places >= 1
-        assert lg.of_top and lg.of_second
+        assert lg.of_top
+        # Every competition names a second tier except Belgium, where
+        # openfootball has no `be2` at any season. That is recorded in the
+        # registry as an empty string rather than a wrong URL, and the
+        # promoted-club correction falls back accordingly.
+        assert lg.of_second or lg.slug == "pro-league", lg.slug
         # Only the big five are in the results mirror -- it has exactly five
         # league directories -- so everything else must say it reads goals only.
         if lg in leagues.BIG_FIVE:
@@ -77,14 +82,16 @@ def test_promotion_leagues_declare_their_playoff_band():
 
 
 def test_2026_27_season_shapes_match_the_contract():
-    """380/380/380/306/306 for the big five, in registry order, and the three
-    competitions added after them: 306/306/552."""
+    """380/380/380/306/306 for the big five, in registry order, and the four
+    competitions added after them: 306/306/306/552. Belgium expanded from 16
+    clubs to 18 for 2026-27, so its shape is the new one, not the old."""
     assert [lg.n_matches for lg in leagues.BIG_FIVE] == [380, 380, 380, 306, 306]
     assert [lg.n_teams for lg in leagues.BIG_FIVE] == [20, 20, 20, 18, 18]
     extra = [lg for lg in leagues.LEAGUES if lg not in leagues.BIG_FIVE]
-    assert [lg.slug for lg in extra] == ["eredivisie", "primeira-liga", "championship"]
-    assert [lg.n_matches for lg in extra] == [306, 306, 552]
-    assert [lg.n_teams for lg in extra] == [18, 18, 24]
+    assert [lg.slug for lg in extra] == ["eredivisie", "primeira-liga",
+                                         "pro-league", "championship"]
+    assert [lg.n_matches for lg in extra] == [306, 306, 306, 552]
+    assert [lg.n_teams for lg in extra] == [18, 18, 18, 24]
 
 
 def test_qualification_rules_are_the_verified_2026_27_ones():
@@ -236,13 +243,22 @@ def test_history_is_deep_enough_to_fit(dataset, slug):
     # The mirror carries the big five back to 1993-94 and the pipeline reads it
     # from 2000-01. openfootball's country files start much later, so the bar is
     # "deep enough to fit", not "as deep as the Premier League".
-    want = 20 if lg.source == "mirror" else 8
+    # Belgium is the thin one and is allowed to be, on measured grounds:
+    # openfootball has no `be1` at all for 2020-21 or 2022-23, and its 2025-26
+    # file stopped at 121 of 240 matches when the maintainer moved on to the
+    # Wallonian provincial leagues. Six seasons is what exists upstream.
+    want = 20 if lg.source == "mirror" else (6 if slug == "pro-league" else 8)
     assert len({m.season for m in ds.top}) >= want, f"{slug}: too few seasons"
     # Enough second-tier football to rate a promoted club at all. The big five
     # have a decade or more; the Eredivisie and Primeira Liga have five seasons
     # upstream, which is thin on purpose -- `priors.regress` falls back to the
     # measured Premier League constants rather than trusting a slope fitted on
     # a handful of promoted clubs, and says so in the output.
+    if not lg.of_second:
+        # Belgium: no second tier upstream, so there is nothing to load and the
+        # promoted-club correction is a declared fallback, not a measurement.
+        assert len(ds.second) == 0, f"{slug}: no second tier is declared"
+        return
     floor = 2000 if lg.source == "mirror" else 1200
     assert len(ds.second) > floor, f"{slug}: second tier needed to rate promoted clubs"
 
@@ -306,8 +322,14 @@ def test_simulation_probabilities_are_coherent_for_every_league(dataset, slug):
     assert np.allclose(sim["position"].sum(axis=1), 1, atol=1e-6)
     assert np.allclose(sim["position"].sum(axis=0), 1, atol=1e-6)
     # The points lines are read off the boundary positions of the same tables.
-    assert sim["lines"]["title"]["p50"] > sim["lines"]["top5"]["p50"] \
-        > sim["lines"]["safety"]["p50"]
+    # Where a competition has exactly one European place -- Belgium -- the
+    # title line and the qualification line are read off the same boundary
+    # position, so they are equal by construction rather than ordered.
+    if lg.ucl_places > 1:
+        assert sim["lines"]["title"]["p50"] > sim["lines"]["top5"]["p50"]
+    else:
+        assert sim["lines"]["title"]["p50"] == sim["lines"]["top5"]["p50"]
+    assert sim["lines"]["top5"]["p50"] > sim["lines"]["safety"]["p50"]
 
 
 def test_the_ucl_line_actually_moves_with_the_league(dataset):
@@ -387,15 +409,36 @@ def test_thin_second_tier_falls_back_to_the_premier_league_constants():
     assert got["intercept"] == pytest.approx(0.0, abs=1e-6)
 
 
-def test_an_implausible_slope_falls_back_too():
+def test_an_implausible_slope_is_clamped_not_discarded():
     """Enough pairs is not the same as a believable answer. Eight seasons of a
-    smaller league can fit a promoted-club slope above one, which would amplify
-    a promoted club's rating gap instead of shrinking it."""
+    smaller league can fit a promoted-club slope of 3.0, which would triple a
+    promoted club's rating gap instead of shrinking it.
+
+    Above the band the slope is pulled back to the ceiling and the fit is kept:
+    the intercept was measured on the right population -- promoted clubs in this
+    competition -- and throwing it away to take the Premier League's would
+    discard a good number along with a bad one. The output has to say what was
+    measured and what was done about it, so the site can too.
+    """
     silly = [(0.1 * i, 0.3 * i) for i in range(-6, 6)]      # slope 3.0
     got = priors.regress(silly, "promoted", "primeira-liga")
+    hi = priors.SLOPE_BAND["promoted"][1]
     assert len(silly) >= priors.MIN_PAIRS
+    assert got["source"] == "primeira-liga"
+    assert got["measured_slope"] > hi
+    assert got["slope"] == pytest.approx(hi)
+    assert "clamped" in got["reason"]
+
+
+def test_a_backwards_slope_is_discarded_entirely():
+    """Below the floor the fit is not noisy, it is pointing the wrong way: a
+    club's preseason edge predicting the opposite of what happens. There is
+    nothing in it worth keeping, so the whole correction falls back."""
+    backwards = [(0.1 * i, -0.3 * i) for i in range(-6, 6)]      # slope -3.0
+    got = priors.regress(backwards, "promoted", "primeira-liga")
+    assert len(backwards) >= priors.MIN_PAIRS
     assert got["source"] == "premier-league"
-    assert got["measured_slope"] > priors.SLOPE_BAND[1]
+    assert got["measured_slope"] < priors.SLOPE_BAND["promoted"][0]
     assert 0 < got["slope"] < 1
 
 

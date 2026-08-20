@@ -231,6 +231,46 @@ def club_card(fc: dict, team: dict, rank: int, words: dict) -> "object":
     return img
 
 
+def global_card(g: dict) -> "object":
+    """The cross-league ranking's own card.
+
+    Rankings and Compare both pointed `og:image` at the Premier League table, so
+    sharing "every club in Europe" showed one league's projected table. This is
+    the top of the actual ranking, on the actual scale.
+    """
+    at = _fonts()
+    img, d = _base(at)
+    rows = g.get("clubs", [])[:6]
+    f = at("bold", 52)
+    d.text((PAD, 48), "Every club in Europe, one scale", font=f, fill=INK)
+    d.text((PAD, 114),
+           f"{g.get('n_clubs', 0)} clubs · {g.get('n_leagues', 0)} leagues · "
+           f"{g.get('n_matches', 0):,} matches in one fit",
+           font=at("regular", 23), fill=MUTED)
+
+    top, rh = 206, 52
+    d.rounded_rectangle([PAD - 18, 162, W - PAD + 18, top + rh * len(rows) + 4],
+                        radius=14, fill=PANEL)
+    hdr = at("bold", 19)
+    d.text((PAD + 46, 176), "CLUB", font=hdr, fill=MUTED)
+    d.text((760, 176), "LEAGUE", font=hdr, fill=MUTED)
+    d.text((1058, 176), "SPI", font=hdr, fill=MUTED)
+    y = top
+    for i, t in enumerate(rows):
+        d.text((PAD, y + 6), str(i + 1), font=at("regular", 24), fill=MUTED)
+        col = _readable(_hex(t.get("primary", "")))
+        d.rounded_rectangle([PAD + 32, y + 4, PAD + 40, y + 30], radius=4, fill=col)
+        fb = at("bold", 28)
+        d.text((PAD + 56, y), _clip(d, t.get("name", t["id"]), fb, 620),
+               font=fb, fill=INK)
+        fn = at("regular", 21)
+        d.text((760, y + 4), _clip(d, t.get("league", ""), fn, 280), font=fn, fill=INK2)
+        d.text((1058, y + 1), f"{t.get('spi', 0):.1f}", font=at("bold", 26), fill=INK)
+        y += rh
+    _footer(d, at, f"Fitted to {g.get('asof', '')}")
+    return img
+
+
 def _updated(fc: dict) -> str:
     try:
         g = dt.datetime.fromisoformat(fc["generated"])

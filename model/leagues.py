@@ -89,6 +89,18 @@ class League:
     #: again by a correction measured on clubs promoted from below.
     above_slug: str = ""
 
+    #: How clubs level on points are separated. "gd" is points, goal difference,
+    #: goals scored -- England, Germany and France. "h2h" puts the mini-table
+    #: among the level clubs first, which is what Spain and Italy actually do and
+    #: what this simulation ignored until now.
+    tiebreak: str = "gd"
+
+    #: The finishing position that plays a two-legged tie against a second-tier
+    #: club instead of going down automatically. Germany and France both send
+    #: their third-from-bottom; everywhere else this is None and the drop is
+    #: settled by the table alone.
+    releg_playoff_pos: int | None = None
+
     #: Backtest window. The Premier League keeps the full record because it is
     #: the league the model was tuned on and the one whose scores are published
     #: as the headline; the others start later purely to keep the five-league
@@ -193,6 +205,7 @@ LA_LIGA = League(
     slug="la-liga", name="La Liga", country="Spain",
     n_teams=20, n_matches=380,
     ucl_places=5, releg_places=3, releg_note=None,
+    tiebreak="h2h",
     fd_dir="la-liga",
     of_top="espana/master/{season}/1-liga",
     of_second="espana/master/{season}/2-liga2",
@@ -204,6 +217,7 @@ SERIE_A = League(
     slug="serie-a", name="Serie A", country="Italy",
     n_teams=20, n_matches=380,
     ucl_places=4, releg_places=3, releg_note=None,
+    tiebreak="h2h",
     fd_dir="serie-a",
     of_top="italy/master/{season}/1-seriea",
     of_second="italy/master/{season}/2-serieb",
@@ -217,6 +231,7 @@ BUNDESLIGA = League(
     ucl_places=4, releg_places=2,
     releg_note="16th plays a two-legged relegation play-off against the "
                "third-placed 2. Bundesliga club",
+    releg_playoff_pos=16,
     fd_dir="bundesliga",
     of_top="deutschland/master/{season}/1-bundesliga",
     of_second="deutschland/master/{season}/2-bundesliga2",
@@ -232,6 +247,7 @@ LIGUE_1 = League(
     ucl_places=3, releg_places=2,
     releg_note="16th plays a two-legged relegation play-off against a Ligue 2 "
                "club; 4th enters Champions League qualifying",
+    releg_playoff_pos=16,
     fd_dir="ligue-1",
     of_top="france/master/france/{season}_fr1",
     of_second="france/master/france/{season}_fr2",
@@ -302,6 +318,30 @@ CHAMPIONSHIP = League(
 )
 
 
+#: Belgium's 2026-27 season is a straight eighteen-club double round robin --
+#: the file's own header says "nieuw format: 1 reguliere competitie, 34
+#: speeldagen, GEEN play-offs", replacing the championship/relegation split that
+#: made earlier seasons impossible to model as a single table. That is what
+#: makes this addable now and not before.
+JUPILER_PRO_LEAGUE = League(
+    slug="pro-league", name="Pro League", country="Belgium",
+    n_teams=18, n_matches=306,
+    # Belgium sends its champions to the league phase; participants-2026-27.json
+    # carries Club Brugge on exactly that basis.
+    ucl_places=1,
+    releg_places=1,
+    releg_note="17th plays a relegation play-off against a Challenger Pro League club",
+    europa_places=3,
+    of_top="belgium/master/{season}/be1",
+    # No second tier upstream: openfootball has no `be2` at any season. The
+    # promoted-club correction therefore falls back to the measured Premier
+    # League constants, which `priors.regress` records in its output.
+    of_second="",
+    source="openfootball", of_from=2018, second_from=2026,
+    backtest_from="2021-22",
+)
+
+
 # ---------------------------------------------------------------------------
 # European competitions. The league phase is literally a 36-team league whose
 # clubs each play 8 of the other 35, so the same machinery carries it; the
@@ -329,7 +369,8 @@ CHAMPIONS_LEAGUE = League(
 #: today; the Champions League appears in the manifest (ready:false until its
 #: pipeline lands) so the site can already show the sixth entry.
 LEAGUES: tuple[League, ...] = (PREMIER_LEAGUE, LA_LIGA, SERIE_A, BUNDESLIGA,
-                               LIGUE_1, EREDIVISIE, PRIMEIRA_LIGA, CHAMPIONSHIP)
+                               LIGUE_1, EREDIVISIE, PRIMEIRA_LIGA,
+                               JUPILER_PRO_LEAGUE, CHAMPIONSHIP)
 
 #: The five the model was calibrated on and whose backtest is quoted as the
 #: headline. Kept separate from `LEAGUES` so anything that means "the big five"

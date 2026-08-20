@@ -12,6 +12,7 @@
 <meta property="og:image" content="og/premier-league.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="og/premier-league.png">
+<link rel="canonical" href="https://chraltro.github.io/537/races.html">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -111,12 +112,7 @@
     <div class="stamp" id="stamp"></div>
   </div>
 
-  <nav class="chips racenav" aria-label="Jump to a race">
-    <a class="chip-btn" href="#week">This week</a>
-    <a class="chip-btn" href="#title" id="titlechip">The title</a>
-    <a class="chip-btn" href="#topfive" id="uclchip">Top five</a>
-    <a class="chip-btn" href="#relegation" id="relchip">Relegation</a>
-  </nav>
+  <div id="tabs"></div>
 
   <div class="narr" id="narrative"></div>
 
@@ -169,7 +165,7 @@
 
 <script type="module">
 import { data, pct, esc, ord, initChrome, initPalette, chipColor, roundLabel,
-         lineChart, probBar, lg, url, setMeta, cardUrl } from './assets/app.js';
+         lineChart, probBar, lg, url, setMeta, cardUrl, initTabs } from './assets/app.js';
 initChrome('races');
 
 const fc = await data('forecast');
@@ -186,7 +182,11 @@ const recap = rc || { mode: 'preseason', movers: [], shocks: [],
 
 const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
 const byTitle = [...fc.teams].sort((a, b) => b.title - a.title);
-const byReleg = [...fc.teams].sort((a, b) => b.releg - a.releg);
+/* The chance of going down, not the chance of finishing in the automatic
+   places -- in Germany and France those differ by the relegation tie, and the
+   reader means the former. `p_down` is absent where no tie is played. */
+fc.teams.forEach((t) => { t.down = t.p_down ?? t.releg; });
+const byReleg = [...fc.teams].sort((a, b) => b.down - a.down);
 const L = fc.lines;
 
 const METRIC = { title: W.isCup ? 'trophy chance' : 'title chance',
@@ -210,10 +210,10 @@ setMeta({
     + 'each contender faces.',
   image: cardUrl(W.slug),
 });
-document.getElementById('titlechip').textContent = W.isCup ? 'The trophy' : 'The title';
+
 document.getElementById('titlehead').textContent =
   `${W.winRace.charAt(0).toUpperCase()}${W.winRace.slice(1)}`;
-document.getElementById('uclchip').textContent = W.topN;
+
 document.getElementById('uclhead').textContent =
   `${W.topRace.charAt(0).toUpperCase()}${W.topRace.slice(1)}`;
 document.getElementById('uclsub').textContent = W.isCup
@@ -222,7 +222,7 @@ document.getElementById('uclsub').textContent = W.isCup
     + 'which skips the knockout play-off.'
   : 'The contested part of the table: clubs whose Champions League place is neither settled '
     + `nor gone. Ranked by their chance of finishing in the ${W.topWord}.`;
-document.getElementById('relchip').textContent = W.isCup ? 'The cut' : 'Relegation';
+
 document.getElementById('relhead').textContent =
   `${W.downRace.charAt(0).toUpperCase()}${W.downRace.slice(1)}`;
 document.getElementById('relsub').textContent = W.isCup
@@ -245,7 +245,7 @@ document.getElementById('lede').innerHTML =
   `Three races decide a ${esc(W.name)} season, and the model has an opinion on all of them.
    <b>${esc(lead.name)}</b> are the likeliest ${W.isCup ? 'winners' : 'champions'} at
    ${pct(lead.title)}, and <b>${esc(drop.name)}</b> the likeliest to ${W.downVerb} at
-   ${pct(drop.releg)}. Each contender is shown with the run of fixtures that will settle it.`;
+   ${pct(drop.down)}. Each contender is shown with the run of fixtures that will settle it.`;
 document.getElementById('stamp').innerHTML = `
   <span>Season <b>${esc(fc.season)}</b></span>
   <span><b>${fc.matches_played}</b> of ${nMatches} matches played</span>
@@ -392,7 +392,7 @@ function weekly() {
         <div class="n">${pct(lead.title)} to win it, then ${esc(second.name)} at ${pct(second.title)}</div></div>
       <div class="tile"><div class="k">${W.isCup ? 'Most likely out' : 'Most likely down'}</div>
         <div class="v">${esc(drop.name)}</div>
-        <div class="n">${pct(drop.releg)}, then ${esc(byReleg[1].name)} at ${pct(byReleg[1].releg)}</div></div>
+        <div class="n">${pct(drop.down)}, then ${esc(byReleg[1].name)} at ${pct(byReleg[1].down)}</div></div>
       <div class="tile"><div class="k">Tightest race</div>
         <div class="v">${esc(tightest.label)}</div>
         <div class="n">${tightest.n} clubs still between 5% and 95%, more than
@@ -449,6 +449,19 @@ function render() {
 }
 render();
 window.addEventListener('themechange', render);
+
+/* One tab per race. The anchor chips this replaces already implied the split;
+   they just made you scroll five screens to act on it. "This week" leads,
+   because it is the part that changes between visits. */
+initTabs(document.getElementById('tabs'), [
+  { id: 'week', label: 'This week', sections: [document.getElementById('week')] },
+  { id: 'title', label: W.winRace.replace(/^the /, '').replace(/^\w/, (c) => c.toUpperCase()),
+    sections: [document.getElementById('title')] },
+  { id: 'europe', label: W.isPromotion ? 'Promotion' : (W.isCup ? W.topN : 'Europe'),
+    sections: [document.getElementById('topfive')] },
+  { id: 'bottom', label: W.isCup ? 'The cut' : 'Relegation',
+    sections: [document.getElementById('relegation')] },
+].filter((g) => g.sections.every(Boolean)));
 </script>
 </body>
 </html>

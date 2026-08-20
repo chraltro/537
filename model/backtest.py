@@ -154,6 +154,19 @@ BASELINE_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "baselines")
 
 
+def _snapshot_span(external: dict) -> dict:
+    """First and last match date in the frozen baseline extract.
+
+    The page says the snapshot "stops in June 2025". It stops when it stops, and
+    the extract knows: quoting a date that was typed by hand is a claim that
+    goes stale silently the first time somebody refreshes the file.
+    """
+    if not external:
+        return {}
+    days = sorted(k[0] for k in external)
+    return {"from": days[0], "to": days[-1], "matches": len(days)}
+
+
 def load_external(league) -> dict:
     """`{(date, home, away): row}` for one league, or {} when not extracted."""
     path = os.path.join(BASELINE_DIR, f"{league.slug}.json")
@@ -381,10 +394,15 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
            "external": {"source": "xgabora/Club-Football-Match-Data-2000-2025",
                         "url": ("https://github.com/xgabora/"
                                 "Club-Football-Match-Data-2000-2025"),
-                        "available": bool(external)},
+                        "available": bool(external),
+                        # The snapshot's own span, read off the extract rather
+                        # than written into the page as a month that will be
+                        # wrong the first time the file is refreshed.
+                        **_snapshot_span(external)},
            "seasons": seasons,
            "params": {"goals_weight": goals_weight, "decay": decay}}
     out["calibration"] = calibration(P, Y)
+    out["by_outcome"] = by_outcome(P, Y)
     return out
 
 
@@ -491,3 +509,123 @@ def calibration(P: np.ndarray, Y: np.ndarray, bins: int = 10) -> list[dict]:
                      "observed": float(flat_o[sel].mean()),
                      "n": int(sel.sum())})
     return rows
+
+
+def by_outcome(P: np.ndarray, Y: np.ndarray) -> list[dict]:
+    """Calibration split three ways, because the pooled curve hides a draw bias.
+
+    The overall reliability curve mixes home wins, draws and away wins, and a
+    model that is 2 points light on draws and 1 point heavy on each of the other
+    two looks perfectly calibrated in the pooled view: the errors cancel. Draws
+    are the outcome a goals model is most likely to get wrong -- they are the
+    thin middle of a distribution over two counts -- so they are worth reporting
+    on their own rather than being averaged away.
+
+    Reported, not corrected. A recalibration fitted on the same matches used to
+    detect the bias would be fitting noise; if the gap is real it will still be
+    here next season, measured on matches this one never saw.
+    """
+    names = ("home", "draw", "away")
+    rows = []
+    for k, name in enumerate(names):
+        pk = P[:, k]
+        ok = (Y == k).astype(float)
+        rows.append({
+            "outcome": name,
+            "n": int(len(pk)),
+            "predicted": round(float(pk.mean()), 4),
+            "observed": round(float(ok.mean()), 4),
+            # The mean gap in probability points, and how big it is next to the
+            # scatter of a single match's outcome -- a bias of half a point on
+            # 4,000 matches is not the same finding as one on 200.
+            "bias": round(float(pk.mean() - ok.mean()), 4),
+            "z": round(float((pk.mean() - ok.mean())
+                             / max(1e-9, ok.std(ddof=1) / np.sqrt(len(ok)))), 2),
+        })
+    return rows
+
+
+# --------------------------------------------------------------------------
+# Scoring the table, not just the matches
+# --------------------------------------------------------------------------
+def table_accuracy(ds: Dataset, seasons: list[str], shot_conv,
+                   *, quiet: bool = True) -> dict:
+    """How good was the preseason projection of the final table?
+
+    Match log-loss is the right way to score a forecast and the wrong way to
+    argue about one. Nobody has an intuition for 0.97, and the number the model
+    is actually judged on in public is whether it called the season.
+
+    So: at the start of each past season, fit on what was knowable then, project
+    every fixture, sum expected points, and compare that ordering with what
+    happened. Reported as the champion hit rate, the share of the qualifying and
+    relegation places called correctly, the rank correlation and the mean points
+    error -- none of which the model has ever been allowed to see.
+    """
+    from .priors import _season_start
+    rows = []
+    for season in seasons:
+        ref = _season_start(season)
+        hist = [m for m in ds.before(ref)]
+        played = [m for m in ds.top if m.season == season]
+        teams = sorted({m.home for m in played})
+        n = len(teams)
+        if len(hist) < 2000 or n < 16 or len(played) != n * (n - 1):
+            continue
+        pool = sorted({m.home for m in hist} | {m.away for m in hist})
+        if not set(teams) <= set(pool):
+            continue
+        fit = ratings.fit(hist, pool, ref, shot_conv=shot_conv)
+        exp = {t: 0.0 for t in teams}
+        for m in played:
+            lh, la = fit.lambdas(m.home, m.away)
+            ph, pd, pa = outcome_probs(score_matrix(lh, la, fit.rho))
+            exp[m.home] += 3 * ph + pd
+            exp[m.away] += 3 * pa + pd
+        actual = {t: 0 for t in teams}
+        for m in played:
+            if m.hg > m.ag:
+                actual[m.home] += 3
+            elif m.hg == m.ag:
+                actual[m.home] += 1
+                actual[m.away] += 1
+            else:
+                actual[m.away] += 3
+        proj = sorted(teams, key=lambda t: -exp[t])
+        real = sorted(teams, key=lambda t: -actual[t])
+        p_rank = {t: i for i, t in enumerate(proj)}
+        r_rank = {t: i for i, t in enumerate(real)}
+        d = np.array([p_rank[t] - r_rank[t] for t in teams], float)
+        # Spearman on ranks is Pearson on the rank vectors.
+        pr = np.array([p_rank[t] for t in teams], float)
+        rr = np.array([r_rank[t] for t in teams], float)
+        rho = float(np.corrcoef(pr, rr)[0, 1]) if n > 2 else 0.0
+        ucl = ds.league.ucl_places
+        rel = ds.league.releg_places
+        rows.append({
+            "season": season, "n_teams": n,
+            "champion_called": proj[0] == real[0],
+            "top_overlap": len(set(proj[:ucl]) & set(real[:ucl])) / max(ucl, 1),
+            "releg_overlap": len(set(proj[-rel:]) & set(real[-rel:])) / max(rel, 1),
+            "rank_corr": round(rho, 4),
+            "mean_rank_error": round(float(np.abs(d).mean()), 2),
+            "mean_points_error": round(
+                float(np.mean([abs(exp[t] - actual[t]) for t in teams])), 2),
+        })
+        if not quiet:
+            print(f"  · {season}: champion "
+                  f"{'hit' if rows[-1]['champion_called'] else 'miss'}, "
+                  f"rank corr {rho:.2f}")
+    if not rows:
+        return {}
+    return {
+        "seasons": rows,
+        "n": len(rows),
+        "champion_rate": round(sum(r["champion_called"] for r in rows) / len(rows), 3),
+        "top_overlap": round(float(np.mean([r["top_overlap"] for r in rows])), 3),
+        "releg_overlap": round(float(np.mean([r["releg_overlap"] for r in rows])), 3),
+        "rank_corr": round(float(np.mean([r["rank_corr"] for r in rows])), 3),
+        "mean_rank_error": round(float(np.mean([r["mean_rank_error"] for r in rows])), 2),
+        "mean_points_error": round(
+            float(np.mean([r["mean_points_error"] for r in rows])), 2),
+    }

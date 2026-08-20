@@ -227,29 +227,32 @@
   }
  ],
  "calibration_priors": {
-  "version": 2,
+  "version": 3,
   "continuing": {
-   "slope": 0.9613261102826561,
-   "intercept": -0.009950332675766817,
-   "n": 144,
-   "source": "championship"
+   "slope": 0.8260996409105278,
+   "intercept": -0.01253032113130442,
+   "n": 252,
+   "source": "championship",
+   "measured_slope": 0.8261
   },
   "promoted": {
-   "slope": 0.22918862627298806,
-   "intercept": -0.1958199488193044,
-   "n": 24,
-   "source": "championship"
+   "slope": 0.5415243430552981,
+   "intercept": -0.09409602224044132,
+   "n": 42,
+   "source": "championship",
+   "measured_slope": 0.5415
   },
   "relegated": {
-   "slope": 0.9053,
-   "intercept": 0.025,
-   "n": 24,
-   "source": "premier-league",
-   "measured_slope": 1.5974,
-   "reason": "measured slope 1.60 outside 0.02-1.25"
+   "slope": 1.0,
+   "intercept": 0.11026747605491607,
+   "n": 42,
+   "source": "championship",
+   "measured_slope": 1.2579,
+   "reason": "measured slope 1.26 clamped to 1.0"
   },
   "league": "championship",
-  "generated": "2026-08-19"
+  "generated": "2026-08-20"
  },
- "league": "championship"
+ "league": "championship",
+ "table": {}
 }

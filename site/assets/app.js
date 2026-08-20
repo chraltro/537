@@ -46,7 +46,14 @@ const _ready = LEAGUES.filter((l) => l.ready);
 export const DEFAULT_LEAGUE =
   ((_named && _named.ready) ? _named : (_ready[0] || _named || LEAGUES[0])).slug;
 
-const _asked = new URLSearchParams(location.search).get('lg');
+/* The competition lives in the URL so every link is shareable, which meant a
+   bare visit always landed on the Premier League even for somebody who only
+   ever reads the Eredivisie. Remember the last one chosen, and let an explicit
+   `?lg=` still win over it. */
+const LG_KEY = 'plf-league';
+let _remembered = null;
+try { _remembered = localStorage.getItem(LG_KEY); } catch { /* private mode */ }
+const _asked = new URLSearchParams(location.search).get('lg') || _remembered;
 /* An unknown league falls back rather than 404ing. A known but not-yet-live one
    is honoured when it is asked for by name: the switcher will not offer it, but
    a direct link renders whatever staging data its directory holds, which is how
@@ -58,6 +65,7 @@ const _chosen = LEAGUES.find((l) => l.slug === _asked)
    topped up from the league's own JSON as that arrives (see absorb below), so
    the manifest is a fallback rather than a second source of truth. */
 export const LG = { ...(_chosen || FALLBACK_MANIFEST.leagues[0]) };
+try { localStorage.setItem(LG_KEY, LG.slug); } catch { /* private mode */ }
 export const getLeague = () => LG.slug;
 
 const NUMWORD = ['zero', 'one', 'two', 'three', 'four', 'five',
@@ -119,7 +127,9 @@ export function lg() {
     roundWord: cup ? 'Matchday' : 'Matchweek',
     roundWords: cup ? 'matchdays' : 'matchweeks',
     roundAbbr: cup ? 'MD' : 'MW',
-    topN: promo ? 'Up' : `Top ${adv}`,        // column header
+    /* A second tier now shows both routes up, so the automatic column has to
+       say which one it is. "Up" on its own would read as either. */
+    topN: promo ? 'Auto' : `Top ${adv}`,      // column header
     topWord: `top ${numWord(adv)}`,           // "the top five"
     topAdj: `top-${numWord(adv)}`,            // "top-five race"
     topFinish: promo ? 'automatic promotion' : `a top-${numWord(adv)} finish`,
@@ -217,9 +227,14 @@ const store = {};
 
 export async function data(name) {
   if (!store[name]) {
-    const r = await fetch(`${DATA}${LG.slug}/${name}.json`, { cache: 'no-cache' });
-    if (!r.ok) throw new Error(`${name}.json ${r.status}`);
-    store[name] = await r.json();
+    try {
+      const r = await fetch(`${DATA}${LG.slug}/${name}.json`, { cache: 'no-cache' });
+      if (!r.ok) throw new Error(`${name}.json ${r.status}`);
+      store[name] = await r.json();
+    } catch (e) {
+      dataError(`${LG.name} ${name}.json`, e);
+      throw e;
+    }
     absorb(name, store[name]);
   }
   return store[name];
@@ -229,6 +244,24 @@ export async function data(name) {
    cross-league ranking and the head-to-head record behind the comparison tool.
    They deliberately do not take a league slug, because their entire point is
    that they are not scoped to one. */
+/* A page that cannot load its data should say so, not sit half-painted behind
+   a skeleton for ever. Called by the data helpers below; the message names the
+   file, because "something went wrong" helps nobody. */
+export function dataError(what, err) {
+  console.error(what, err);
+  const main = document.getElementById('main') || document.body;
+  if (document.getElementById('loadfail')) return;
+  main.insertAdjacentHTML('afterbegin', `
+    <div class="loadfail" id="loadfail" role="alert">
+      <b>This page could not load its forecast.</b>
+      <span>${esc(what)} did not arrive${err && err.message ? `: ${esc(err.message)}` : ''}.
+      The site rebuilds every six hours, so this is usually a deploy in progress —
+      try again in a few minutes. If it persists, the competition may not have
+      been built this cycle.</span>
+      <a href="${ROOT}index.html">Back to the Premier League</a>
+    </div>`);
+}
+
 export async function siteData(name) {
   const key = `::${name}`;
   if (!store[key]) {
@@ -413,7 +446,7 @@ export function initChrome(page) {
     <header class="masthead"><div class="wrap">
       <a class="brand" href="${url('index.html')}">
         <span class="mark"></span>
-        <b>Ninety</b>
+        <b>537</b>
       </a>
       <label class="lgswitch">
         <span class="vh">League</span>
@@ -443,6 +476,8 @@ export function initChrome(page) {
             }).join('')}
           </div>
         </div>
+      </nav>
+      <div class="tools">
         <button class="searchbtn" data-open-palette aria-label="Search (press slash)">
           <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
             <circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
@@ -455,7 +490,7 @@ export function initChrome(page) {
             <path d="M8 1.8a6.2 6.2 0 0 0 0 12.4z" fill="currentColor"/>
           </svg>
         </button>
-      </nav>
+      </div>
     </div></header>`);
 
   document.getElementById('tt').addEventListener('click', () => {
@@ -494,8 +529,23 @@ export function initChrome(page) {
   document.body.insertAdjacentHTML('beforeend', '<div id="tip" role="tooltip"></div>');
 
   initNavMenu();
+  trackHeadHeight();
   lgifyLinks(document);
   registerWorker();
+}
+
+/* The masthead's real height, published for anything that has to sit under it.
+   Sticky table headers used to hardcode 60px, and 52px on a phone; the two-row
+   phone masthead made both wrong and pinned the header over the first row.
+   Measuring is cheap and survives the next change to the bar. */
+function trackHeadHeight() {
+  const head = document.querySelector('.masthead');
+  if (!head) return;
+  const set = () => document.documentElement.style.setProperty(
+    '--head-h', `${Math.round(head.getBoundingClientRect().height)}px`);
+  set();
+  if (typeof ResizeObserver === 'function') new ResizeObserver(set).observe(head);
+  else addEventListener('resize', set);
 }
 
 /* ================= the overflow menu =================
@@ -613,6 +663,17 @@ const _ratio = (a, b) => {
   const [x, y] = [_lum(a), _lum(b)].sort((p, q) => q - p);
   return (x + 0.05) / (y + 0.05);
 };
+/* A club has two colours in `team_meta.json` and the site only ever used one,
+   which left the several clubs whose primaries collide after the contrast nudge
+   looking identical. A thin second band costs nothing and separates them. */
+export function chipStyle(t) {
+  const a = chipColor(t.primary);
+  const b = t.secondary ? chipColor(t.secondary) : null;
+  return b && b !== a
+    ? `background:linear-gradient(180deg,${a} 0 55%,${b} 55% 100%)`
+    : `background:${a}`;
+}
+
 export function chipColor(hex) {
   const dark = document.documentElement.getAttribute('data-theme') !== 'light';
   const surface = dark ? [26, 26, 25] : [252, 252, 251];
@@ -635,13 +696,41 @@ export function rampColor(p, max) {
 }
 
 /* ---------------- sortable tables ---------------- */
-export function makeSortable(table, rows, render, initial) {
+export function makeSortable(table, rows, render, initial, opts = {}) {
+  /* A sortable header used to be a `th` with a click listener and nothing else:
+     no way to reach it from a keyboard, and no way for a screen reader to learn
+     which column was active or which way it ran. Both are fixed here rather
+     than per page, because every table on the site goes through this function.
+
+     The active column also rides in the URL, since a sorted table is a thing
+     people send each other and the site's convention is that what you are
+     looking at is what you can link to. */
+  const param = opts.param === false ? null : (opts.param || 'sort');
+  const url = new URL(location.href);
   let key = initial, dir = -1;
+  if (param) {
+    const want = url.searchParams.get(param);
+    if (want && table.querySelector(`th[data-k="${CSS.escape(want)}"]`)) key = want;
+    if (url.searchParams.get(`${param}dir`) === 'asc') dir = 1;
+  }
+
   const heads = [...table.querySelectorAll('th[data-k]')];
-  const apply = () => {
-    heads.forEach((h) => h.removeAttribute('data-dir'));
+  const apply = (push) => {
+    heads.forEach((h) => {
+      h.removeAttribute('data-dir');
+      h.setAttribute('aria-sort', 'none');
+    });
     const h = heads.find((x) => x.dataset.k === key);
-    if (h) h.setAttribute('data-dir', dir === -1 ? 'desc' : 'asc');
+    if (h) {
+      h.setAttribute('data-dir', dir === -1 ? 'desc' : 'asc');
+      h.setAttribute('aria-sort', dir === -1 ? 'descending' : 'ascending');
+    }
+    if (param && push) {
+      const u = new URL(location.href);
+      u.searchParams.set(param, key);
+      u.searchParams.set(`${param}dir`, dir === -1 ? 'desc' : 'asc');
+      history.replaceState({}, '', u.pathname + u.search + u.hash);
+    }
     const sorted = [...rows].sort((a, b) => {
       const x = a[key], y = b[key];
       const c = typeof x === 'string' ? x.localeCompare(y) : x - y;
@@ -649,15 +738,25 @@ export function makeSortable(table, rows, render, initial) {
     });
     render(sorted);
   };
+
+  const toggle = (h) => {
+    if (key === h.dataset.k) dir = -dir;
+    else { key = h.dataset.k; dir = h.dataset.k === 'name' ? 1 : -1; }
+    apply(true);
+  };
   heads.forEach((h) => {
     h.classList.add('sortable');
-    h.addEventListener('click', () => {
-      if (key === h.dataset.k) dir = -dir;
-      else { key = h.dataset.k; dir = h.dataset.k === 'name' ? 1 : -1; }
-      apply();
+    h.setAttribute('tabindex', '0');
+    h.setAttribute('role', 'button');
+    if (!h.title) h.title = `Sort by ${h.textContent.trim()}`;
+    h.addEventListener('click', () => toggle(h));
+    h.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      toggle(h);
     });
   });
-  apply();
+  apply(false);
 }
 
 /* ---------------- tiny SVG line chart ----------------
@@ -819,6 +918,8 @@ export function initPalette(teams) {
     }
     if ((e.key === '/' && !typing) || ((e.metaKey || e.ctrlKey) && e.key === 'k')) {
       e.preventDefault(); open();
+    } else if (e.key === '?' && !typing) {
+      e.preventDefault(); showShortcuts();
     }
   });
   input.addEventListener('input', () => { active = 0; render(); });
@@ -829,6 +930,122 @@ export function initPalette(teams) {
   el.addEventListener('click', (e) => { if (e.target.dataset.close !== undefined) close(); });
   document.querySelectorAll('[data-open-palette]').forEach((b) =>
     b.addEventListener('click', open));
+}
+
+/* ================= tabs =================
+   The feature build left `team.html` at eight stacked cards and `method.html` at
+   ten screens: everything given equal weight, so nothing had any. This groups a
+   page's cards without hiding its answer -- whatever sits above the strip stays
+   unconditional, and only the depth below it is switched.
+
+   Three properties it has to have, none optional:
+     * the chosen tab is in the URL as a hash, so a tab is linkable and Back works;
+     * every panel is shown when printing, since a tab is a screen affordance;
+     * the strip is a real tablist, driven by arrow keys as well as clicks.
+
+   `groups` is [{ id, label, sections: [element…] }]. Panels are wrapped rather
+   than moved, so the page's own markup order still decides what is in each. */
+export function initTabs(host, groups, { param = '' } = {}) {
+  if (!host || groups.length < 2) return () => {};
+  const wraps = groups.map((g) => {
+    const div = document.createElement('div');
+    div.id = `panel-${g.id}`;
+    div.setAttribute('data-tabpanel', g.id);
+    div.setAttribute('role', 'tabpanel');
+    div.setAttribute('aria-labelledby', `tab-${g.id}`);
+    g.sections.filter(Boolean).forEach((el) => div.appendChild(el));
+    return div;
+  });
+  const anchor = document.createElement('div');
+  anchor.className = 'tabstrip';
+  anchor.setAttribute('role', 'tablist');
+  anchor.innerHTML = groups.map((g) => `
+    <button class="tab-btn" role="tab" id="tab-${esc(g.id)}"
+            aria-controls="panel-${esc(g.id)}" data-tab="${esc(g.id)}"
+            aria-selected="false" tabindex="-1">${esc(g.label)}</button>`).join('');
+  host.appendChild(anchor);
+  wraps.forEach((w) => host.appendChild(w));
+
+  const btns = [...anchor.querySelectorAll('[data-tab]')];
+  const show = (id, push) => {
+    const found = groups.find((g) => g.id === id) ? id : groups[0].id;
+    btns.forEach((b) => {
+      const on = b.dataset.tab === found;
+      b.setAttribute('aria-selected', String(on));
+      b.tabIndex = on ? 0 : -1;
+    });
+    wraps.forEach((w) => { w.hidden = w.dataset.tabpanel !== found; });
+    if (push) {
+      const u = new URL(location.href);
+      u.hash = found;
+      history.replaceState({}, '', u.pathname + u.search + u.hash);
+    }
+    return found;
+  };
+
+  anchor.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tab]');
+    if (b) show(b.dataset.tab, true);
+  });
+  anchor.addEventListener('keydown', (e) => {
+    const i = btns.indexOf(document.activeElement);
+    if (i < 0) return;
+    let j = null;
+    if (e.key === 'ArrowRight') j = (i + 1) % btns.length;
+    else if (e.key === 'ArrowLeft') j = (i - 1 + btns.length) % btns.length;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = btns.length - 1;
+    if (j === null) return;
+    e.preventDefault();
+    btns[j].focus();
+    show(btns[j].dataset.tab, true);
+  });
+  addEventListener('hashchange', () => show(location.hash.slice(1), false));
+
+  const wanted = location.hash.slice(1)
+    || (param && new URLSearchParams(location.search).get(param)) || groups[0].id;
+  show(wanted, false);
+  return show;
+}
+
+/* The site rewards keyboard use and advertised almost none of it. */
+export function showShortcuts() {
+  modal(`<h3>Keyboard shortcuts</h3>
+    <p class="msub">Everything here works from any page.</p>
+    <div id="tipish">
+      ${[['/ or Ctrl-K', 'Search clubs, matchweeks and pages'],
+         ['?', 'This list'],
+         ['j / k', 'Move down and up a table, Enter to open'],
+         ['← / →', 'Move between tabs when one is focused'],
+         ['Esc', 'Close whatever is open'],
+         ['Tab', 'Reach the sort headers; Enter sorts']]
+        .map(([k, v]) => `<div class="r"><span>${esc(v)}</span><b>${esc(k)}</b></div>`).join('')}
+    </div>`);
+}
+
+/* ================= row navigation =================
+   j and k through a table's rows, Enter to follow the row's own link. Bound to
+   a container rather than to each row, so a re-render never loses it. */
+export function initRowKeys(container, { rowSel = 'tr[data-id]' } = {}) {
+  if (!container) return;
+  let at = -1;
+  const rows = () => [...container.querySelectorAll(rowSel)];
+  const mark = (list) => list.forEach((r, i) => r.classList.toggle('rowcursor', i === at));
+  addEventListener('keydown', (e) => {
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName || '')) return;
+    if (!document.getElementById('palette')?.hidden) return;
+    const list = rows();
+    if (!list.length) return;
+    if (e.key === 'j' || e.key === 'k') {
+      e.preventDefault();
+      at = e.key === 'j' ? Math.min(at + 1, list.length - 1) : Math.max(at - 1, 0);
+      mark(list);
+      list[at].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter' && at >= 0 && at < list.length) {
+      const a = list[at].querySelector('a[href]');
+      if (a) { e.preventDefault(); location.href = a.href; }
+    }
+  });
 }
 
 /* ================= body scroll lock =================
@@ -865,6 +1082,13 @@ export function modal(html) {
   }
   const box = m.querySelector('.modal-box');
   box.innerHTML = `<button class="modal-x" data-close aria-label="Close">✕</button>${html}`;
+  box.querySelectorAll('[data-ics]').forEach((a) => a.addEventListener('click', (e) => {
+    e.preventDefault();
+    /* One fixture out of the competition's own feed, so the description is the
+       same text a subscriber already gets and there is one format to maintain. */
+    const [h, aw] = a.dataset.ics.split('|');
+    window.location.href = `${ROOT}cal/${LG.slug}/${encodeURIComponent(h)}.ics`;
+  }));
   box.scrollTop = 0;
   m.hidden = false;
   lockScroll();
@@ -1128,7 +1352,8 @@ export function matchModal(m, meta, opts = {}) {
     <p class="msub">${esc(roundLabel(m.md, m.leg))} · ${fmtDay(m.date)}${m.time ? ` · ${m.time}` : ''}
       ${m.played ? ` · finished ${m.hg}–${m.ag}` : ''}
       ${opts.link === false ? '' :
-        ` · <a href="${url(`matches.html?m=${m.h}--${m.a}`)}">link to this match</a>`}</p>
+        ` · <a href="${url(`matches.html?m=${m.h}--${m.a}`)}">link to this match</a>`}
+      ${m.played ? '' : ` · <a href="#" data-ics="${esc(m.h)}|${esc(m.a)}">add to calendar</a>`}</p>
     <div class="wdl" style="height:26px;margin-bottom:6px">
       <i class="h" style="flex:${Math.max(m.ph, .02)}"><b>${Math.round(m.ph * 100)}</b></i>
       <i class="d" style="flex:${Math.max(m.pd, .02)}"><b>${Math.round(m.pd * 100)}</b></i>

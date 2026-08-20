@@ -1,6 +1,6 @@
 {
  "default": "premier-league",
- "generated": "2026-08-19T21:03:38+00:00",
+ "generated": "2026-08-20T08:06:15+00:00",
  "leagues": [
   {
    "slug": "premier-league",
@@ -78,6 +78,17 @@
    "ucl_places": 2,
    "releg_places": 2,
    "releg_note": null
+  },
+  {
+   "slug": "pro-league",
+   "name": "Pro League",
+   "country": "Belgium",
+   "ready": true,
+   "kind": "league",
+   "n_teams": 18,
+   "ucl_places": 1,
+   "releg_places": 1,
+   "releg_note": "17th plays a relegation play-off against a Challenger Pro League club"
   },
   {
    "slug": "championship",

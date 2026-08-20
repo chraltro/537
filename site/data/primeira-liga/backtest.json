@@ -248,20 +248,21 @@
   }
  ],
  "calibration_priors": {
-  "version": 2,
+  "version": 3,
   "continuing": {
    "slope": 1.0336464712536744,
    "intercept": -0.02180375690211454,
    "n": 45,
-   "source": "primeira-liga"
+   "source": "primeira-liga",
+   "measured_slope": 1.0336
   },
   "promoted": {
-   "slope": 0.3225,
-   "intercept": -0.3441,
+   "slope": 1.25,
+   "intercept": 0.5768652748879668,
    "n": 8,
-   "source": "premier-league",
+   "source": "primeira-liga",
    "measured_slope": 2.0121,
-   "reason": "measured slope 2.01 outside 0.02-1.25"
+   "reason": "measured slope 2.01 clamped to 1.25"
   },
   "relegated": {
    "slope": 0.9053,
@@ -271,7 +272,38 @@
    "reason": "too few pairs"
   },
   "league": "primeira-liga",
-  "generated": "2026-08-19"
+  "generated": "2026-08-20"
  },
- "league": "primeira-liga"
+ "league": "primeira-liga",
+ "table": {
+  "seasons": [
+   {
+    "season": "2024-25",
+    "n_teams": 18,
+    "champion_called": true,
+    "top_overlap": 1.0,
+    "releg_overlap": 0.0,
+    "rank_corr": 0.7833,
+    "mean_rank_error": 2.56,
+    "mean_points_error": 5.84
+   },
+   {
+    "season": "2025-26",
+    "n_teams": 18,
+    "champion_called": false,
+    "top_overlap": 0.5,
+    "releg_overlap": 0.5,
+    "rank_corr": 0.8369,
+    "mean_rank_error": 2.22,
+    "mean_points_error": 5.68
+   }
+  ],
+  "n": 2,
+  "champion_rate": 0.5,
+  "top_overlap": 0.75,
+  "releg_overlap": 0.25,
+  "rank_corr": 0.81,
+  "mean_rank_error": 2.39,
+  "mean_points_error": 5.76
+ }
 }

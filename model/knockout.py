@@ -242,3 +242,116 @@ def simulate_bracket(fit: Fit, teams: list[str], orders: np.ndarray, *,
 
     return {"teams": teams, "n_sims": int(S),
             **{k: v / S for k, v in reach.items()}}
+
+
+# --------------------------------------------------------------------------
+# Domestic play-offs
+# --------------------------------------------------------------------------
+def promotion_playoff(fit: Fit, teams: list[str], orders: np.ndarray, *,
+                      direct: int, band: int,
+                      adj: dict[str, float] | None = None,
+                      seed: int = config.SEED,
+                      max_sims: int = 20000) -> np.ndarray:
+    """P(each club goes up through the play-off), from simulated finishes.
+
+    The Championship's `p_playoff` used to be the chance of *finishing* third to
+    sixth, which is not the same question anybody asks: three clubs go up and
+    only one of those four is one of them. This plays the bracket on top of each
+    simulated table, exactly as the Champions League bracket is played on top of
+    its league phase -- two-legged semi-finals seeded high against low, then a
+    one-off final on neutral ground at Wembley.
+
+    Returns one probability per club, already containing its chance of reaching
+    the play-off at all, so it adds to the automatic-promotion probability
+    without double counting.
+    """
+    n = len(teams)
+    if band < 2 or direct + band > n:
+        return np.zeros(n)
+    rng = np.random.default_rng(seed + 7)
+    if len(orders) > max_sims:
+        orders = orders[rng.choice(len(orders), max_sims, replace=False)]
+    S = len(orders)
+    tie = tie_matrix(fit, teams, adj=adj)
+    neu = neutral_matrix(fit, teams, adj=adj)
+
+    def resolve(high, low, table):
+        return np.where(rng.random(S) < table[high, low], high, low)
+
+    # Seeded semi-finals: highest plays lowest, and so on inward. The higher
+    # seed is at home in the second leg, which `tie_matrix` already assumes.
+    seeds = [orders[:, direct + k] for k in range(band)]
+    winners = [resolve(seeds[k], seeds[band - 1 - k], tie)
+               for k in range(band // 2)]
+    # Successive rounds, until one club is left. A four-club band is one round
+    # of semi-finals and a final; the loop keeps it correct for any even band.
+    while len(winners) > 1:
+        nxt = [resolve(winners[k], winners[len(winners) - 1 - k], neu)
+               for k in range(len(winners) // 2)]
+        winners = nxt
+    champion = winners[0]
+    out = np.bincount(champion, minlength=n).astype(float) / S
+    return out
+
+
+def relegation_playoff(fit: Fit, teams: list[str], orders: np.ndarray, *,
+                       position: int, opponent_rating: float,
+                       adj: dict[str, float] | None = None,
+                       seed: int = config.SEED,
+                       max_sims: int = 20000) -> np.ndarray:
+    """P(each club goes down *through the play-off*), added to direct relegation.
+
+    Germany and France send the club finishing third-from-bottom into a
+    two-legged tie against a second-tier side. Until now that was a sentence
+    beside a number that ignored it, so the published relegation probability was
+    the chance of finishing in the bottom two -- not the chance of going down.
+
+    The opponent is not a club this pipeline simulates: it is whoever finishes
+    third in a division we do not project. So it is represented by a single
+    net rating, `opponent_rating`, taken from the second tier's own recent
+    record, and the tie is played on that. An approximation, and labelled as one
+    on the method page, but a far better one than pretending the tie is not
+    played at all.
+    """
+    n = len(teams)
+    if position < 1 or position > n:
+        return np.zeros(n)
+    rng = np.random.default_rng(seed + 11)
+    if len(orders) > max_sims:
+        orders = orders[rng.choice(len(orders), max_sims, replace=False)]
+    S = len(orders)
+    # P(the top-flight club survives) against a synthetic opponent, per club.
+    survive = np.zeros(n)
+    for i, t in enumerate(teams):
+        survive[i] = _survive_vs_rating(fit, t, opponent_rating, adj)
+    who = orders[:, position - 1]
+    lost = rng.random(S) >= survive[who]
+    out = np.bincount(who[lost], minlength=n).astype(float) / S
+    return out
+
+
+def _survive_vs_rating(fit: Fit, team: str, opponent_net: float,
+                       adj: dict[str, float] | None) -> float:
+    """Two legs against a club described only by a net rating.
+
+    The opponent's attack and defence are split evenly around the division's
+    own average, which is the neutral choice when the only thing known about
+    them is how far ahead or behind they are overall.
+    """
+    a = (adj or {}).get(team, 0.0)
+    off = fit.offence(team) * np.exp(a / 2)
+    dfn = fit.defence(team) * np.exp(-a / 2)
+    mu = float(np.exp(fit.mu))
+    o_off = mu * np.exp(opponent_net / 2)
+    o_def = mu * np.exp(-opponent_net / 2)
+    h = float(np.exp(fit.home_advantage()))
+    # Leg one away, leg two at home.
+    m1 = score_matrix(o_off * dfn / mu * h, off * o_def / mu, fit.rho)
+    m2 = score_matrix(off * o_def / mu * h, o_off * dfn / mu, fit.rho)
+    d1 = _diff_dist(m1)                    # opponent minus us, leg one
+    d2 = _diff_dist(m2)                    # us minus opponent, leg two
+    agg = np.convolve(d2, d1[::-1])        # our aggregate difference
+    mid = len(agg) // 2
+    win = float(agg[mid + 1:].sum())
+    draw = float(agg[mid])
+    return win + draw * 0.5                # level after 180 minutes: a coin flip

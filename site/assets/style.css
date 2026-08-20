@@ -83,6 +83,9 @@ a:hover { text-decoration: underline; }
 }
 .brand b { font-size: 16px; }
 nav.top { display: flex; gap: 4px; margin-left: auto; align-items: center; }
+/* Search and the theme switch left the nav so a phone can give the nav a row
+   of its own. On a wide screen they still sit at the end of the same line. */
+.tools { display: flex; align-items: center; gap: 4px; flex: none; }
 nav.top a {
   color: var(--ink2); padding: 7px 12px; border-radius: 7px;
   font-size: 13.5px; font-weight: 550; text-decoration: none;
@@ -127,9 +130,48 @@ nav.top a[aria-current="page"] { background: var(--raised); color: var(--ink); }
 /* Wide enough for the primary links to sit in the bar: the menu's copies of
    them go away entirely, which takes them out of the accessibility tree too. */
 @media (min-width: 701px) { .menu-pop a.m-primary { display: none; } }
-/* Too narrow for four links plus a switcher: the bar keeps the button and the
-   menu carries everything, rather than a row of eight that scrolls sideways. */
-@media (max-width: 700px) { nav.top a.np { display: none; } }
+/* On a phone the masthead is two rows rather than one crowded line, because
+   the one-line version had nothing on it: four links plus a switcher does not
+   fit in 360px, so all four were hidden and the bar was a lone "More" button,
+   which tells a reader neither where they are nor where they can go.
+
+   Row one is identity — the wordmark, which competition, search, theme. Row
+   two is navigation: the four primary destinations across the full width, each
+   an equal share, with the menu button holding the rest. The menu still keeps
+   its copies of the primary links hidden here, so nothing is announced twice. */
+@media (max-width: 700px) {
+  .masthead .wrap {
+    height: auto; flex-wrap: wrap; row-gap: 0; align-items: center;
+    padding-top: 7px;
+  }
+  .brand { order: 1; }
+  /* On its own row the switcher can afford to show the whole competition name;
+     it was truncating "Championship" to fit a bar it no longer shares. */
+  .lgswitch { order: 2; margin-left: auto; min-width: 0; }
+  .lgswitch select { max-width: min(46vw, 168px); text-overflow: ellipsis; }
+  .tools { order: 3; }
+  nav.top {
+    order: 4; width: 100%; margin: 5px -14px 0; padding: 0 8px;
+    gap: 0; border-top: 1px solid var(--rule);
+  }
+  nav.top a.np {
+    flex: 1 1 0; text-align: center; padding: 11px 2px; border-radius: 0;
+    font-size: 13px; position: relative;
+  }
+  /* A tab bar marks the current tab with a rule under it, not a pill: the pill
+     reads as a button you have not pressed yet. */
+  nav.top a.np:hover { background: none; color: var(--ink); }
+  nav.top a.np[aria-current="page"] { background: none; color: var(--accent); }
+  nav.top a.np[aria-current="page"]::after {
+    content: ''; position: absolute; left: 14%; right: 14%; bottom: 0; height: 2px;
+    background: var(--accent); border-radius: 2px 2px 0 0;
+  }
+  .navmenu { flex: 0 0 auto; }
+  .morebtn { padding: 11px 12px; border-radius: 0; }
+  .morebtn[data-here] { background: none; color: var(--accent); }
+  .morebtn[aria-expanded="true"] { background: var(--raised); }
+  .menu-pop { top: calc(100% - 2px); }
+}
 
 .themetoggle {
   background: none; border: 1px solid var(--border); color: var(--ink2);
@@ -376,14 +418,26 @@ footer a { color: var(--ink2); }
      which the bottom of the table already implies. */
   .club { min-width: 0; gap: 7px; }
   .club .tag { display: none; }
+  /* The bar under a points total is a nice-to-have that costs a column's worth
+     of width, and width is the thing a phone has none of. */
+  .minibar { display: none; }
+  /* A club column sized to "Borussia Mönchengladbach" pushes the last
+     probability column off the edge, and the column that falls off is the one
+     the reader came for. Cap it and let the long names wrap onto two lines --
+     vertical space is the one thing a phone has plenty of. */
+  tbody td.l .club a { overflow-wrap: anywhere; }
+  tbody td.l:nth-child(2), thead th.l:nth-child(2) { max-width: 116px; }
   tbody td, thead th { padding-left: 5px; padding-right: 5px; }
   tbody td { font-size: 13px; }
-  .masthead .wrap { height: 52px; gap: 6px; }
+  .masthead .wrap { gap: 6px; }
   .themetoggle { width: 26px; height: 26px; margin-left: 0; }
+  nav.top a.np, .morebtn { font-size: 12.5px; padding-left: 0; padding-right: 0; }
+  .morebtn { padding-left: 9px; padding-right: 9px; }
   /* The switcher keeps its place on a phone — it is how you get to the other
      four leagues — but gives up everything it can spare. */
   .lgswitch select {
-    max-width: 96px; font-size: 11px; padding: 4px 4px; border-radius: 7px;
+    max-width: min(46vw, 150px); font-size: 11.5px; padding: 5px 5px;
+    border-radius: 7px;
   }
   .brand { gap: 7px; }
   .brand b { font-size: 14px; }
@@ -530,9 +584,6 @@ kbd {
    the header *below* the first row instead of pinning it above. So the table
    only gets a scroll container on narrow screens, and stickiness only applies
    where there is no such container. */
-@media (min-width: 861px) {
-  thead th { position: sticky; top: 60px; background: var(--surface); z-index: 5; }
-}
 @media (max-width: 860px) {
   .scroller { overflow-x: auto; }
 }
@@ -763,4 +814,131 @@ kbd {
     animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important; scroll-behavior: auto !important;
   }
+}
+
+/* ================= load failure =================
+   A page that cannot fetch its forecast used to sit behind a skeleton for ever.
+   This says what is missing and why it is usually temporary. */
+.loadfail {
+  display: grid; gap: 8px; margin: 26px 0; padding: 18px 20px;
+  background: var(--surface); border: 1px solid var(--critical);
+  border-left-width: 3px; border-radius: 12px;
+}
+.loadfail b { color: var(--ink); font-size: 15px; }
+.loadfail span { color: var(--ink2); font-size: 13.5px; line-height: 1.6; max-width: 74ch; }
+
+/* ================= sortable headers =================
+   Reachable from a keyboard, and visibly so. */
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ================= sticky table headers =================
+   The Championship is twenty-four rows and the global ranking four hundred;
+   without this the columns scroll away from the numbers under them. The
+   masthead is sticky too, so the header has to sit directly beneath it.
+
+   That offset used to be written here as 60px, with 52px for a phone. Both
+   were true when the masthead was one line and stopped being true the moment
+   it became two, which pinned the header on top of the first row. It is now
+   measured from the masthead itself, in `initChrome`, and republished as
+   `--head-h` whenever the bar changes size -- a banner appearing, an orientation
+   change, a long competition name wrapping. */
+thead th {
+  position: sticky; top: var(--head-h, 60px); z-index: 5;
+  background: var(--surface);
+  box-shadow: inset 0 -1px 0 var(--rule);
+}
+/* An ancestor with `overflow-x: auto` becomes the sticky scrollport, and the
+   header then pins itself inside the scroller rather than to the viewport --
+   which puts it in the middle of the table, over whichever row happens to be
+   there. Narrow screens give the table that scroller, so narrow screens give
+   up the sticky header. */
+@media (max-width: 860px) { thead th { position: static; } }
+
+/* ================= higher contrast on request ================= */
+@media (prefers-contrast: more) {
+  :root { --muted: var(--ink2); --border: currentColor; --grid: var(--rule); }
+  .hint, .sub, .stamp { color: var(--ink2); }
+}
+
+/* ================= print =================
+   A projected table is a thing people pin up. Print it on paper, not in the
+   dark theme, and without the chrome that cannot be clicked on paper. */
+@media print {
+  :root {
+    --plane: #fff; --surface: #fff; --raised: #fff; --ink: #000; --ink2: #222;
+    --muted: #555; --grid: #ccc; --rule: #999; --border: #bbb; --shadow: none;
+  }
+  .masthead, footer, .deeper, .searchbtn, .themetoggle, .lgswitch,
+  #palette, #tip, .navmenu, .chips, .rk-filters, .skip { display: none !important; }
+  /* Tabs are a screen affordance: on paper every panel is shown. */
+  [data-tabpanel][hidden] { display: block !important; }
+  thead th { position: static; }
+  .card { border: 1px solid #ccc; break-inside: avoid; page-break-inside: avoid; }
+  a { text-decoration: none; color: #000; }
+  body { background: #fff; }
+}
+
+/* ================= tabs ================= */
+.tabstrip {
+  display: flex; gap: 4px; flex-wrap: wrap; margin: 0 0 18px;
+  border-bottom: 1px solid var(--grid); padding-bottom: 0;
+}
+.tab-btn {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--muted); cursor: pointer; font: inherit; font-size: 14px;
+  font-weight: 600; padding: 9px 14px; margin-bottom: -1px; border-radius: 8px 8px 0 0;
+}
+.tab-btn:hover { color: var(--ink); background: var(--raised); }
+.tab-btn[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+@media (max-width: 620px) {
+  .tabstrip { gap: 0; overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+  .tabstrip::-webkit-scrollbar { display: none; }
+  .tab-btn { padding: 8px 11px; font-size: 13px; white-space: nowrap; flex: none; }
+}
+
+/* ================= keyboard row cursor ================= */
+tr.rowcursor > td { background: var(--raised); }
+tr.rowcursor > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
+/* ---- reference: glossary, coverage table, changelog ----
+   Three blocks of definition-shaped content that were prose paragraphs or,
+   more often, nowhere at all. */
+.gloss { margin: 0; display: grid; gap: 0; }
+.gloss dt {
+  font-weight: 650; color: var(--ink); font-size: 14px;
+  padding: 16px 0 4px; border-top: 1px solid var(--rule);
+}
+.gloss dt:first-of-type { border-top: 0; padding-top: 0; }
+.gloss dd {
+  margin: 0 0 4px; color: var(--muted); font-size: 13.5px; line-height: 1.62;
+  max-width: 68ch;
+}
+.gloss dd a { color: var(--accent); }
+
+/* A competition's own row, so a reader can find it without counting. */
+#comptbl tr.me td { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+#comptbl tr.me td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+#comptbl .hint { display: block; margin-top: 2px; }
+.warn { color: var(--away); font-size: 11.5px; }
+
+.changelog { list-style: none; margin: 0; padding: 0; }
+.changelog li {
+  display: grid; grid-template-columns: 108px 1fr; gap: 18px;
+  padding: 18px 0; border-top: 1px solid var(--rule);
+}
+.changelog li:first-child { border-top: 0; padding-top: 0; }
+.changelog .when {
+  color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums;
+  padding-top: 2px;
+}
+.changelog .what b { color: var(--ink); font-size: 14px; }
+.changelog .what .hint { display: block; margin: 2px 0 6px; }
+.changelog .what p {
+  margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.62;
+  max-width: 68ch;
+}
+@media (max-width: 620px) {
+  .changelog li { grid-template-columns: 1fr; gap: 4px; }
 }

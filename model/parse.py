@@ -170,7 +170,11 @@ def parse_football_data_csv(text: str, season: str, reg: TeamRegistry) -> list[M
 _MD_RE = re.compile(r"^\s*(?:▪)?\s*(?:Matchday|Regular Season -|Round)\s*(\d+)", re.I)
 _DATE_RE = re.compile(
     r"^\s*(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+([A-Za-z]{3})\w*\s+(\d{1,2})(?:\s+(\d{4}))?\s*$")
-_TIME = re.compile(r"^\s*(\d{1,2}:\d{2})\s+")
+#: A kick-off time, or the placeholder a feed uses when the time is not yet
+#: fixed. Belgium's 2026-27 file writes `--:--` for one match whose slot the
+#: league had not announced; without this the placeholder is read as part of
+#: the home club's name and the fixture is silently dropped.
+_TIME = re.compile(r"^\s*(?:(\d{1,2}:\d{2})|-{1,2}:-{1,2}|\?{1,2}:\?{1,2})\s+")
 _NOTE = re.compile(r"\s*\[[^\]]*\]\s*")
 # Club names outside England are full of digits -- 'Como 1907', '1. FC Köln',
 # 'Bayer 04 Leverkusen', 'Stade Rennais FC 1901'. So a side cannot be rejected
@@ -200,7 +204,13 @@ _RESULT = r"""
     (?:\s*\(\s*(?P<p1h>\d+)\s*-\s*(?P<p1a>\d+)
        (?:\s*,\s*(?P<p2h>\d+)\s*-\s*(?P<p2a>\d+))?\s*\))?
 """
-_TRAIL_SCORE = re.compile(r"\s{2,}" + _RESULT + r"\s*$", re.I | re.X)
+# One space, not two, before a trailing score: the corpus is mostly aligned
+# in columns but not always -- Belgium's 2026-27 file writes
+# `Club Brugge v KV Kortrijk 3-0` for one fixture, and requiring two spaces
+# left the score glued to the club name, `_is_club` rejected it for holding
+# a digit-hyphen-digit, and the match vanished. A trailing score is anchored
+# to the end of the line, so relaxing this cannot swallow a club name.
+_TRAIL_SCORE = re.compile(r"\s+" + _RESULT + r"\s*$", re.I | re.X)
 _MID_SCORE = re.compile(r"\s{2,}" + _RESULT + r"\s{2,}", re.I | re.X)
 
 

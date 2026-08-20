@@ -1,6 +1,6 @@
 {
-  "name": "Ninety — open football forecast",
-  "short_name": "Ninety",
+  "name": "537 — open football forecast",
+  "short_name": "537",
   "description": "A rating for every club, a probability for every match, and a simulated season — for eight competitions, rebuilt from public data every six hours.",
   "start_url": "./index.html",
   "scope": "./",

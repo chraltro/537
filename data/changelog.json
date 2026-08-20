@@ -1,0 +1,59 @@
+{
+  "note": "Changes that moved a published number, or changed what a published number means. Kept by hand, because a list generated from commit subjects is a list of commit subjects.",
+  "entries": [
+    {
+      "date": "2026-08-20",
+      "title": "The site is called 537, and a phone gets a real navigation bar",
+      "effect": "No change to any number.",
+      "body": "A homage to FiveThirtyEight, whose Soccer Power Index this is built in the spirit of. The masthead below 700px is now two rows — identity on the first, four tab-shaped destinations and the menu on the second — instead of one row that hid all four links and left a lone \"More\" button. The sticky table header used to assume a 60-pixel masthead; it now measures the bar it sits under, so it stays correct the next time the bar changes."
+    },
+    {
+      "date": "2026-08-20",
+      "title": "Nine competitions, and a page that says what each is built on",
+      "effect": "New numbers, no change to existing ones.",
+      "body": "Belgium's Pro League joins the eight already here. Its feed is the thinnest on the site — openfootball has no top flight at all for 2020-21 or 2022-23, and its 2025-26 file stopped at 121 of 240 matches — so the coverage table below now states, per competition, how many seasons and matches the fit actually rests on and which seasons the feed is missing."
+    },
+    {
+      "date": "2026-08-20",
+      "title": "Relegation and promotion probabilities now count the play-off",
+      "effect": "Changes the Down column in Germany and France, and adds a Promoted column in the Championship.",
+      "body": "Germany and France send the club finishing third-from-bottom into a two-legged tie, and until now the published relegation figure was the chance of finishing in the automatic places — not the chance of going down. Both are simulated; the table shows the one a reader means and the tooltip splits it. The same at the other end: the Championship's Promoted column counts automatic promotion and the play-off together."
+    },
+    {
+      "date": "2026-08-19",
+      "title": "A relegated club is rated on the division it came from",
+      "effect": "Large. West Ham moved from 24th to 1st in the Championship forecast.",
+      "body": "A club arriving in a division was classed as promoted whatever direction it came from, so a club relegated from the Premier League had the promoted-club correction applied to it — a correction measured on clubs arriving from a weaker league. The pipeline now loads the division above as well, tells the three arrival types apart, and rates each on the evidence that applies to it."
+    },
+    {
+      "date": "2026-08-19",
+      "title": "Rating intervals, schedule played, and the second-tier fields published",
+      "effect": "New numbers, no change to existing ones.",
+      "body": "The rating already carried a measured uncertainty — it is what the simulation resamples between scenarios — and was printed as a bare number. It now shows one standard deviation either way."
+    },
+    {
+      "date": "2026-08-19",
+      "title": "The masthead went from eight links to four and a menu",
+      "effect": "No change to any number.",
+      "body": "Nine pages were competing for a phone's top bar. The four that answer the site's own question stayed; the rest moved into a menu, and the long pages were cut into tabs."
+    },
+    {
+      "date": "2026-08-19",
+      "title": "Champions League: pooled cross-league ratings",
+      "effect": "New competition; the global rankings page is built on this fit.",
+      "body": "UEFA competition matches are the only edges joining one domestic league to another, so they are what makes a rating comparable across borders. The pooled fit uses them, with a per-competition home-advantage term and each league's ratings shrunk toward its own mean rather than a global one."
+    },
+    {
+      "date": "2026-08-18",
+      "title": "Warm-started backtest fits",
+      "effect": "No change to any number.",
+      "body": "The walk-forward backtest went from fifteen minutes to twenty seconds, which is what made running it on every competition affordable."
+    },
+    {
+      "date": "2026-08-18",
+      "title": "First forecast published",
+      "effect": "—",
+      "body": "A Dixon–Coles goals model with time-weighted fitting, preseason priors anchored to a decaying market weight, and fifty thousand simulated seasons."
+    }
+  ]
+}

@@ -368,18 +368,20 @@
   }
  ],
  "calibration_priors": {
-  "version": 2,
+  "version": 3,
   "continuing": {
-   "slope": 0.9876357805971488,
-   "intercept": 0.006972038887717023,
-   "n": 221,
-   "source": "serie-a"
+   "slope": 0.969473862139213,
+   "intercept": 0.008591296408233732,
+   "n": 323,
+   "source": "serie-a",
+   "measured_slope": 0.9695
   },
   "promoted": {
-   "slope": 0.4488937631587654,
-   "intercept": -0.23607281892164364,
-   "n": 38,
-   "source": "serie-a"
+   "slope": 0.6852061558588062,
+   "intercept": -0.10908676839942787,
+   "n": 52,
+   "source": "serie-a",
+   "measured_slope": 0.6852
   },
   "relegated": {
    "slope": 0.9053,
@@ -389,7 +391,128 @@
    "reason": "too few pairs"
   },
   "league": "serie-a",
-  "generated": "2026-08-19"
+  "generated": "2026-08-20"
  },
- "league": "serie-a"
+ "league": "serie-a",
+ "table": {
+  "seasons": [
+   {
+    "season": "2015-16",
+    "n_teams": 20,
+    "champion_called": true,
+    "top_overlap": 0.75,
+    "releg_overlap": 0.3333333333333333,
+    "rank_corr": 0.7323,
+    "mean_rank_error": 3.4,
+    "mean_points_error": 8.61
+   },
+   {
+    "season": "2016-17",
+    "n_teams": 20,
+    "champion_called": true,
+    "top_overlap": 0.75,
+    "releg_overlap": 0.6666666666666666,
+    "rank_corr": 0.8165,
+    "mean_rank_error": 2.7,
+    "mean_points_error": 8.44
+   },
+   {
+    "season": "2017-18",
+    "n_teams": 20,
+    "champion_called": true,
+    "top_overlap": 1.0,
+    "releg_overlap": 1.0,
+    "rank_corr": 0.9338,
+    "mean_rank_error": 1.5,
+    "mean_points_error": 6.28
+   },
+   {
+    "season": "2018-19",
+    "n_teams": 20,
+    "champion_called": true,
+    "top_overlap": 0.75,
+    "releg_overlap": 0.3333333333333333,
+    "rank_corr": 0.8451,
+    "mean_rank_error": 2.5,
+    "mean_points_error": 5.79
+   },
+   {
+    "season": "2019-20",
+    "n_teams": 20,
+    "champion_called": true,
+    "top_overlap": 0.75,
+    "releg_overlap": 0.3333333333333333,
+    "rank_corr": 0.7233,
+    "mean_rank_error": 3.1,
+    "mean_points_error": 9.78
+   },
+   {
+    "season": "2020-21",
+    "n_teams": 20,
+    "champion_called": false,
+    "top_overlap": 0.75,
+    "releg_overlap": 0.3333333333333333,
+    "rank_corr": 0.7985,
+    "mean_rank_error": 3.1,
+    "mean_points_error": 8.39
+   },
+   {
+    "season": "2021-22",
+    "n_teams": 20,
+    "champion_called": false,
+    "top_overlap": 0.75,
+    "releg_overlap": 0.3333333333333333,
+    "rank_corr": 0.8902,
+    "mean_rank_error": 2.2,
+    "mean_points_error": 7.3
+   },
+   {
+    "season": "2022-23",
+    "n_teams": 20,
+    "champion_called": false,
+    "top_overlap": 0.75,
+    "releg_overlap": 0.3333333333333333,
+    "rank_corr": 0.8511,
+    "mean_rank_error": 2.4,
+    "mean_points_error": 8.01
+   },
+   {
+    "season": "2023-24",
+    "n_teams": 20,
+    "champion_called": false,
+    "top_overlap": 0.5,
+    "releg_overlap": 0.3333333333333333,
+    "rank_corr": 0.791,
+    "mean_rank_error": 3.0,
+    "mean_points_error": 9.04
+   },
+   {
+    "season": "2024-25",
+    "n_teams": 20,
+    "champion_called": false,
+    "top_overlap": 0.75,
+    "releg_overlap": 0.6666666666666666,
+    "rank_corr": 0.8752,
+    "mean_rank_error": 1.7,
+    "mean_points_error": 6.93
+   },
+   {
+    "season": "2025-26",
+    "n_teams": 20,
+    "champion_called": true,
+    "top_overlap": 0.5,
+    "releg_overlap": 0.6666666666666666,
+    "rank_corr": 0.8346,
+    "mean_rank_error": 2.6,
+    "mean_points_error": 8.11
+   }
+  ],
+  "n": 11,
+  "champion_rate": 0.545,
+  "top_overlap": 0.727,
+  "releg_overlap": 0.485,
+  "rank_corr": 0.827,
+  "mean_rank_error": 2.56,
+  "mean_points_error": 7.88
+ }
 }

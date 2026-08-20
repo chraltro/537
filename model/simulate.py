@@ -129,6 +129,13 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
     idx = {t: i for i, t in enumerate(teams)}
     n = len(teams)
 
+    # Spain and Italy separate clubs level on points by the mini-table among
+    # those clubs, not by goal difference. That needs a running tally of the
+    # points each club has taken off each other club, which is cheap to keep and
+    # was simply never kept.
+    h2h_rule = lg.tiebreak == "h2h"
+    base_h2h = np.zeros((n, n)) if h2h_rule else None
+
     base_pts = np.zeros(n)
     base_gf = np.zeros(n)
     base_ga = np.zeros(n)
@@ -138,8 +145,13 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
         if f.played:
             base_gf[i] += f.hg; base_ga[i] += f.ag
             base_gf[j] += f.ag; base_ga[j] += f.hg
-            base_pts[i] += 3 if f.hg > f.ag else (1 if f.hg == f.ag else 0)
-            base_pts[j] += 3 if f.ag > f.hg else (1 if f.hg == f.ag else 0)
+            hp = 3 if f.hg > f.ag else (1 if f.hg == f.ag else 0)
+            ap = 3 if f.ag > f.hg else (1 if f.hg == f.ag else 0)
+            base_pts[i] += hp
+            base_pts[j] += ap
+            if h2h_rule:
+                base_h2h[i, j] += hp
+                base_h2h[j, i] += ap
         else:
             remaining.append(f)
 
@@ -224,12 +236,29 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
         np.add.at(ga, (slice(None), ai), hg)
 
         gd = gf - ga
-        # Points, then goal difference, then goals scored. Serie A and La Liga
-        # actually settle level clubs on head-to-head first; over a full season
-        # that changes the odd placing, never the shape of the distribution, and
-        # tracking it would cost a per-pair tally in the hot loop.
+        # Points, then goal difference, then goals scored -- and, where the
+        # league says so, the mini-table among the clubs level on points before
+        # goal difference is looked at.
+        #
+        # That mini-table is the whole reason the pairwise tally exists: a club's
+        # tie-break score is the points it took off the clubs it is level with,
+        # which is `same` (who is on my points) masked over `h2h` (what I took
+        # off them). Vectorised, it costs one (per, n, n) product per scenario.
+        # It is the primary criterion rather than the full recursive rule --
+        # Spain and Italy then go to head-to-head goal difference -- and the
+        # method page says which part is modelled.
+        if h2h_rule:
+            h2h = np.tile(base_h2h.ravel(), (per, 1))
+            if len(remaining):
+                np.add.at(h2h, (slice(None), hi * n + ai), hw)
+                np.add.at(h2h, (slice(None), ai * n + hi), aw)
+            h2h = h2h.reshape(per, n, n)
+            same = (pts[:, :, None] == pts[:, None, :])
+            mini = (h2h * same).sum(axis=2)
+        else:
+            mini = 0.0
         # A genuine tie is settled by a play-off, so break it at random here.
-        key = (pts * 1e9 + (gd + 200) * 1e4 + gf * 1e0
+        key = (pts * 1e12 + mini * 1e8 + (gd + 200) * 1e4 + gf * 1e0
                + rng.random((per, n)) * 1e-3)
         order = np.argsort(-key, axis=1)          # order[s, r] = team finishing r-th
         # bincount, not fancy-index +=: repeated (team, position) pairs across the

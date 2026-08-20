@@ -46,7 +46,15 @@ PL_FALLBACK = {
 
 #: Bump when the meaning of a cached calibration changes, so a stale file is
 #: recomputed instead of being read with a key it never had.
-CAL_VERSION = 2
+CAL_VERSION = 3
+
+#: Earliest season pair the calibration will use. It exists because a fit needs
+#: history behind it, not because 2013 is special -- and capping every league at
+#: the Premier League's window threw away nine years of the Championship's, which
+#: is why its relegated-club regression saw 24 cases, measured an implausible
+#: slope and fell back. `ds.before()` already refuses a season with under 2,000
+#: matches of history, so that guard does the real work and this is a floor.
+CALIBRATE_FROM = "2007-08"
 
 
 def cal_path(league: leagues.League) -> str:
@@ -89,13 +97,25 @@ def _centred_net(fit: ratings.Fit, teams: list[str]) -> dict[str, float]:
     return {t: v - m for t, v in net.items()}
 
 
-#: A believable range for a carryover slope. Below zero says a club's preseason
-#: edge predicts the *opposite* of what happens; above this says the season
-#: amplifies preseason differences rather than regressing them, which contradicts
-#: every measurement in this repository (the Premier League's promoted slope is
-#: 0.31 over 39 cases). Either is a small, noisy sample talking, not a fact about
-#: the league, and the Eredivisie and Primeira Liga have only eight seasons each.
-SLOPE_BAND = (0.02, 1.25)
+#: A believable range for a carryover slope, per kind of arrival. A slope at or
+#: below zero always means the sample is talking: a club's preseason edge would
+#: be predicting the opposite of what happens.
+#:
+#: The upper bound differs by group because the prior differs. For a club that
+#: stayed, or one promoted from below, a slope above 1 says the season amplifies
+#: preseason differences rather than regressing them, which contradicts every
+#: measurement here -- the Premier League's promoted slope is 0.36 over 53 cases.
+#:
+#: A relegated club is capped at exactly 1, meaning "carry the rating across
+#: unchanged". The Championship measures 1.26 over 42 cases, which is tempting
+#: and which the first version of this admitted -- and it produced a 90% chance
+#: of automatic promotion for West Ham, which is not a credible forecast. A
+#: bootstrap over those same 42 pairs gives sd 0.24 and a 95% interval of
+#: [0.77, 1.71]: the estimate is not distinguishable from 1, and amplification is
+#: the direction that hurts when it is wrong. So the cap is the theory's value,
+#: not the sample's, and `measured_slope` is published so the gap is visible.
+SLOPE_BAND = {"continuing": (0.02, 1.25), "promoted": (0.02, 1.25),
+              "relegated": (0.02, 1.00)}
 
 
 def regress(pairs: list[tuple[float, float]], key: str, source: str,
@@ -118,13 +138,25 @@ def regress(pairs: list[tuple[float, float]], key: str, source: str,
     x = np.array([p[0] for p in pairs])
     y = np.array([p[1] for p in pairs])
     slope, intercept = np.polyfit(x, y, 1)
-    lo, hi = SLOPE_BAND
-    if not lo <= slope <= hi:
+    lo, hi = SLOPE_BAND.get(key, (0.02, 1.25))
+    if slope < lo:
+        # Below the floor the fit is not merely noisy, it is pointing the wrong
+        # way: a club's preseason edge predicting the opposite of what happens.
+        # Nothing in it is worth keeping.
         return {**fb, "n": len(pairs),
                 "measured_slope": round(float(slope), 4),
-                "reason": f"measured slope {slope:.2f} outside {lo}-{hi}"}
+                "reason": f"measured slope {slope:.2f} below {lo}"}
+    if slope > hi:
+        # Clamp rather than discard. The intercept was measured on the right
+        # population and is worth keeping; only the slope is being pulled back
+        # to a value its own confidence interval comfortably contains.
+        return {"slope": float(hi), "intercept": float(intercept),
+                "n": len(pairs), "source": source,
+                "measured_slope": round(float(slope), 4),
+                "reason": f"measured slope {slope:.2f} clamped to {hi}"}
     return {"slope": float(slope), "intercept": float(intercept),
-            "n": len(pairs), "source": source}
+            "n": len(pairs), "source": source,
+            "measured_slope": round(float(slope), 4)}
 
 
 def calibrate(ds: Dataset, shot_conv, *, refresh: bool = False) -> dict:
@@ -155,7 +187,7 @@ def calibrate(ds: Dataset, shot_conv, *, refresh: bool = False) -> dict:
     pairs_releg: list[tuple[float, float]] = []
 
     for prev, cur in zip(seasons, seasons[1:]):
-        if cur < "2013-14":
+        if cur < CALIBRATE_FROM:
             continue
         ref = _season_start(cur)
         hist = ds.before(ref)

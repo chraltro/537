@@ -40,7 +40,7 @@ import time
 import numpy as np
 
 from . import (backtest, config, europe, feeds, gamestate, insight, knockout,
-               leagues, priors, rankings, ratings, simulate, social)
+               leagues, priors, rankings, ratings, seo, simulate, social)
 from .data import Dataset
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -103,6 +103,32 @@ def _rating_history(ds: Dataset, teams, shot_conv, adj: dict[str, float],
                 a = adj.get(t, 0.0) if live else 0.0
                 hist[t].append({"season": label, "spi": round(spi(f, t, a), 1)})
     return hist
+
+
+def _second_tier_rating(ds: Dataset, fit: ratings.Fit, teams: list[str],
+                        league: leagues.League) -> float | None:
+    """Net rating of the club likely to come up through the play-off.
+
+    Germany's and France's play-off opponent is the third-placed second-tier
+    side, which this pipeline does not project -- that division has no fixture
+    list here. What it does have is the division's recent results, and the fit
+    already contains those clubs, so the opponent is represented by the
+    third-strongest current second-tier club's net rating. An approximation, and
+    the method page says so.
+    """
+    recent = sorted({m.season for m in ds.second})[-1:]
+    if not recent:
+        return None
+    pool = {m.home for m in ds.second if m.season in recent}
+    nets = sorted((float(np.log(fit.offence(t)) - np.log(fit.defence(t))))
+                  for t in pool if t in fit.index)
+    if len(nets) < 6:
+        return None
+    # Third best of that division, centred on this division's own average.
+    third = nets[-3]
+    here = float(np.mean([np.log(fit.offence(t)) - np.log(fit.defence(t))
+                          for t in teams if t in fit.index]))
+    return third - here
 
 
 def _recap_words(league: leagues.League) -> dict:
@@ -240,7 +266,19 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
     ref = max(dt.date.today(), kickoff)
     freshness = dict(ds.sources)
     hist = ds.before(ref)
-    pool = sorted({m.home for m in hist} | {m.away for m in hist})
+    # Every club in this season's fixture list is in the pool even if it has
+    # never played a match the corpus can see. Belgium has no second-tier feed
+    # upstream, so its three promoted clubs arrive with no record at all; the
+    # ridge then hands them the league-average rating, which is the honest prior
+    # for a club nothing is known about, and `preseason_net` applies the
+    # promoted-club correction on top. Without this they are simply absent from
+    # the fit and the build dies on a KeyError.
+    pool = sorted({m.home for m in hist} | {m.away for m in hist} | set(teams))
+    unseen = [t for t in teams
+              if not any(t in (m.home, m.away) for m in hist)]
+    if unseen:
+        print(f"  · {len(unseen)} club(s) with no match history at all, rated at "
+              f"the division average: {', '.join(unseen)}")
     if pooled:
         print("  · pooled fit: adding the European corpus")
         fit, _ = pooled_fit_for(ds, ref, league=league, quiet=False)
@@ -277,9 +315,49 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
         adj = base_adj
         w = 0.0
 
+    # How much evidence each club actually has. A promoted club with two
+    # seasons behind it is not as well known as one with twenty, and the
+    # simulation should say so by resampling its rating more widely.
+    seen_n = {t: 0 for t in teams}
+    for m in hist:
+        if m.home in seen_n:
+            seen_n[m.home] += 1
+        if m.away in seen_n:
+            seen_n[m.away] += 1
+    typical = float(np.median([v for v in seen_n.values() if v] or [1]))
+    rating_sd = np.array([
+        config.RATING_SD * min(2.0, max(1.0, (typical / max(seen_n[t], 1)) ** 0.25))
+        for t in teams])
+    thin = [t for t in teams if seen_n[t] < typical * 0.25]
+    if thin:
+        print(f"  · widened intervals for {len(thin)} thinly-evidenced club(s)")
+
     print(f"Simulating the season {config.N_SIMS:,} times…")
+    # A play-off at either end needs the finishing order of every simulated
+    # season, not just the aggregate table: who a club would meet depends on
+    # where both of them finished.
+    wants_orders = bool(league.advance_playoff) or bool(league.releg_playoff_pos)
     sim = simulate.simulate_season(fit, ds.fixtures, teams, league=league,
-                                   adj=adj, leverage=True)
+                                   adj=adj, leverage=True, rating_sd=rating_sd,
+                                   keep_orders=wants_orders)
+
+    p_po_up = np.zeros(len(teams))
+    p_po_down = np.zeros(len(teams))
+    if league.kind == "promotion" and league.advance_playoff:
+        print("Playing the promotion play-off…")
+        p_po_up = knockout.promotion_playoff(
+            fit, teams, sim["orders"], direct=league.advance_direct or 0,
+            band=league.advance_playoff, adj=adj)
+        print(f"  · {p_po_up.sum():.2f} of one promotion place distributed")
+    if league.releg_playoff_pos:
+        rating = _second_tier_rating(ds, fit, teams, league)
+        if rating is not None:
+            print(f"Playing the relegation play-off (opponent net {rating:+.2f})…")
+            p_po_down = knockout.relegation_playoff(
+                fit, teams, sim["orders"], position=league.releg_playoff_pos,
+                opponent_rating=rating, adj=adj)
+            print(f"  · {p_po_down.sum() * 100:.1f}% chance the play-off sends "
+                  "someone down")
 
     # Half time is a second, cheaper model over the same corpus, and the only
     # thing the results feed carries that the forecast has never read.
@@ -312,6 +390,12 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
             "id": t, "name": m["name"], "short": m["short"],
             "primary": m["primary"], "secondary": m["secondary"],
             "spi": round(spi(fit, t, a), 1),
+            # The rating already has a measured uncertainty -- it is what the
+            # simulation resamples between scenarios -- and it was being printed
+            # as a bare number. One standard deviation either way, in the same
+            # units the rating is quoted in.
+            "spi_lo": round(spi(fit, t, a - config.RATING_SD), 1),
+            "spi_hi": round(spi(fit, t, a + config.RATING_SD), 1),
             "off": round(fit.offence(t) * np.exp(a / 2), 2),
             "def": round(fit.defence(t) * np.exp(-a / 2), 2),
             "pts": round(float(sim["points_mean"][i]), 1),
@@ -321,7 +405,15 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
             "gd": round(float(sim["gd_mean"][i])),
             "title": float(sim["title"][i]), "ucl": float(sim["ucl"][i]),
             "europa": float(sim["europa"][i]), "releg": float(sim["relegation"][i]),
-            **({"p_playoff": playoff} if promo else {}),
+            **({"p_playoff": playoff,
+                # Reaching the play-off is not the same as going up through it:
+                # four clubs get there and one of them is promoted.
+                "p_playoff_won": round(float(p_po_up[i]), 5),
+                "p_up": round(float(sim["ucl"][i]) + float(p_po_up[i]), 5)}
+               if promo else {}),
+            **({"p_releg_playoff": round(float(p_po_down[i]), 5),
+                "p_down": round(float(sim["relegation"][i]) + float(p_po_down[i]), 5)}
+               if league.releg_playoff_pos else {}),
             "pos": [round(float(x), 5) for x in sim["position"][i]],
             "played": cur.get("pld", 0), "w": cur.get("w", 0), "d": cur.get("d", 0),
             "l": cur.get("l", 0), "gf": cur.get("gf", 0), "ga": cur.get("ga", 0),
@@ -451,6 +543,7 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
         "lines": sim.get("lines"),
         "sources": freshness,
         "half_time": bool(ht_fit),
+        "coverage": _coverage(ds),
         "teams": rows,
     }
     json.dump(payload, open(os.path.join(out, "forecast.json"), "w"),
@@ -464,6 +557,14 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
         bt = backtest.run(ds)
         bt["calibration_priors"] = cal
         bt["league"] = league.slug
+        bt["table"] = backtest.table_accuracy(
+            ds, [s for s in sorted({m.season for m in ds.top})
+                 if s >= league.backtest_from and s != ds.season], shot_conv)
+        if bt["table"]:
+            ta = bt["table"]
+            print(f"  · table: champion called {ta['champion_rate']:.0%} of "
+                  f"{ta['n']} seasons, rank correlation {ta['rank_corr']:.2f}, "
+                  f"mean points error {ta['mean_points_error']:.1f}")
         json.dump(bt, open(os.path.join(out, "backtest.json"), "w"), indent=1)
         m = bt["model"]
         print(f"  → backtest.json  log-loss {m['log_loss']:.4f} "
@@ -928,6 +1029,12 @@ def build_rankings(ready: set[str]) -> None:
               separators=(",", ":"))
     print(f"  → global.json ({payload['n_clubs']} clubs across "
           f"{payload['n_leagues']} leagues, from {payload['n_matches']:,} matches)")
+    try:
+        social.save(social.global_card(payload),
+                    os.path.join(HERE, "site", "og", "global.png"))
+        print("  → og/global.png")
+    except Exception as exc:                       # noqa: BLE001
+        print(f"  ! global share card skipped: {exc}")
     h2h = rankings.head_to_head(corpus, featured)
     json.dump({"generated": payload["generated"], "pairs": h2h},
               open(os.path.join(OUT, "h2h.json"), "w"), separators=(",", ":"))
@@ -959,7 +1066,7 @@ def build_feeds(ready: set[str]) -> None:
                    + (f"?lg={lg.slug}" if lg.slug != leagues.DEFAULT.slug else ""),
         })
     items = feeds.feed_items(rows)
-    title = "Ninety: forecast movement"
+    title = "537: forecast movement"
     site = os.path.join(HERE, "site")
     feeds.write(os.path.join(site, "feed.json"),
                 json.dumps(feeds.json_feed(items, home=HOME, title=title),
@@ -967,6 +1074,129 @@ def build_feeds(ready: set[str]) -> None:
     feeds.write(os.path.join(site, "feed.xml"),
                 feeds.rss(items, home=HOME, title=title))
     print(f"  → feed.json and feed.xml ({len(items)} item(s) with real movement)")
+
+
+def _coverage(ds) -> dict:
+    """What this competition's forecast is actually fitted on.
+
+    Nine competitions do not all rest on the same amount of evidence, and until
+    now the site said nothing about which. The Premier League has twenty-five
+    seasons from a feed that carries shots and cards; Belgium has six seasons of
+    goals from a feed that skipped two of them. Both produce a table of
+    probabilities that looks identical. This is the difference, published.
+    """
+    lg = ds.league
+    seasons = sorted({m.season for m in ds.top if m.season != ds.season})
+    per = {}
+    for m in ds.top:
+        if m.season != ds.season:
+            per[m.season] = per.get(m.season, 0) + 1
+    # A season the feed left half-finished is worth naming: it is weighted as
+    # heavily as a complete one and carries a fraction of the evidence.
+    full = lg.n_teams * (lg.n_teams - 1)
+    partial = [s for s in seasons if per[s] < full * 0.75]
+    return {
+        "source": lg.source,
+        "seasons": len(seasons),
+        "first_season": seasons[0] if seasons else "",
+        "last_season": seasons[-1] if seasons else "",
+        "matches": sum(per.values()),
+        "second_tier": len(ds.second),
+        "above": len(ds.above),
+        "missing_seasons": [s for s in _expected_seasons(lg, seasons)
+                            if s not in per],
+        "partial_seasons": partial,
+        "has_shots": lg.source == "mirror",
+    }
+
+
+def _expected_seasons(lg, seen: list[str]) -> list[str]:
+    """Every season between the first and last the feed has, inclusive.
+
+    A gap in the middle is a hole in the feed; a short run at the start is just
+    where the feed begins. Only the first is worth reporting.
+    """
+    if not seen:
+        return []
+    a, b = int(seen[0][:4]), int(seen[-1][:4])
+    return [f"{y}-{str(y + 1)[2:]}" for y in range(a, b + 1)]
+
+
+def build_coverage(ready: set[str]) -> None:
+    """One file describing what every competition is built from."""
+    rows = []
+    for lg in leagues.LEAGUES:
+        if lg.slug not in ready:
+            continue
+        try:
+            fc = json.load(open(os.path.join(OUT, lg.slug, "forecast.json")))
+        except (OSError, ValueError):
+            continue
+        cov = fc.get("coverage")
+        if cov:
+            rows.append({"slug": lg.slug, "name": lg.name,
+                         "country": lg.country, **cov})
+    json.dump({"generated": dt.datetime.now(dt.timezone.utc)
+               .isoformat(timespec="seconds"), "leagues": rows},
+              open(os.path.join(OUT, "coverage.json"), "w"), indent=1)
+    thin = [r["slug"] for r in rows if r["missing_seasons"] or r["partial_seasons"]]
+    print(f"  → coverage.json ({len(rows)} competitions"
+          + (f", {len(thin)} with feed gaps: {', '.join(thin)}" if thin else "")
+          + ")")
+    # The changelog is written by hand and lives with the source, not with the
+    # generated output; the build copies it so the site fetches one directory.
+    src = os.path.join(HERE, "data", "changelog.json")
+    if os.path.exists(src):
+        with open(src) as fh:
+            log = json.load(fh)
+        json.dump(log, open(os.path.join(OUT, "changelog.json"), "w"), indent=1)
+        print(f"  → changelog.json ({len(log.get('entries', []))} entries)")
+
+
+def build_seo(ready: set[str]) -> None:
+    """robots.txt, the sitemap, and a static stub per club."""
+    manifest = {"default": leagues.DEFAULT.slug,
+                "leagues": [lg.manifest_entry(lg.slug in ready)
+                            for lg in leagues.LEAGUES + leagues.EUROPEAN]}
+    forecasts = {}
+    for slug in sorted(ready):
+        try:
+            forecasts[slug] = json.load(
+                open(os.path.join(OUT, slug, "forecast.json")))
+        except (OSError, ValueError):
+            continue
+    got = seo.build(OUT, manifest, forecasts)
+    print(f"  → robots.txt, sitemap.xml ({got['leagues']} competitions), "
+          f"{got['stubs']} club pages")
+
+
+#: What the Pages artefact may weigh before the build complains. Not a hard
+#: failure -- a forecast that is a megabyte over is still a forecast -- but a
+#: number somebody has to look at, because 8 MB of share cards arrived without
+#: anybody deciding to spend it.
+SIZE_BUDGET_MB = 26
+
+
+def check_size(ready: set[str]) -> None:
+    site = os.path.join(HERE, "site")
+    by_dir: dict[str, int] = {}
+    total = 0
+    for root, _dirs, files in os.walk(site):
+        for f in files:
+            try:
+                sz = os.path.getsize(os.path.join(root, f))
+            except OSError:
+                continue
+            total += sz
+            top = os.path.relpath(root, site).split(os.sep)[0]
+            by_dir[top] = by_dir.get(top, 0) + sz
+    mb = total / 1e6
+    parts = ", ".join(f"{k} {v / 1e6:.1f}MB" for k, v in
+                      sorted(by_dir.items(), key=lambda kv: -kv[1])[:4])
+    print(f"  → site is {mb:.1f}MB ({parts})")
+    if mb > SIZE_BUDGET_MB:
+        print(f"  ! over the {SIZE_BUDGET_MB}MB budget by {mb - SIZE_BUDGET_MB:.1f}MB "
+              "- see SIZE_BUDGET_MB in model/run.py")
 
 
 def write_manifest(ready: set[str]) -> dict:
@@ -1066,7 +1296,10 @@ def main(argv: list[str] | None = None) -> None:
     # Cross-competition outputs, once, after every league has been written.
     # Each is optional: a failure here must not cost the forecasts that already
     # landed, so it is reported and the run carries on.
-    for name, fn in (("global rankings", build_rankings), ("feeds", build_feeds)):
+    for name, fn in (("global rankings", build_rankings), ("feeds", build_feeds),
+                     ("coverage", build_coverage),
+                     ("sitemap and club pages", build_seo),
+                     ("size budget", check_size)):
         try:
             fn(ready)
         except Exception as exc:                   # noqa: BLE001
