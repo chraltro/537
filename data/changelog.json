@@ -3,45 +3,51 @@
   "entries": [
     {
       "date": "2026-08-20",
+      "title": "Every tab below 620 pixels was blank",
+      "effect": "No change to any number.",
+      "body": "Tabs carry a long label and a short one, and CSS picks which to show. The rule hiding the short spelling was written after the media query that reveals it, at the same specificity, so it won the cascade and hid both: below 620 pixels every tab with a short label rendered as an empty button. On the method page that left Accuracy and Data named with two blanks between them. The geometry check written to catch exactly this kind of thing passed, because blank tabs fit beautifully; it now requires visible text as well as a fit. The matches page also opens on the fixture list again rather than on the stakes card, and the footer is one line of links instead of three paragraphs repeated on nine pages."
+    },
+    {
+      "date": "2026-08-20",
       "title": "Ratings for every club in Europe, not just the ones we forecast",
       "effect": "797 of 836 ranked clubs gain five ratings they did not have.",
-      "body": "The comparison page offers 836 clubs and could rate 174 of them: the radar read the ratings off a club's league forecast, which exists for nine competitions. Bodø/Glimt against Celtic showed nothing at all. Five of the eight — attack, defence, home, big games, consistency — are computable from the pooled European corpus and are now carried on the ranking itself. Attack and defence stay on the big-five scale, the same reference SPI uses there; the other three are measured against each club's own division, because \"how you do against the best in your league\" has no cross-border meaning. The first attempt scored that one against a European average and rated Galatasaray the best big-game side in Europe at 95 against Manchester City's 88, which is what dominating a weak top quarter looks like when you forget whose top quarter it is."
+      "body": "The comparison page offers 836 clubs and could rate 174 of them: the radar read the ratings off a club's league forecast, which exists for nine competitions. Bodø/Glimt against Celtic showed nothing at all. Five of them (attack, defence, home, big games and consistency) are computable from the pooled European corpus and are now carried on the ranking itself. Attack and defence stay on the big-five scale, the same reference SPI uses there; the other three are measured against each club's own division, because \"how you do against the best in your league\" has no cross-border meaning. The first attempt scored that one against a European average and rated Galatasaray the best big-game side in Europe at 95 against Manchester City's 88, which is what dominating a weak top quarter looks like when you forget whose top quarter it is."
     },
     {
       "date": "2026-08-20",
       "title": "Tabs that scrolled off the screen, and a URL rewrite that ate the tab",
       "effect": "No change to any number.",
-      "body": "Below 620 pixels the tab strip became a horizontal scroller, which put the later tabs off the right-hand edge behind no visible affordance — on the comparison page that hid two of five. It wraps now, and long labels give way to short ones first, so every tab is reachable at 360 pixels. Separately, three pages rebuilt the query string and wrote it as \"?…\", which drops the fragment: on the matches page that ran during the first draw and erased the tab named in the link microseconds before the tab strip read it, so a shared link never opened the tab it named; on the club and comparison pages it fired on every change of club, quietly removing the tab from the address bar so Copy link copied the wrong panel. The sorting code in the same file had always done it correctly. The matches page itself is now two tabs: the matches that matter, and all of them."
+      "body": "Below 620 pixels the tab strip became a horizontal scroller, which put the later tabs off the right-hand edge behind no visible affordance. On the comparison page that hid two of five. It wraps now, and long labels give way to short ones first, so every tab is reachable at 360 pixels. Separately, three pages rebuilt the query string and wrote it as \"?…\", which drops the fragment: on the matches page that ran during the first draw and erased the tab named in the link microseconds before the tab strip read it, so a shared link never opened the tab it named; on the club and comparison pages it fired on every change of club, quietly removing the tab from the address bar so Copy link copied the wrong panel. The sorting code in the same file had always done it correctly. The matches page itself is now two tabs: the matches that matter, and all of them."
     },
     {
       "date": "2026-08-20",
       "title": "Belgium's fixtures had no matchweek, and nothing said so",
       "effect": "Fixes the What-if simulator, the next-round card and match grouping for the Pro League.",
-      "body": "openfootball's Belgian file writes its round headings as \"1. Round\" where every other feed writes \"Matchday 1\", and the reader knew only the second form. All 306 Belgian fixtures came through with no matchweek: the simulator's week selector was empty and its heading read \"NaN\", and the front page could not say what the next round was. Nothing raised — a fixture with no matchweek is not an error anywhere, it just quietly stops being groupable. The European reader in the same file had handled \"1. Round\" since the day it was written. The reader now knows all seven spellings the corpus actually uses, including the split-phase headings Belgium used before this season, and a test fails if any competition has a fixture without a week."
+      "body": "openfootball's Belgian file writes its round headings as \"1. Round\" where every other feed writes \"Matchday 1\", and the reader knew only the second form. All 306 Belgian fixtures came through with no matchweek: the simulator's week selector was empty and its heading read \"NaN\", and the front page could not say what the next round was. Nothing raised, because a fixture with no matchweek is not an error anywhere; it just quietly stops being groupable. The European reader in the same file had handled \"1. Round\" since the day it was written. The reader now knows all seven spellings the corpus actually uses, including the split-phase headings Belgium used before this season, and a test fails if any competition has a fixture without a week."
     },
     {
       "date": "2026-08-20",
       "title": "Three more places where absent was being rendered as a number",
       "effect": "Changes the movement charts, and the wording of the RSS and JSON feeds.",
-      "body": "The forecast keeps 400 days of daily snapshots with no season stamp, and the movement charts read a club missing from one as a probability of zero. Next August that would have drawn a promoted club at a flat, confident 0% for every day it spent in another division — a line that reads as \"the model gave them no chance\". Snapshots now carry their season, the charts use only the current one, and a club absent from a snapshot is a gap in the line rather than a point on the floor. Separately, the feeds applied Premier League vocabulary to all nine competitions, so a Championship item read \"Middlesbrough's qualification chance fell\" — naming a competition the club is not in. The weekly narrative beside it had taken a per-competition vocabulary since it was written; the feed simply never asked for one. And the method page's own description claimed a decaying market anchor on eight competitions that have none."
+      "body": "The forecast keeps 400 days of daily snapshots with no season stamp, and the movement charts read a club missing from one as a probability of zero. Next August that would have drawn a promoted club at a flat, confident 0% for every day it spent in another division: a line that reads as \"the model gave them no chance\". Snapshots now carry their season, the charts use only the current one, and a club absent from a snapshot is a gap in the line rather than a point on the floor. Separately, the feeds applied Premier League vocabulary to all nine competitions, so a Championship item read \"Middlesbrough's qualification chance fell\", naming a competition the club is not in. The weekly narrative beside it had taken a per-competition vocabulary since it was written; the feed simply never asked for one. And the method page's own description claimed a decaying market anchor on eight competitions that have none."
     },
     {
       "date": "2026-08-20",
       "title": "Eight ratings, and a radar to compare them on",
       "effect": "New numbers. No forecast changed.",
-      "body": "Attack and defence were two of a possible eight. The other six are the same transform over different measurables — distance from the competition's own average, through a logistic, so 65 is average and higher is better every time. Creation is shots on target per match and Finishing is goals per shot on target, kept apart because a club that creates plenty and finishes badly is the interesting case. Big games is points per game against the top quarter of that season's table. Home is points per game at home minus away: the competition's home advantage is already in the model, and this is the part that belongs to the club. Consistency is how little the goal difference moves match to match — a description, not a compliment. Discipline is cards and fouls inverted. Club pages draw all eight as a radar; the head-to-head page overlays two. Creation, finishing and discipline need a shot feed, so the four openfootball competitions show five axes rather than eight, and an axis nobody has is dropped rather than pinned at the middle."
+      "body": "Attack and defence were two of a possible eight. The other six use the same transform over different measurables: distance from the competition's own average, put through a logistic, so 65 is average and higher is better every time. Creation is shots on target per match and Finishing is goals per shot on target, kept apart because a club can create plenty and finish badly, and one number cannot show both. Big games is points per game against the top quarter of that season's table. Home is points per game at home minus away. The competition's own home advantage is already in the model, so this is the part that belongs to the club. Consistency is how little the goal difference moves from match to match, which describes a club rather than praising one. Discipline is cards and fouls inverted. Club pages draw all eight as a radar; the head-to-head page overlays two. Creation, finishing and discipline need a shot feed, so the four openfootball competitions show five axes rather than eight, and an axis nobody has is dropped rather than pinned at the middle."
     },
     {
       "date": "2026-08-20",
       "title": "Belgian clubs were invisible in the global ranking",
       "effect": "Sixteen clubs gain a link and a rating trajectory.",
-      "body": "The map from a pooled-corpus competition id to a site slug is kept by hand, and it was never updated when Belgium was added. Every Belgian club sat in the global ranking with no link to its own page and no line on the comparison chart, and the page announced that this site does not forecast the Belgian Pro League — which it does. Nothing failed: a missing entry just produces an empty slug, which reads exactly like a competition that genuinely is not built. A test now fails if a forecast competition appears in the pooled corpus without a mapping. The comparison page also stopped guessing at why a line is missing: it now distinguishes a competition that is not forecast from a file that failed to load."
+      "body": "The map from a pooled-corpus competition id to a site slug is kept by hand, and it was never updated when Belgium was added. Every Belgian club sat in the global ranking with no link to its own page and no line on the comparison chart, and the page announced that this site does not forecast the Belgian Pro League, which it does. Nothing failed: a missing entry just produces an empty slug, which reads exactly like a competition that genuinely is not built. A test now fails if a forecast competition appears in the pooled corpus without a mapping. The comparison page also stopped guessing at why a line is missing: it now distinguishes a competition that is not forecast from a file that failed to load."
     },
     {
       "date": "2026-08-20",
       "title": "Shooting, from a column the feed has carried since 2000 and nothing read",
       "effect": "New numbers. No forecast changed.",
-      "body": "The results mirror has carried shots and shots on target for every big-five match since 2000-01, and this pipeline read them for exactly one purpose: fitting a single league-wide conversion rate into the ratings. Per club they were never aggregated at all. Club pages now show shots, shots on target, accuracy, conversion, shots faced and the share of shots on target saved, all against the league average; the head-to-head page compares the same six. Big five only — no other feed this build can reach has a shot in it, so a club from the other four competitions is absent rather than shown a zero. Crosses, possession and passes are in no feed available here, and expected goals is approximated by whether a shot was on target rather than by where it was taken from."
+      "body": "The results mirror has carried shots and shots on target for every big-five match since 2000-01, and this pipeline read them for exactly one purpose: fitting a single league-wide conversion rate into the ratings. Per club they were never aggregated at all. Club pages now show shots, shots on target, accuracy, conversion, shots faced and the share of shots on target saved, all against the league average; the head-to-head page compares the same six. Big five only, since no other feed this build can reach has a shot in it, so a club from the other four competitions is absent rather than shown a zero. Crosses, possession and passes are in no feed available here, and expected goals is approximated by whether a shot was on target rather than by where it was taken from."
     },
     {
       "date": "2026-08-20",
@@ -53,31 +59,31 @@
       "date": "2026-08-20",
       "title": "A Ratings view, and a trajectory chart that can actually be compared",
       "effect": "No change to any number.",
-      "body": "The “show ratings and schedule” button on the table did nothing below 1100 pixels wide: every column it revealed was also marked low priority, and a media query hid them again. So on a phone, and on most laptops, it was a no-op. Ratings now have a tab of their own — every club's SPI, attack, defence, goals for and against, goal difference and remaining schedule in one sortable view, with bars drawn on the 35-95 rating scale rather than stretched to the division's own range. The head-to-head page is four tabs, and its two rating trajectories became one chart on one axis: two panels with different vertical scales invited exactly the reading they could not support. Where two clubs' colours are too close to tell apart — half of Europe plays in red — the chart falls back to the two colours this site already uses for the sides of a match, and says so."
+      "body": "The “show ratings and schedule” button on the table did nothing below 1100 pixels wide: every column it revealed was also marked low priority, and a media query hid them again. So on a phone, and on most laptops, the button did nothing. Ratings now have a tab of their own, every club's SPI, attack, defence, goals for and against, goal difference and remaining schedule in one sortable view, with bars drawn on the 35-95 rating scale rather than stretched to the division's own range. The head-to-head page is four tabs, and its two rating trajectories became one chart on one axis: two panels with different vertical scales invited exactly the reading they could not support. Where two clubs' colours are too close to tell apart, half of Europe plays in red: the chart falls back to the two colours this site already uses for the sides of a match, and says so."
     },
     {
       "date": "2026-08-20",
       "title": "Attack and defence are ratings out of 100",
       "effect": "A new way of reading two numbers that already existed. No forecast changed.",
-      "body": "The model thinks in goals — 1.91 expected against an average opponent, 0.55 conceded — and those are still what every probability is computed from. But the defence column was backwards against every other column on the page: the smaller number was the better club. Both are now also published out of 100, higher better, sitting roughly between 40 and 90. On a competition page 65 is an average club there; on the global rankings 65 is an average big-five club, which is why most of Europe sits below 50. The spread each is measured against is a fixed constant, so a club's rating does not move when a rival's does."
+      "body": "The model thinks in goals, 1.91 expected against an average opponent, 0.55 conceded, and those are still what every probability is computed from. But the defence column was backwards against every other column on the page: the smaller number was the better club. Both are now also published out of 100, higher better, sitting roughly between 40 and 90. On a competition page 65 is an average club there; on the global rankings 65 is an average big-five club, which is why most of Europe sits below 50. The spread each is measured against is a fixed constant, so a club's rating does not move when a rival's does."
     },
     {
       "date": "2026-08-20",
       "title": "Fewer cards, more tabs, and a comparison worth reading",
       "effect": "No change to any number.",
-      "body": "The three summary tiles on the front page said the favourite, the projected champion and the likeliest relegation — which were the first row, the first row and the last row of the table directly beneath them. The same on the rankings and races pages. All gone. The Table page is now four tabs rather than one long scroll. The head-to-head page gained the last twenty matches for each club: results, points per game, goals scored and conceded, clean sheets, and how often each failed to score. None of it feeds the model, which reads the same matches better; it is there because a rating says how good a club is and nothing about what watching it has been like."
+      "body": "The three summary tiles on the front page said the favourite, the projected champion and the likeliest relegation, which were the first row, the first row and the last row of the table directly beneath them. The same on the rankings and races pages. All gone. The Table page is now four tabs rather than one long scroll. The head-to-head page gained the last twenty matches for each club: results, points per game, goals scored and conceded, clean sheets, and how often each failed to score. None of it feeds the model, which reads the same matches better; it is there because a rating says how good a club is and nothing about what watching it has been like."
     },
     {
       "date": "2026-08-20",
       "title": "The Championship play-off is no longer part of the Championship season",
       "effect": "Small. Every Championship rating and probability moves slightly; the season-accuracy card appears for the first time.",
-      "body": "openfootball keeps the play-off in the same file as the league season — two semi-final legs each way and a Wembley final, five matches under a \"Finals\" header — and nothing was reading that header. So 557 matches a season were being fitted and tabled as if they were 552, with a neutral-ground final counting as league points and a knockout tie teaching the ratings model. Belgium had the same problem in reverse: its post-split rounds are league matches and had to be kept, while its one-off tie for a Conference League place had to go. Both are now read from the header. The Championship's walk-forward log-loss went from 1.0507 to 1.0500."
+      "body": "openfootball keeps the play-off in the same file as the league season, two semi-final legs each way and a Wembley final, five matches under a \"Finals\" header, and nothing was reading that header. So 557 matches a season were being fitted and tabled as if they were 552, with a neutral-ground final counting as league points and a knockout tie teaching the ratings model. Belgium had the same problem in reverse: its post-split rounds are league matches and had to be kept, while its one-off tie for a Conference League place had to go. Both are now read from the header. The Championship's walk-forward log-loss went from 1.0507 to 1.0500."
     },
     {
       "date": "2026-08-20",
       "title": "A club page says when the club was founded and where it plays",
       "effect": "New information, no change to any number.",
-      "body": "From openfootball's club register, matched on the alias list this repository already keeps — which is how \"Bayern Munich\" here finds \"Bayern München\" there. The same register carries stadiums and they are not read: it still has West Ham at the Boleyn Ground and Tottenham at White Hart Lane. 271 of 335 clubs matched; the rest are from countries with no register, and are shown without the line rather than with a guess."
+      "body": "From openfootball's club register, matched on the alias list this repository already keeps, which is how \"Bayern Munich\" here finds \"Bayern München\" there. The same register carries stadiums and they are not read: it still has West Ham at the Boleyn Ground and Tottenham at White Hart Lane. 271 of 335 clubs matched; the rest are from countries with no register, and are shown without the line rather than with a guess."
     },
     {
       "date": "2026-08-20",
@@ -95,31 +101,31 @@
       "date": "2026-08-20",
       "title": "The site is called 537, and a phone gets a real navigation bar",
       "effect": "No change to any number.",
-      "body": "A homage to FiveThirtyEight, whose Soccer Power Index this is built in the spirit of. The masthead below 700px is now two rows — identity on the first, four tab-shaped destinations and the menu on the second — instead of one row that hid all four links and left a lone \"More\" button. The sticky table header used to assume a 60-pixel masthead; it now measures the bar it sits under, so it stays correct the next time the bar changes."
+      "body": "A homage to FiveThirtyEight, whose Soccer Power Index this is built in the spirit of. The masthead below 700px is now two rows, identity on the first, four tab-shaped destinations and the menu on the second, instead of one row that hid all four links and left a lone \"More\" button. The sticky table header used to assume a 60-pixel masthead; it now measures the bar it sits under, so it stays correct the next time the bar changes."
     },
     {
       "date": "2026-08-20",
       "title": "Nine competitions, and a page that says what each is built on",
       "effect": "New numbers, no change to existing ones.",
-      "body": "Belgium's Pro League joins the eight already here. Its feed is the thinnest on the site — openfootball has no top flight at all for 2020-21 or 2022-23, and its 2025-26 file stopped at 121 of 240 matches — so the coverage table on the Data tab now states, per competition, how many seasons and matches the fit actually rests on and which seasons the feed is missing."
+      "body": "Belgium's Pro League joins the eight already here. Its feed is the thinnest on the site, openfootball has no top flight at all for 2020-21 or 2022-23, and its 2025-26 file stopped at 121 of 240 matches, so the coverage table on the Data tab now states, per competition, how many seasons and matches the fit actually rests on and which seasons the feed is missing."
     },
     {
       "date": "2026-08-20",
       "title": "Relegation and promotion probabilities now count the play-off",
       "effect": "Changes the Down column in Germany and France, and adds a Promoted column in the Championship.",
-      "body": "Germany and France send the club finishing third-from-bottom into a two-legged tie, and until now the published relegation figure was the chance of finishing in the automatic places — not the chance of going down. Both are simulated; the table shows the one a reader means and the tooltip splits it. The same at the other end: the Championship's Promoted column counts automatic promotion and the play-off together."
+      "body": "Germany and France send the club finishing third-from-bottom into a two-legged tie, and until now the published relegation figure was the chance of finishing in the automatic places, not the chance of going down. Both are simulated; the table shows the one a reader means and the tooltip splits it. The same at the other end: the Championship's Promoted column counts automatic promotion and the play-off together."
     },
     {
       "date": "2026-08-19",
       "title": "A relegated club is rated on the division it came from",
       "effect": "Large. West Ham moved from 24th to 1st in the Championship forecast.",
-      "body": "A club arriving in a division was classed as promoted whatever direction it came from, so a club relegated from the Premier League had the promoted-club correction applied to it — a correction measured on clubs arriving from a weaker league. The pipeline now loads the division above as well, tells the three arrival types apart, and rates each on the evidence that applies to it."
+      "body": "A club arriving in a division was classed as promoted whatever direction it came from, so a club relegated from the Premier League had the promoted-club correction applied to it: a correction measured on clubs arriving from a weaker league. The pipeline now loads the division above as well, tells the three arrival types apart, and rates each on the evidence that applies to it."
     },
     {
       "date": "2026-08-19",
       "title": "Rating intervals, schedule played, and the second-tier fields published",
       "effect": "New numbers, no change to existing ones.",
-      "body": "The rating already carried a measured uncertainty — it is what the simulation resamples between scenarios — and was printed as a bare number. It now shows one standard deviation either way."
+      "body": "The rating already carried a measured uncertainty, it is what the simulation resamples between scenarios, and was printed as a bare number. It now shows one standard deviation either way."
     },
     {
       "date": "2026-08-19",
@@ -142,7 +148,7 @@
     {
       "date": "2026-08-18",
       "title": "First forecast published",
-      "effect": "—",
+      "effect": "First forecast.",
       "body": "A Dixon–Coles goals model with time-weighted fitting, preseason priors anchored to a decaying market weight, and fifty thousand simulated seasons."
     }
   ]

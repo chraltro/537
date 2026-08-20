@@ -63,7 +63,7 @@
           <th class="l" data-k="name">Club</th>
           <th data-k="spi" title="Expected share of points against an average club in this competition">SPI</th>
           <th data-k="att_r" title="Attack out of 100. Higher is better">Attack</th>
-          <th data-k="def_r" title="Defence out of 100. Higher is better — it is the conceding that is low">Defence</th>
+          <th data-k="def_r" title="Defence out of 100. Higher is better, because it is the conceding that is low">Defence</th>
           <th class="p3" data-k="off" title="Goals expected against an average opponent">Scored</th>
           <th class="p3" data-k="def" title="Goals conceded against an average opponent">Conceded</th>
           <th class="p2" data-k="gd" title="Projected goal difference across the season">GD</th>
@@ -314,8 +314,8 @@ tbody.addEventListener('mousemove', (e) => {
          ['Relegated, either way', pct(t.down, 1)]] : []),
     ['Rating (SPI)', t.spi_lo != null ? `${t.spi.toFixed(1)} (${t.spi_lo}–${t.spi_hi})`
                                       : t.spi.toFixed(1)],
-    ['Attack', `${t.att_r ?? '—'} — ${t.off.toFixed(2)} goals a game vs average`],
-    ['Defence', `${t.def_r ?? '—'} — ${t.def.toFixed(2)} conceded a game vs average`],
+    ['Attack', `${t.att_r ?? '—'} · ${t.off.toFixed(2)} goals a game vs average`],
+    ['Defence', `${t.def_r ?? '—'} · ${t.def.toFixed(2)} conceded a game vs average`],
     ['Schedule left', t.sos ? `${t.sos} avg opponent (${ord(t.sos_rank)} hardest)` : '—'],
     ['Schedule played', t.sos_played != null ? `${t.sos_played} avg opponent` : '—'],
   ]), e);
@@ -363,17 +363,16 @@ makeSortable(document.getElementById('rtbl'), rows, renderRatings, 'spi',
 const bestAtt = [...rows].sort((a, b) => (b.att_r ?? 0) - (a.att_r ?? 0))[0];
 const bestDef = [...rows].sort((a, b) => (b.def_r ?? 0) - (a.def_r ?? 0))[0];
 document.getElementById('ratingsub').innerHTML =
-  `Attack and defence are out of 100 and higher is better both times — including defence, `
-  + `where it is the <em>conceding</em> that is low. 65 is an average ${esc(W.name)} club; `
-  + `the scale is this competition's own, so a 70 here and a 70 elsewhere are not the same `
+  `Attack and defence are out of 100. Higher is better both times, including defence, `
+  + `where it is the <em>conceding</em> that is low. 65 is an average ${esc(W.name)} club. `
+  + `The scale is this competition's own, so a 70 here and a 70 elsewhere are not the same `
   + `club. Click a column to sort.`;
 document.getElementById('ratingfoot').innerHTML =
   `<b>${esc(bestAtt.name)}</b> have the best attack at ${bestAtt.att_r}, worth `
   + `${bestAtt.off.toFixed(2)} goals a match against an average opponent; `
   + `<b>${esc(bestDef.name)}</b> the best defence at ${bestDef.def_r}, conceding `
-  + `${bestDef.def.toFixed(2)}. The two goal columns are what the ratings were computed `
-  + `from and what every probability on this site is computed from; the ratings are the `
-  + `same two numbers made readable.`;
+  + `${bestDef.def.toFixed(2)}. The two goal columns are what the ratings are computed from, `
+  + `and what every probability on this site is computed from.`;
 
 /* ---- distribution view ---- */
 /* One column per finishing position, however many the league has. The two

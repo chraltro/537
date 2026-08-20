@@ -70,8 +70,8 @@
     <h2>Rating trajectory</h2>
     <p class="sub">Both clubs on one scale, season by season. The line comes from that club's
       own league forecast, so a club in a competition this site does not build has no line to
-      draw — and a season spent in another division is a gap rather than a straight segment
-      across years it was not there for.</p>
+      draw. A season spent in another division is a gap, not a straight segment across
+      years the club was not there for.</p>
     <div id="traj"></div>
   </section>
 </main>
@@ -141,11 +141,11 @@ document.getElementById('scalenote').textContent = g.note
   + 'better both times, with the goals they come from underneath. Most of Europe sits '
   + 'below 50 on this scale, which is what it means to be ranked against the big five. '
   + 'Below the ratings are plain counts that feed nothing: the last twenty matches each '
-  + 'club played, and — where a competition has a shot feed, which means the big five and '
-  + 'nowhere else — five seasons of shooting. The fit reads the same matches and reads '
-  + 'them better, weighted by age and by who the opponent was. A rating is only as fresh '
-  + 'as the feed behind it, so a club whose league stopped publishing carries the age of '
-  + 'its newest result.';
+  + 'club played, plus five seasons of shooting where a competition has a shot feed, which '
+  + 'means the big five and nowhere else. The fit reads the same matches and reads them '
+  + 'better, weighted by age and by who the opponent was. A rating is only as fresh as the '
+  + 'feed behind it, so a club whose league stopped publishing carries the age of its '
+  + 'newest result.';
 
 const fmtStale = (c) => (c.stale > 13 ? ` · rated to ${c.last}` : '');
 
@@ -374,13 +374,13 @@ async function render() {
       + (both.length > 1 ? 'both clubs' : 'one club');
     document.getElementById('radarsub').innerHTML =
       'Every one is the same transform over a different measurable, and higher is better on '
-      + 'all of them \u2014 defence and discipline included, where it is the '
-      + '<em>conceding</em> and the <em>booking</em> that is low. '
+      + 'all of them, including defence and discipline, where it is the <em>conceding</em> '
+      + 'and the <em>booking</em> that is low. '
       + '<b>Attack</b> and <b>defence</b> are measured against an average big-five club, the '
       + 'same reference SPI uses here, so they compare across borders and most of Europe '
-      + 'sits below 50. The rest are measured against each club\u2019s own division, because '
-      + '\u201chow you do against the best in your league\u201d has no cross-border meaning: '
-      + 'a club that dominates a weak division beats a weak top quarter.';
+      + 'sits below 50. The rest are measured against each club\u2019s own division. '
+      + '\u201cHow you do against the best in your league\u201d has no cross-border meaning, '
+      + 'because a club that dominates a weak division beats a weak top quarter.';
     document.getElementById('radarbody').innerHTML =
       `<div>${radar(both, { size: 320 })}
         <div class="tl-key">${both.map((c) => `
@@ -402,9 +402,9 @@ async function render() {
       ? 'Creation, finishing and discipline need shots, cards and fouls, which only the '
         + 'results mirror publishes and only for the big five. An axis neither club has is '
         + 'dropped rather than pinned at the middle, which would read as "average".'
-      : 'Attack and creation are deliberately separate: a club that creates plenty and '
-        + 'finishes badly is the interesting case. Consistency is how little the goal '
-        + 'difference moves match to match — a description, not a compliment.';
+      : 'Attack and creation are kept apart because a club can create plenty and finish '
+        + 'badly. Consistency is how little the goal difference moves from match to match, '
+        + 'which describes a club rather than praising it.';
   }
   rcard.hidden = false;
 

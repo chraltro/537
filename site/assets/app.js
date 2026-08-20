@@ -536,21 +536,21 @@ export function initChrome(page) {
     location.href = u.toString();
   });
 
+  /* One line of links. This used to be three paragraphs of prose on the bottom
+     of all nine pages, restating on every one of them what the method page
+     exists to say. */
   document.body.insertAdjacentHTML('beforeend', `
     <footer><div class="wrap">
-      <p>An open forecast of ${esc(W.the)}, rebuilt in the spirit of FiveThirtyEight's
-      Soccer Power Index. Ratings, match probabilities and season simulations are generated
-      from public match data, with no private feeds and no hand-tuned opinions.
-      <a href="${url('method.html')}">How it works and how accurate it is →</a></p>
-      <p>Match data: <a href="https://github.com/datasets/football-datasets">football-datasets</a>
-      (mirroring football-data.co.uk) and <a href="https://github.com/openfootball">openfootball</a>.
-      Not affiliated with ${esc(W.the)}. Not betting advice.</p>
-      <p>Take it with you:
-      <a href="${ROOT}cal/${esc(LG.slug)}.ics">fixtures in your calendar</a> ·
-      <a href="${ROOT}feed.json">JSON feed</a> ·
-      <a href="${ROOT}feed.xml">RSS</a> ·
-      <a href="${ROOT}embed.html?lg=${esc(LG.slug)}">embeddable widget</a>. Each is a static
-      file this build writes, refreshed every six hours.</p>
+      <p>
+        <a href="${url('method.html')}">Method</a> ·
+        <a href="${ROOT}cal/${esc(LG.slug)}.ics">Calendar</a> ·
+        <a href="${ROOT}feed.xml">RSS</a> ·
+        <a href="${ROOT}feed.json">JSON</a> ·
+        <a href="${ROOT}embed.html?lg=${esc(LG.slug)}">Widget</a> ·
+        <a href="https://github.com/datasets/football-datasets">football-datasets</a> ·
+        <a href="https://github.com/openfootball">openfootball</a>
+      </p>
+      <p class="foot-fine">Not affiliated with ${esc(W.the)}. Not betting advice.</p>
     </div></footer>`);
   document.body.insertAdjacentHTML('beforeend', '<div id="tip" role="tooltip"></div>');
 
@@ -1452,7 +1452,7 @@ export const DIMS = [
   { key: 'att_r', label: 'Attack',
     hint: 'Goals against an average opponent' },
   { key: 'creation_r', label: 'Creation',
-    hint: 'Shots on target per match. Big five only — no other feed has a shot in it' },
+    hint: 'Shots on target per match. Big five only, since no other feed has a shot in it' },
   { key: 'finishing_r', label: 'Finishing',
     hint: 'Goals per shot on target. Big five only' },
   { key: 'big_r', label: 'Big games',
@@ -1460,9 +1460,9 @@ export const DIMS = [
   { key: 'home_r', label: 'Home',
     hint: 'Points per game at home minus points per game away' },
   { key: 'consistency_r', label: 'Consistency',
-    hint: 'How little the goal difference moves match to match. Predictable, which is not the same as good' },
+    hint: 'How little the goal difference moves from match to match. Predictable, which is not the same as strong' },
   { key: 'discipline_r', label: 'Discipline',
-    hint: 'Cards and fouls, inverted — a high rating is a clean side. Big five only' },
+    hint: 'Cards and fouls, inverted, so a high rating is a clean side. Big five only' },
   { key: 'def_r', label: 'Defence',
     hint: 'Goals conceded against an average opponent' },
 ];

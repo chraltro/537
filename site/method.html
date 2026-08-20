@@ -198,8 +198,8 @@
       <p class="sub" style="margin-bottom:12px">The curve above mixes home wins, draws and
         away wins, and a model that is light on draws and heavy on the other two looks
         perfectly calibrated there: the errors cancel. Draws are the outcome a goals model
-        is most likely to miss — they are the thin middle of a distribution over two
-        counts — so they are worth checking on their own.</p>
+        is most likely to miss, being the thin middle of a distribution over two
+        counts, so they are worth checking on their own.</p>
       <div class="tiles" id="outcometiles" style="margin-bottom:6px"></div>
       <p class="hint" id="outcomenote"></p>
     </div>
@@ -294,7 +294,7 @@
       on each club page come from. Goals only, because shot counts are full-match totals and
       cannot be split across the break.</p>
     <p>Cards and fouls are published as a club's record, not as a model input. The referee is
-      published the same way and deliberately does no work: no source reachable from the build
+      published the same way and does no work: no source reachable from the build
       names the official <em>before</em> kick-off, so a referee term could not be applied to a
       match that has not been played. A referee who books more is also usually working harder
       fixtures rather than being stricter. The column is also, in practice, a Premier
@@ -347,8 +347,8 @@
       <li><b>No fixture congestion or European commitments.</b> A Thursday night in Baku
         followed by a Sunday lunchtime kick-off is not modelled, and not for want of trying:
         across 18,929 big-five matches since 2015-16, a day of extra rest relative to the
-        opponent is worth −0.014 goals of unexplained goal difference — the wrong sign, and
-        four of the five leagues' confidence intervals contain zero. The sign is almost
+        opponent is worth −0.014 goals of unexplained goal difference. That is the wrong
+        sign, and four of the five leagues' confidence intervals contain zero. The sign is almost
         certainly the confound rather than the effect: the club on short rest is short of
         rest <em>because</em> it is still in Europe, which is to say because it is good. A
         covariate cannot be separated from that without a European fixture list joined to
@@ -368,7 +368,7 @@
       <a href="https://github.com/openfootball/clubs">openfootball/clubs</a>, matched on the
       alias list this repository already keeps; that register also carries stadiums, which
       are not read, because it has West Ham at the Boleyn Ground and Tottenham at White Hart
-      Lane — grounds they left in 2016 and 2017. A club the register does not carry is shown
+      Lane, grounds they left in 2016 and 2017. A club the register does not carry is shown
       without the line rather than with a guess.
       The forecast rebuilds itself every six hours on GitHub Actions.
       Model, site and the odds snapshot are all in
@@ -858,57 +858,56 @@ const GLOSS = [
   ['SPI', `Expected share of the points a club would take against an average
     ${esc(W.name)} club, home and away. 50 is exactly average. It is a rating,
     not a forecast: it says how good a club is, not where it will finish.
-    <b>It is not comparable between competitions</b> — a 60 in the Championship
+    <b>It is not comparable between
+    competitions</b>: a 60 in the Championship
     and a 60 in the Premier League both mean "well above the clubs around
     them", and those are different clubs. The
     <a href="${url('rankings.html')}">global rankings</a> page is the one that
     compares across borders, and it is built on a different fit: one that uses
     UEFA competition matches as the only evidence joining one league to
     another.`],
-  ['Attack / Defence', `Out of 100, and higher is better both times — including
+  ['Attack / Defence', `Out of 100, and higher is better both times, including
     defence, where it is the <em>conceding</em> that is low. On a competition
     page 65 is an average ${esc(W.name)} club and the scale is that competition's
     own, exactly as SPI's is; on the
     <a href="${url('rankings.html')}">global rankings</a> 65 is an average
     big-five club, which is why most of Europe sits below 50 there.
-    <br>The model itself thinks in goals — 1.91 expected against an average
-    opponent, 0.55 conceded — and those are still what every probability is
+    <br>The model itself thinks in goals: 1.91 expected against an average
+    opponent, 0.55 conceded. Those are still what every probability is
     computed from and what the tooltips show. The rating is a readable form of
     the same two numbers: the log of the ratio to average, put through a
     logistic so the best attack in a division lands near 90 instead of running
     off the end of the scale. The spread it is measured against is a fixed
-    constant, so a club's rating does not move when a rival's does — which
-    means a competition whose clubs are close together shows a narrower band of
-    ratings than one where they are spread out. That is the interesting part,
-    not a defect.`],
+    constant, so a club's rating does not move when a rival's does. A competition
+    whose clubs are close together therefore shows a narrower band of ratings than
+    one where they are spread out, which is worth knowing rather than a flaw.`],
   ['The other six ratings', `<b>Creation</b>, <b>Finishing</b>, <b>Big games</b>,
     <b>Home</b>, <b>Consistency</b> and <b>Discipline</b>, on the same 35-to-95
     scale and the same rule: 65 is average for the competition and higher is
     better every time. Creation is shots on target per match and finishing is
-    goals per shot on target — kept apart on purpose, because a club that
-    creates plenty and finishes badly is the interesting case and one number
-    cannot show it. Big games is points per game against the top quarter of that
+    goals per shot on target. They are kept apart because a club can create
+    plenty and finish badly, and one number cannot show both. Big games is points per game against the top quarter of that
     season's table. Home is points per game at home minus points per game away:
     the competition's own home advantage is already in the model, and this is
     the part that belongs to the club. Consistency is how little the goal
-    difference moves from match to match, which is a description and not a
-    compliment — a side that loses narrowly every week scores well on it.
+    difference moves from match to match. It describes a club rather than
+    praising one: a side that loses narrowly every week scores well on it.
     Discipline is cards and fouls inverted, so a clean side rates high.
     <br>Creation, finishing and discipline need shots, cards and fouls, which
     only the results mirror publishes and only for the big five. The other four
     competitions here are read from openfootball, which carries goals and
     nothing else, so those three are absent rather than guessed at.`],
-  ['Projected points', `The mean points total across every simulated season —
+  ['Projected points', `The mean points total across every simulated season,
     which is why it carries a decimal and why no club is ever projected to a
     round number. The 80% range beside it is the 10th to 90th percentile.`],
   [W.winN, `Chance of ${esc(W.winWord)}, across every simulated season.`],
   [W.topN, `Chance of ${esc(W.topFinish)}.`],
   ['Down', `Chance of ${esc(W.downWord)}. Where a competition plays a tie for
-    the last place — Germany, France — this counts losing that tie as well as
-    finishing in the automatic places, and the tooltip splits the two.`],
+    the last place, as Germany and France do, this counts losing that tie as
+    well as finishing in the automatic places, and the tooltip splits the two.`],
   ['Sched', `Average rating of the opponents a club has left to play. Higher is
-    harder. The rank beside it is out of ${W.nTeams} — 1st is the hardest run
-    remaining, not the easiest.`],
+    harder. The rank beside it is out of ${W.nTeams}, where 1st is the hardest
+    run remaining rather than the easiest.`],
   ['Log-loss', `How wrong the forecast was, in the units the forecast is made
     in. A confident wrong call costs far more than a hedged one, which is the
     point: it cannot be improved by being vague. Lower is better, and the only
@@ -918,8 +917,8 @@ const GLOSS = [
     draw costs less than calling one when it was an away win. Lower is better.`],
   ['Calibration', `Whether the numbers mean what they say. Of every match this
     model called at 30%, close to 30% should happen. A model can be well
-    calibrated and still useless — always saying 33/33/33 is perfectly
-    calibrated — so it is read alongside log-loss, never instead of it.`],
+    calibrated and still useless, since always saying 33/33/33 is perfectly
+    calibrated, so it is read alongside log-loss and never instead of it.`],
   ['Market weight', `How much of a club's preseason rating comes from the
     bookmakers' published season prices rather than from its own results. It
     starts high, because in July the market knows about transfers and this
@@ -937,8 +936,8 @@ try {
   const rows = cov.leagues || [];
   if (rows.length) {
     const FEED = {
-      mirror: 'results mirror — goals, shots, cards, half-time, referee',
-      openfootball: 'openfootball — goals only',
+      mirror: 'results mirror: goals, shots, cards, half-time, referee',
+      openfootball: 'openfootball: goals only',
     };
     document.getElementById('compsub').innerHTML =
       `Nine competitions, and they do not rest on the same evidence. Every forecast on

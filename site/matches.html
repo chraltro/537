@@ -29,16 +29,7 @@
 
   <div id="tabs"></div>
 
-  <section class="card" id="c-big">
-    <div class="cardbar">
-      <h2>The matches that matter most</h2>
-      <button class="chip-btn" id="jumpstakes">See all, sorted by stakes</button>
-    </div>
-    <p class="sub" id="bigsub">Ranked by swing rather than by reputation. The score is how
-      far one club's title, qualification or relegation chance moves between a home win and an
-      away win, measured across every simulation.</p>
-    <div id="bigmatches"></div>
-  </section>
+  
 
   <section class="card" id="c-all">
   <div class="controls">
@@ -73,6 +64,17 @@
   </div>
   <div id="list"><p class="skeleton">Loading match forecasts…</p></div>
   </section>
+<section class="card" id="c-big">
+    <div class="cardbar">
+      <h2>The matches that matter most</h2>
+      <button class="chip-btn" id="jumpstakes">See all, sorted by stakes</button>
+    </div>
+    <p class="sub" id="bigsub">Ranked by swing rather than by reputation. The score is how
+      far one club's title, qualification or relegation chance moves between a home win and an
+      away win, measured across every simulation.</p>
+    <div id="bigmatches"></div>
+  </section>
+
 </main>
 
 <script type="module">
@@ -289,10 +291,10 @@ document.getElementById('bigmatches').addEventListener('click', (e) => {
    old path: it switches tab, drops the matchweek filter and sorts the whole
    season by stakes. */
 const showTab = initTabs(document.getElementById('tabs'), [
+  { id: 'all', label: 'Fixtures', short: 'Fixtures',
+    sections: [document.getElementById('c-all')] },
   { id: 'big', label: 'Matches that matter', short: 'Key games',
     sections: [document.getElementById('c-big')] },
-  { id: 'all', label: `All ${matches.length} matches`, short: 'All matches',
-    sections: [document.getElementById('c-all')] },
 ]);
 
 document.getElementById('jumpstakes').addEventListener('click', () => {

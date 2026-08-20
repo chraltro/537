@@ -405,8 +405,10 @@ tbody tr:hover { background: var(--raised); }
 #tip .r { color: var(--ink2); display: flex; justify-content: space-between; gap: 14px; }
 #tip .r b { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 600; }
 
-footer { color: var(--muted); font-size: 12.5px; padding: 40px 0 60px; border-top: 1px solid var(--border); margin-top: 40px; }
+footer { color: var(--muted); font-size: 12.5px; padding: 22px 0 34px; border-top: 1px solid var(--border); margin-top: 36px; }
+footer p { margin: 0; }
 footer a { color: var(--ink2); }
+.foot-fine { margin-top: 6px !important; font-size: 11.5px; }
 .skeleton { color: var(--muted); padding: 40px 0; text-align: center; }
 
 /* Club names collapse to their three-letter code where space is tight. */
@@ -957,6 +959,14 @@ thead th {
 .tab-btn:hover { color: var(--ink); background: var(--raised); }
 .tab-btn[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
 .tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* Short labels are hidden by default and revealed on a narrow screen. This
+   rule has to come BEFORE the media query that reveals them: it has the same
+   specificity, so placed after it won the cascade and hid *both* spellings --
+   long ones hidden by the media query, short ones hidden by this. Every tab
+   below 620px rendered as an empty button, and a geometry-only check of the
+   strip passed happily, because blank tabs fit beautifully. */
+.tab-btn .t-short { display: none; }
+
 /* A tab a reader cannot see is a tab they will not press. The strip used to
    become a horizontal scroller on a phone, which put the later tabs off the
    right-hand edge behind no visible affordance -- on the comparison page that
@@ -969,7 +979,6 @@ thead th {
   .tab-btn .t-long { display: none; }
   .tab-btn .t-short { display: inline; }
 }
-.tab-btn .t-short { display: none; }
 
 /* ================= keyboard row cursor ================= */
 tr.rowcursor > td { background: var(--raised); }

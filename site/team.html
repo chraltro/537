@@ -338,7 +338,7 @@ function renderRadar(t) {
     `The ${WORD[have.length] || have.length} ratings`;
   document.getElementById('radarsub').innerHTML =
     `All of them on the same scale: 65 is an average ${esc(W.name)} club and higher is `
-    + `better every time, defence and discipline included — for those it is the `
+    + `better every time, defence and discipline included. For those it is the `
     + `<em>conceding</em> and the <em>booking</em> that is low. The dashed ring is 65.`;
   const note = document.getElementById('radarnote');
   if (!shape) {
@@ -354,11 +354,10 @@ function renderRadar(t) {
       + 'rather than guessed.';
   } else {
     note.textContent =
-      'Attack and creation are deliberately separate: a club that creates plenty and '
-      + 'finishes badly is the interesting case, and one number cannot show it. '
-      + 'Consistency measures how little the goal difference moves match to match — it is '
-      + 'a description, not a compliment, since a side that loses narrowly every week '
-      + 'scores well on it.';
+      'Attack and creation are kept apart because a club can create plenty and finish '
+      + 'badly, and one number cannot show both. Consistency measures how little the goal '
+      + 'difference moves from match to match. It describes a club rather than praising '
+      + 'one: a side that loses narrowly every week scores well on it.';
   }
 }
 
@@ -396,12 +395,12 @@ function renderShooting(t) {
     tile('Saved', rate(sh.save_pct), 'of the shots on target they face'),
   ].join('');
   document.getElementById('shotnote').textContent =
-    'Accuracy is a property of the shots a club chooses to take — a side that only '
+    'Accuracy is a property of the shots a club chooses to take, so a side that only '
     + 'shoots from six yards has a high one. Conversion is finishing, and is the noisiest '
-    + 'figure here over a short run, which is why the window is five seasons. "Saved" is '
-    + 'goalkeeper and defence together, not the goalkeeper alone. None of this feeds any '
-    + 'forecast: the ratings read the same matches and read them better, weighted by age '
-    + 'and by who the opponent was.';
+    + 'figure here over a short run, which is why the window is five seasons. "Saved" '
+    + 'covers goalkeeper and defence together. None of this feeds any forecast: the '
+    + 'ratings read the same matches and read them better, weighted by age and by who the '
+    + 'opponent was.';
 }
 
 /* ---- either side of the interval ---- */
