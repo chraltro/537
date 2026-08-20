@@ -102,7 +102,7 @@
   </section>
 
   <section class="card" id="radarcard" hidden>
-    <h2>The eight ratings</h2>
+    <h2 id="radarhead">The ratings</h2>
     <p class="sub" id="radarsub"></p>
     <div class="split" id="radarbody"></div>
     <p class="hint" id="radarnote" style="margin-top:14px"></p>
@@ -318,28 +318,48 @@ function renderRadar(t) {
   const card = document.getElementById('radarcard');
   const values = Object.fromEntries(DIMS.map((d) => [d.key, t[d.key] ?? null]));
   const have = DIMS.filter((d) => values[d.key] != null);
-  if (have.length < 3) { card.hidden = true; return; }
+  if (!have.length) { card.hidden = true; return; }
   card.hidden = false;
+  /* A club promoted this summer has attack and defence -- the model rates it
+     from the division below -- and nothing else, because it has no record in
+     this one. Two axes is not a shape, so the radar is skipped and the numbers
+     it does have are still shown, with a line saying why the rest are absent.
+     Hiding the card outright left a promoted club's page silently missing a
+     section every other club has. */
+  const shape = have.length >= 3;
   document.getElementById('radarbody').innerHTML =
-    `<div>${radar([{ label: t.name, color: chipColor(t.primary), values }],
-                  { size: 320 })}</div>`
+    (shape ? `<div>${radar([{ label: t.name, color: chipColor(t.primary), values }],
+                  { size: 320 })}</div>` : '')
     + `<div><table class="rdtbl">${have.map((d) => `
         <tr><td title="${esc(d.hint)}">${esc(d.label)}</td>
             <td class="v">${values[d.key]}</td></tr>`).join('')}</table></div>`;
+  const WORD = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+  document.getElementById('radarhead').textContent =
+    `The ${WORD[have.length] || have.length} ratings`;
   document.getElementById('radarsub').innerHTML =
-    `All eight on the same scale: 65 is an average ${esc(W.name)} club and higher is `
+    `All of them on the same scale: 65 is an average ${esc(W.name)} club and higher is `
     + `better every time, defence and discipline included — for those it is the `
     + `<em>conceding</em> and the <em>booking</em> that is low. The dashed ring is 65.`;
-  document.getElementById('radarnote').textContent = have.length < DIMS.length
-    ? 'Creation, finishing and discipline need shots, cards and fouls, which only the '
+  const note = document.getElementById('radarnote');
+  if (!shape) {
+    note.textContent =
+      `${t.name} came up this summer, so they have no record in ${W.the} to read the other `
+      + 'ratings from. Attack and defence survive because the model rates a promoted club '
+      + 'on the division it came from; the rest would be invented.';
+  } else if (have.length < DIMS.length) {
+    note.textContent =
+      'Creation, finishing and discipline need shots, cards and fouls, which only the '
       + 'results mirror publishes and only for the big five. This competition is read from '
       + 'openfootball, which carries goals and nothing else, so those axes are absent '
-      + 'rather than guessed.'
-    : 'Attack and creation are deliberately separate: a club that creates plenty and '
+      + 'rather than guessed.';
+  } else {
+    note.textContent =
+      'Attack and creation are deliberately separate: a club that creates plenty and '
       + 'finishes badly is the interesting case, and one number cannot show it. '
       + 'Consistency measures how little the goal difference moves match to match — it is '
       + 'a description, not a compliment, since a side that loses narrowly every week '
       + 'scores well on it.';
+  }
 }
 
 /* ---- how a club gets to its goals ----

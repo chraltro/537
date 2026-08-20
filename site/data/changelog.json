@@ -3,6 +3,18 @@
  "entries": [
   {
    "date": "2026-08-20",
+   "title": "Eight ratings, and a radar to compare them on",
+   "effect": "New numbers. No forecast changed.",
+   "body": "Attack and defence were two of a possible eight. The other six are the same transform over different measurables \u2014 distance from the competition's own average, through a logistic, so 65 is average and higher is better every time. Creation is shots on target per match and Finishing is goals per shot on target, kept apart because a club that creates plenty and finishes badly is the interesting case. Big games is points per game against the top quarter of that season's table. Home is points per game at home minus away: the competition's home advantage is already in the model, and this is the part that belongs to the club. Consistency is how little the goal difference moves match to match \u2014 a description, not a compliment. Discipline is cards and fouls inverted. Club pages draw all eight as a radar; the head-to-head page overlays two. Creation, finishing and discipline need a shot feed, so the four openfootball competitions show five axes rather than eight, and an axis nobody has is dropped rather than pinned at the middle."
+  },
+  {
+   "date": "2026-08-20",
+   "title": "Belgian clubs were invisible in the global ranking",
+   "effect": "Sixteen clubs gain a link and a rating trajectory.",
+   "body": "The map from a pooled-corpus competition id to a site slug is kept by hand, and it was never updated when Belgium was added. Every Belgian club sat in the global ranking with no link to its own page and no line on the comparison chart, and the page announced that this site does not forecast the Belgian Pro League \u2014 which it does. Nothing failed: a missing entry just produces an empty slug, which reads exactly like a competition that genuinely is not built. A test now fails if a forecast competition appears in the pooled corpus without a mapping. The comparison page also stopped guessing at why a line is missing: it now distinguishes a competition that is not forecast from a file that failed to load."
+  },
+  {
+   "date": "2026-08-20",
    "title": "Shooting, from a column the feed has carried since 2000 and nothing read",
    "effect": "New numbers. No forecast changed.",
    "body": "The results mirror has carried shots and shots on target for every big-five match since 2000-01, and this pipeline read them for exactly one purpose: fitting a single league-wide conversion rate into the ratings. Per club they were never aggregated at all. Club pages now show shots, shots on target, accuracy, conversion, shots faced and the share of shots on target saved, all against the league average; the head-to-head page compares the same six. Big five only \u2014 no other feed this build can reach has a shot in it, so a club from the other four competitions is absent rather than shown a zero. Crosses, possession and passes are in no feed available here, and expected goals is approximated by whether a shot was on target rather than by where it was taken from."

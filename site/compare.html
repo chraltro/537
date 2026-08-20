@@ -45,7 +45,7 @@
   </section>
 
   <section class="card" id="c-radar">
-    <h2>Eight ratings, both clubs</h2>
+    <h2 id="radarhead">The ratings, both clubs</h2>
     <p class="sub" id="radarsub"></p>
     <div class="split" id="radarbody"></div>
     <p class="hint" id="radarnote" style="margin-top:14px"></p>
@@ -354,6 +354,10 @@ async function render() {
     document.getElementById('radarnote').textContent = '';
   } else {
     const shown = DIMS.filter((d) => both.some((c) => c.values[d.key] != null));
+    const WORD = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+    document.getElementById('radarhead').textContent =
+      `${(WORD[shown.length] || shown.length).replace(/^./, (m) => m.toUpperCase())} ratings, `
+      + (both.length > 1 ? 'both clubs' : 'one club');
     document.getElementById('radarsub').innerHTML =
       'Every one is the same transform over a different measurable: distance from that '
       + 'club\u2019s own competition average, so 65 is average and higher is better on all '
