@@ -69,12 +69,21 @@ class Dataset:
             if not text:
                 continue
             self.second.extend(
-                m for m in parse_openfootball(text, label, self.reg) if m.played)
+                m for m in parse_openfootball(text, label, self.reg)
+                if m.played and m.stage != "playoff")
         print(f"  · {len(self.second)} second-tier matches")
 
         print(f"Loading {self.season} fixtures…")
         text = fetch.fixtures_text(lg, self.season, "top")
-        self.fixtures = parse_openfootball(text, self.season, self.reg)
+        # The play-off is not part of the league season. The Championship's file
+        # carries five knockout matches beside the 552 league ones, and treating
+        # them as fixtures would have every club playing 47 games, a table that
+        # counts a Wembley final as league points, and a fit that learns from a
+        # neutral-ground tie as if it were a Tuesday at Ashton Gate. The
+        # promotion play-off is simulated separately, from the league table the
+        # simulation produces -- `knockout.promotion_playoff`.
+        self.fixtures = [m for m in parse_openfootball(text, self.season, self.reg)
+                         if m.stage != "playoff"]
         self._merge_current_results()
         self.validate()
         return self
@@ -100,7 +109,7 @@ class Dataset:
                 if not text:
                     continue
                 out.extend(m for m in parse_openfootball(text, label, self.reg)
-                           if m.played)
+                           if m.played and m.stage != "playoff")
         else:
             for code in lg.fd_season_codes(self.season):
                 label = _season_label(code)

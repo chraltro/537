@@ -283,7 +283,10 @@
  "external": {
   "source": "xgabora/Club-Football-Match-Data-2000-2025",
   "url": "https://github.com/xgabora/Club-Football-Match-Data-2000-2025",
-  "available": true
+  "available": true,
+  "from": "2010-08-14",
+  "to": "2025-05-25",
+  "matches": 5700
  },
  "seasons": [
   "2015-16",
@@ -365,6 +368,32 @@
    "predicted": 0.8343336603142644,
    "observed": 0.9032258064516129,
    "n": 62
+  }
+ ],
+ "by_outcome": [
+  {
+   "outcome": "home",
+   "n": 4180,
+   "predicted": 0.4284,
+   "observed": 0.4433,
+   "bias": -0.0149,
+   "z": -1.95
+  },
+  {
+   "outcome": "draw",
+   "n": 4180,
+   "predicted": 0.2542,
+   "observed": 0.2368,
+   "bias": 0.0174,
+   "z": 2.64
+  },
+  {
+   "outcome": "away",
+   "n": 4180,
+   "predicted": 0.3174,
+   "observed": 0.3199,
+   "bias": -0.0024,
+   "z": -0.34
   }
  ],
  "calibration_priors": {

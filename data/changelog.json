@@ -3,6 +3,12 @@
   "entries": [
     {
       "date": "2026-08-20",
+      "title": "The Championship play-off is no longer part of the Championship season",
+      "effect": "Small. Every Championship rating and probability moves slightly; the season-accuracy card appears for the first time.",
+      "body": "openfootball keeps the play-off in the same file as the league season — two semi-final legs each way and a Wembley final, five matches under a \"Finals\" header — and nothing was reading that header. So 557 matches a season were being fitted and tabled as if they were 552, with a neutral-ground final counting as league points and a knockout tie teaching the ratings model. Belgium had the same problem in reverse: its post-split rounds are league matches and had to be kept, while its one-off tie for a Conference League place had to go. Both are now read from the header. The Championship's walk-forward log-loss went from 1.0507 to 1.0500."
+    },
+    {
+      "date": "2026-08-20",
       "title": "A club page says when the club was founded and where it plays",
       "effect": "New information, no change to any number.",
       "body": "From openfootball's club register, matched on the alias list this repository already keeps — which is how \"Bayern Munich\" here finds \"Bayern München\" there. The same register carries stadiums and they are not read: it still has West Ham at the Boleyn Ground and Tottenham at White Hart Lane. 271 of 335 clubs matched; the rest are from countries with no register, and are shown without the line rather than with a guess."

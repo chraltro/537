@@ -247,6 +247,32 @@
    "n": 103
   }
  ],
+ "by_outcome": [
+  {
+   "outcome": "home",
+   "n": 1521,
+   "predicted": 0.4215,
+   "observed": 0.4326,
+   "bias": -0.0112,
+   "z": -0.88
+  },
+  {
+   "outcome": "draw",
+   "n": 1521,
+   "predicted": 0.2424,
+   "observed": 0.2479,
+   "bias": -0.0055,
+   "z": -0.5
+  },
+  {
+   "outcome": "away",
+   "n": 1521,
+   "predicted": 0.3362,
+   "observed": 0.3195,
+   "bias": 0.0166,
+   "z": 1.39
+  }
+ ],
  "calibration_priors": {
   "version": 3,
   "continuing": {

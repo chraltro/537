@@ -290,6 +290,51 @@ def _stage_header(head: str) -> tuple[str | None, int | None]:
     return None, num
 
 
+#: Domestic files carry stage headers too, and until now nothing read them.
+#: The Championship's play-off is five knockout matches sitting in the same file
+#: as the 552 league ones -- two semi-final legs each way and a Wembley final --
+#: and they were being fitted as league fixtures and counted in the league
+#: table. Belgium's regular season is followed by split rounds that *are* league
+#: matches carrying league points, plus a separate tie for a Conference League
+#: place that is not.
+#:
+#: So the rule is not "a named group means knockout": '▪ Championship, Matchday
+#: 3' and '▪ Relegation, Matchday 2' are Belgium's split and count, while
+#: '▪ Relegation, Abstieg' is a German relegation tie and does not. What decides
+#: it is whether the header names a knockout round.
+_KNOCKOUT_WORDS = (
+    "final", "finals", "semifinal", "semifinals", "semi-final", "semi-finals",
+    "quarterfinal", "quarterfinals", "quarter-final", "quarter-finals",
+    "playoff", "playoffs", "play-off", "play-offs", "playout", "playouts",
+    # A German file's relegation tie, and the placement bracket some leagues
+    # play after the split.
+    "abstieg", "platzierung",
+    # 'Match for 3rd place'.
+    "place",
+    # A domestic file that names a UEFA competition is describing the tie for a
+    # place in it, not a round of its own league.
+    "champions league", "europa league", "conference league", "ecl",
+)
+
+
+def domestic_stage(head: str) -> str:
+    """'league' or 'playoff' for one domestic '▪ ...' header.
+
+    An unrecognised header is league, deliberately. Every competition read here
+    is a league first, and this classifier also runs over the forty-six smaller
+    top flights that only feed the pooled European fit, where a header nobody
+    has seen is far more likely to be a spelling of "matchday" than a knockout
+    round. Dropping real matches on a guess is the expensive mistake.
+    """
+    for part in (p.strip().lower() for p in head.split(",")):
+        for word in _KNOCKOUT_WORDS:
+            if part == word or part.startswith(word + " ") or part.endswith(" " + word):
+                return "playoff"
+        if part.startswith("round of"):
+            return "playoff"
+    return "league"
+
+
 def parse_openfootball(text: str, season: str, reg: TeamRegistry,
                        *, comp: str = "", euro: bool = False) -> list[Match]:
     """openfootball plain-text league files.
@@ -314,9 +359,9 @@ def parse_openfootball(text: str, season: str, reg: TeamRegistry,
         line = _NOTE.sub("  ", raw_line.rstrip())
         if not line.strip() or line.lstrip().startswith("#") or line.startswith("="):
             continue
-        if euro:
-            hm = _STAGE_HEAD.match(line)
-            if hm:
+        hm = _STAGE_HEAD.match(line)
+        if hm:
+            if euro:
                 stage, num = _stage_header(hm.group(1))
                 # A matchday only means something in the league phase; the
                 # '▪ Playoffs, Matchday 2' of a two-legged tie is a leg, and
@@ -324,6 +369,20 @@ def parse_openfootball(text: str, season: str, reg: TeamRegistry,
                 # knockout second leg look like league-phase matchday 2.
                 matchday = num if stage == "league" else None
                 leg = num if stage not in (None, "league") else None
+                continue
+            # A domestic header says two things: whether what follows is still
+            # the league, and sometimes which round it is. `_MD_RE` below only
+            # reads a matchday that starts the header, so '▪ Regular, Matchday
+            # 46' was losing its number; take it from the header's own segments
+            # instead. A knockout round has no matchday by definition.
+            stage = domestic_stage(hm.group(1))
+            num = None
+            for part in (q.strip() for q in hm.group(1).split(",")):
+                mm = _MD_IN.match(part)
+                if mm:
+                    num = int(mm.group(1))
+            matchday = num if stage == "league" else None
+            if num is not None or stage != "league":
                 continue
         m = _MD_RE.match(line)
         if m:

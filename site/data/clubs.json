@@ -1,0 +1,942 @@
+{
+ "source": "openfootball/clubs",
+ "url": "https://github.com/openfootball/clubs",
+ "note": "Founded year and city only. The register's stadium field is years out of date and is not read.",
+ "clubs": {
+  "aachen": {
+   "city": "Aachen"
+  },
+  "academico-de-viseu": {
+   "city": "Viseu"
+  },
+  "ado-den-haag": {
+   "founded": 1905,
+   "city": "Den Haag"
+  },
+  "ajaccio": {
+   "founded": 1910,
+   "city": "Ajaccio"
+  },
+  "ajax": {
+   "founded": 1900,
+   "city": "Amsterdam"
+  },
+  "alaves": {
+   "city": "Vitoria"
+  },
+  "albacete": {
+   "city": "Albacete"
+  },
+  "almeria": {
+   "city": "Almer\u00eda"
+  },
+  "alverca": {
+   "city": "Alverca do Ribatejo"
+  },
+  "amiens": {
+   "city": "Amiens"
+  },
+  "ancona": {
+   "city": "Ancona"
+  },
+  "anderlecht": {
+   "founded": 1908,
+   "city": "Brussels"
+  },
+  "angers": {
+   "founded": 1919,
+   "city": "Angers"
+  },
+  "arles": {
+   "city": "Avignon"
+  },
+  "arouca": {
+   "city": "Arouca"
+  },
+  "arsenal": {
+   "founded": 1886,
+   "city": "London"
+  },
+  "ascoli": {
+   "city": "Ascoli Piceno"
+  },
+  "aston-villa": {
+   "founded": 1874,
+   "city": "Birmingham"
+  },
+  "atalanta": {
+   "city": "Bergamo"
+  },
+  "athletic-bilbao": {
+   "city": "Bilbao"
+  },
+  "atletico-madrid": {
+   "city": "Madrid"
+  },
+  "augsburg": {
+   "founded": 1907,
+   "city": "Augsburg"
+  },
+  "auxerre": {
+   "city": "Auxerre"
+  },
+  "az-alkmaar": {
+   "founded": 1967,
+   "city": "Alkmaar"
+  },
+  "barcelona": {
+   "city": "Barcelona"
+  },
+  "bari": {
+   "city": "Bari"
+  },
+  "bastia": {
+   "founded": 1905,
+   "city": "Bastia"
+  },
+  "bayern": {
+   "founded": 1900,
+   "city": "M\u00fcnchen"
+  },
+  "benevento": {
+   "founded": 1929,
+   "city": "Benevento"
+  },
+  "benfica": {
+   "city": "Lisboa"
+  },
+  "betis": {
+   "city": "Sevilla"
+  },
+  "bielefeld": {
+   "founded": 1905,
+   "city": "Bielefeld"
+  },
+  "birmingham": {
+   "city": "Birmingham"
+  },
+  "blackburn": {
+   "city": "Blackburn"
+  },
+  "blackpool": {
+   "city": "Blackpool"
+  },
+  "bochum": {
+   "founded": 1938,
+   "city": "Bochum"
+  },
+  "bologna": {
+   "city": "Bologna"
+  },
+  "bolton": {
+   "city": "Bolton"
+  },
+  "bordeaux": {
+   "founded": 1881,
+   "city": "Bordeaux"
+  },
+  "boulogne": {
+   "city": "Boulogne-sur-Mer"
+  },
+  "bournemouth": {
+   "founded": 1890,
+   "city": "Bournemouth"
+  },
+  "bradford": {
+   "city": "Bradford"
+  },
+  "braga": {
+   "city": "Braga"
+  },
+  "braunschweig": {
+   "founded": 1895,
+   "city": "Braunschweig"
+  },
+  "brentford": {
+   "city": "London (Brentford)        #  London (Brentford)  or London-Brentford"
+  },
+  "brescia": {
+   "city": "Brescia"
+  },
+  "brest": {
+   "city": "Brest"
+  },
+  "brighton": {
+   "city": "Falmer"
+  },
+  "bristol-city": {
+   "city": "Bristol"
+  },
+  "burnley": {
+   "founded": 1882,
+   "city": "Burnley"
+  },
+  "cadiz": {
+   "city": "C\u00e1diz"
+  },
+  "caen": {
+   "founded": 1913,
+   "city": "Caen"
+  },
+  "cagliari": {
+   "city": "Cagliari"
+  },
+  "cardiff": {
+   "founded": 1899,
+   "city": "Cardiff"
+  },
+  "carpi": {
+   "city": "Carpi"
+  },
+  "casa-pia-ac": {
+   "city": "Lisboa"
+  },
+  "catania": {
+   "city": "Catania"
+  },
+  "cd-nacional": {
+   "city": "Funchal"
+  },
+  "cd-santa-clara": {
+   "city": "Ponta Delgada"
+  },
+  "celta": {
+   "city": "Vigo"
+  },
+  "cercle-brugge": {
+   "founded": 1899,
+   "city": "Brugge"
+  },
+  "cesena": {
+   "city": "Cesena"
+  },
+  "cf-estrela-da-amadora": {
+   "city": "Amadora"
+  },
+  "charlton": {
+   "city": "London"
+  },
+  "chelsea": {
+   "founded": 1905,
+   "city": "London"
+  },
+  "chievo": {
+   "city": "Verona"
+  },
+  "clermont": {
+   "city": "Clermont"
+  },
+  "club-brugge": {
+   "founded": 1891,
+   "city": "Brugge"
+  },
+  "como": {
+   "city": "Como"
+  },
+  "cordoba": {
+   "city": "C\u00f3rdoba"
+  },
+  "cottbus": {
+   "founded": 1966,
+   "city": "Cottbus"
+  },
+  "coventry": {
+   "city": "Coventry"
+  },
+  "cremonese": {
+   "city": "Cremona"
+  },
+  "crotone": {
+   "city": "Crotone"
+  },
+  "crystal-palace": {
+   "founded": 1905,
+   "city": "London"
+  },
+  "cs-maritimo": {
+   "city": "Funchal"
+  },
+  "darmstadt": {
+   "founded": 1898,
+   "city": "Darmstadt"
+  },
+  "deportivo": {
+   "city": "La Coru\u00f1a"
+  },
+  "derby": {
+   "city": "Derby"
+  },
+  "dijon": {
+   "city": "Dijon"
+  },
+  "dortmund": {
+   "founded": 1909,
+   "city": "Dortmund"
+  },
+  "duisburg": {
+   "city": "Duisburg"
+  },
+  "eibar": {
+   "city": "Eibar"
+  },
+  "eintracht-frankfurt": {
+   "founded": 1899,
+   "city": "Frankfurt am Main"
+  },
+  "elche": {
+   "city": "Elche"
+  },
+  "empoli": {
+   "city": "Empoli"
+  },
+  "espanyol": {
+   "city": "Barcelona"
+  },
+  "everton": {
+   "founded": 1878,
+   "city": "Liverpool"
+  },
+  "evian": {
+   "founded": 2007,
+   "city": "Thonon-les-Bains"
+  },
+  "famalicao": {
+   "founded": 1931,
+   "city": "Vila Nova de Famalic\u00e3o"
+  },
+  "feyenoord": {
+   "founded": 1908,
+   "city": "Rotterdam"
+  },
+  "fiorentina": {
+   "city": "Firenze"
+  },
+  "fortuna-dusseldorf": {
+   "founded": 1895,
+   "city": "D\u00fcsseldorf"
+  },
+  "fortuna-sittard": {
+   "city": "Sittard"
+  },
+  "freiburg": {
+   "founded": 1904,
+   "city": "Freiburg"
+  },
+  "frosinone": {
+   "city": "Frosinone"
+  },
+  "fulham": {
+   "founded": 1879,
+   "city": "London"
+  },
+  "gd-estoril-praia": {
+   "city": "Estoril"
+  },
+  "genk": {
+   "founded": 1988,
+   "city": "Genk"
+  },
+  "genoa": {
+   "city": "Genova"
+  },
+  "gent": {
+   "founded": 1864,
+   "city": "Gent"
+  },
+  "getafe": {
+   "city": "Madrid    # Getafe - city in madrid metro area"
+  },
+  "gfc-ajaccio": {
+   "founded": 1910,
+   "city": "Ajaccio"
+  },
+  "gil-vicente": {
+   "city": "Barcelos"
+  },
+  "gimnastic": {
+   "city": "Tarragona"
+  },
+  "girona": {
+   "city": "Gerona"
+  },
+  "go-ahead-eagles": {
+   "city": "Deventer"
+  },
+  "granada": {
+   "city": "Granada"
+  },
+  "grenoble": {
+   "city": "Grenoble"
+  },
+  "greuther-furth": {
+   "founded": 1903,
+   "city": "F\u00fcrth"
+  },
+  "groningen": {
+   "founded": 1971,
+   "city": "Groningen"
+  },
+  "guingamp": {
+   "founded": 1912,
+   "city": "Guingamp"
+  },
+  "hamburg": {
+   "founded": 1887,
+   "city": "Hamburg"
+  },
+  "hannover": {
+   "founded": 1896,
+   "city": "Hannover"
+  },
+  "hansa-rostock": {
+   "founded": 1965,
+   "city": "Rostock"
+  },
+  "heidenheim": {
+   "founded": 2007,
+   "city": "Heidenheim an der Brenz"
+  },
+  "hercules": {
+   "city": "Alicante"
+  },
+  "hertha": {
+   "founded": 1892,
+   "city": "Berlin"
+  },
+  "hoffenheim": {
+   "founded": 1899,
+   "city": "Sinsheim"
+  },
+  "holstein-kiel": {
+   "city": "Kiel"
+  },
+  "huddersfield": {
+   "city": "Huddersfield"
+  },
+  "huesca": {
+   "city": "Huesca"
+  },
+  "hull": {
+   "founded": 1904,
+   "city": "Hull"
+  },
+  "ingolstadt": {
+   "founded": 2004,
+   "city": "Ingolstadt"
+  },
+  "inter": {
+   "city": "Milano"
+  },
+  "ipswich": {
+   "city": "Ipswich"
+  },
+  "istres": {
+   "city": "Istres"
+  },
+  "juventus": {
+   "city": "Torino"
+  },
+  "kaiserslautern": {
+   "founded": 1900,
+   "city": "Kaiserslautern"
+  },
+  "karlsruhe": {
+   "founded": 1894,
+   "city": "Karlsruhe"
+  },
+  "koln": {
+   "founded": 1948,
+   "city": "K\u00f6ln"
+  },
+  "kv-kortrijk": {
+   "founded": 1901,
+   "city": "Kortrijk"
+  },
+  "kv-mechelen": {
+   "founded": 1904,
+   "city": "Mechelen"
+  },
+  "kvc-westerlo": {
+   "founded": 1933,
+   "city": "Westerlo"
+  },
+  "las-palmas": {
+   "city": "Las Palmas"
+  },
+  "lazio": {
+   "city": "Roma"
+  },
+  "le-havre": {
+   "city": "Le Havre"
+  },
+  "le-mans": {
+   "city": "Le Mans"
+  },
+  "lecce": {
+   "city": "Lecce"
+  },
+  "leeds": {
+   "city": "Leeds"
+  },
+  "leicester": {
+   "founded": 1884,
+   "city": "Leicester"
+  },
+  "lens": {
+   "founded": 1906,
+   "city": "Lens"
+  },
+  "levante": {
+   "city": "Valencia"
+  },
+  "leverkusen": {
+   "founded": 1904,
+   "city": "Leverkusen"
+  },
+  "lille": {
+   "founded": 1944,
+   "city": "Lille"
+  },
+  "lincoln-city": {
+   "city": "Lincoln"
+  },
+  "liverpool": {
+   "founded": 1892,
+   "city": "Liverpool"
+  },
+  "livorno": {
+   "founded": 1915,
+   "city": "Livorno"
+  },
+  "lommel-sk": {
+   "city": "Lommel"
+  },
+  "lorient": {
+   "founded": 1926,
+   "city": "Lorient"
+  },
+  "luton": {
+   "city": "Luton"
+  },
+  "lyon": {
+   "founded": 1899,
+   "city": "Lyon"
+  },
+  "mainz": {
+   "founded": 1905,
+   "city": "Mainz"
+  },
+  "malaga": {
+   "city": "M\u00e1laga"
+  },
+  "mallorca": {
+   "city": "Palma de Mallorca"
+  },
+  "man-city": {
+   "founded": 1880,
+   "city": "Manchester"
+  },
+  "man-united": {
+   "founded": 1878,
+   "city": "Manchester"
+  },
+  "marseille": {
+   "founded": 1899,
+   "city": "Marseille"
+  },
+  "messina": {
+   "city": "Messina"
+  },
+  "metz": {
+   "founded": 1932,
+   "city": "Metz"
+  },
+  "middlesbrough": {
+   "founded": 1876,
+   "city": "Middlesbrough"
+  },
+  "milan": {
+   "city": "Milano"
+  },
+  "millwall": {
+   "city": "London (South Bermondsey)        # London (South Bermondsey) or  London-South Bermondsey"
+  },
+  "modena": {
+   "city": "Modena"
+  },
+  "monchengladbach": {
+   "founded": 1900,
+   "city": "M\u00f6nchengladbach"
+  },
+  "montpellier": {
+   "founded": 1974,
+   "city": "Montpellier"
+  },
+  "monza": {
+   "founded": 1912,
+   "city": "Monza"
+  },
+  "moreirense": {
+   "city": "Moreira de C\u00f3negos"
+  },
+  "munich-1860": {
+   "founded": 1860,
+   "city": "M\u00fcnchen"
+  },
+  "nancy": {
+   "city": "Nancy"
+  },
+  "nantes": {
+   "founded": 1943,
+   "city": "Nantes"
+  },
+  "napoli": {
+   "city": "Napoli"
+  },
+  "nec": {
+   "founded": 1900,
+   "city": "Nijmegen"
+  },
+  "newcastle": {
+   "founded": 1892,
+   "city": "Newcastle upon Tyne"
+  },
+  "nice": {
+   "founded": 1904,
+   "city": "Nice"
+  },
+  "nimes": {
+   "city": "N\u00eemes"
+  },
+  "norwich": {
+   "founded": 1890,
+   "city": "Norwich"
+  },
+  "nott-forest": {
+   "city": "West Bridgford"
+  },
+  "novara": {
+   "city": "Novara"
+  },
+  "nurnberg": {
+   "founded": 1900,
+   "city": "N\u00fcrnberg"
+  },
+  "oh-leuven": {
+   "founded": 2002,
+   "city": "Leuven"
+  },
+  "osasuna": {
+   "city": "Pamplona"
+  },
+  "paderborn": {
+   "founded": 1907,
+   "city": "Paderborn"
+  },
+  "palermo": {
+   "city": "Palermo"
+  },
+  "paris-fc": {
+   "founded": 1970,
+   "city": "Paris"
+  },
+  "parma": {
+   "city": "Parma"
+  },
+  "pec-zwolle": {
+   "founded": 1910,
+   "city": "Zwolle"
+  },
+  "perugia": {
+   "founded": 1905,
+   "city": "Perugia"
+  },
+  "pescara": {
+   "city": "Pescara"
+  },
+  "piacenza": {
+   "city": "Piacenza"
+  },
+  "pisa": {
+   "city": "Pisa"
+  },
+  "porto": {
+   "city": "Porto"
+  },
+  "portsmouth": {
+   "city": "Portsmouth"
+  },
+  "preston-north-end": {
+   "city": "Preston"
+  },
+  "psg": {
+   "founded": 1970,
+   "city": "Paris"
+  },
+  "psv": {
+   "founded": 1913,
+   "city": "Eindhoven"
+  },
+  "qpr": {
+   "founded": 1882,
+   "city": "London"
+  },
+  "raal-la-louviere": {
+   "city": "La Louvi\u00e8re"
+  },
+  "racing-santander": {
+   "founded": 1913,
+   "city": "Santander"
+  },
+  "rayo-vallecano": {
+   "city": "Madrid"
+  },
+  "rb-leipzig": {
+   "founded": 2009,
+   "city": "Leipzig"
+  },
+  "reading": {
+   "founded": 1871,
+   "city": "Reading"
+  },
+  "real-madrid": {
+   "city": "Madrid"
+  },
+  "real-murcia": {
+   "city": "Murcia"
+  },
+  "real-sociedad": {
+   "city": "San Sebasti\u00e1n"
+  },
+  "reggina": {
+   "city": "Reggio Calabria"
+  },
+  "reims": {
+   "founded": 1931,
+   "city": "Reims"
+  },
+  "rennes": {
+   "founded": 1901,
+   "city": "Rennes"
+  },
+  "rio-ave": {
+   "city": "Vila do Conde"
+  },
+  "roma": {
+   "city": "Roma"
+  },
+  "royal-antwerp": {
+   "city": "Antwerpen"
+  },
+  "saint-etienne": {
+   "founded": 1919,
+   "city": "Saint-\u00c9tienne"
+  },
+  "salernitana": {
+   "city": "Salerno"
+  },
+  "sampdoria": {
+   "city": "Genova"
+  },
+  "sassuolo": {
+   "founded": 1922,
+   "city": "Sassuolo"
+  },
+  "sbv-excelsior": {
+   "founded": 1902,
+   "city": "Rotterdam"
+  },
+  "sc-cambuur-leeuwarden": {
+   "founded": 1964,
+   "city": "Leeuwarden"
+  },
+  "sc-heerenveen": {
+   "founded": 1920,
+   "city": "Heerenveen"
+  },
+  "schalke": {
+   "founded": 1904,
+   "city": "Gelsenkirchen"
+  },
+  "sedan": {
+   "founded": 1919,
+   "city": "Sedan"
+  },
+  "sevilla": {
+   "city": "Sevilla"
+  },
+  "sheffield-united": {
+   "city": "Sheffield"
+  },
+  "siena": {
+   "city": "Siena"
+  },
+  "sk-beveren": {
+   "city": "Beveren"
+  },
+  "sochaux": {
+   "city": "Montb\u00e9liard"
+  },
+  "southampton": {
+   "founded": 1885,
+   "city": "Southampton"
+  },
+  "spal": {
+   "city": "Ferrara"
+  },
+  "sparta-rotterdam": {
+   "city": "Rotterdam"
+  },
+  "spezia": {
+   "city": "La Spezia"
+  },
+  "sporting-charleroi": {
+   "founded": 1904,
+   "city": "Charleroi"
+  },
+  "sporting-cp": {
+   "city": "Lisboa"
+  },
+  "sporting-gijon": {
+   "city": "Gij\u00f3n"
+  },
+  "st-pauli": {
+   "founded": 1910,
+   "city": "Hamburg"
+  },
+  "standard-de-liege": {
+   "founded": 1898,
+   "city": "Li\u00e8ge"
+  },
+  "stoke": {
+   "founded": 1863,
+   "city": "Stoke-on-Trent"
+  },
+  "strasbourg": {
+   "city": "Strasbourg"
+  },
+  "stuttgart": {
+   "founded": 1893,
+   "city": "Stuttgart"
+  },
+  "stvv": {
+   "founded": 1924,
+   "city": "Sint-Truiden"
+  },
+  "sunderland": {
+   "founded": 1879,
+   "city": "Sunderland"
+  },
+  "sv-zulte-waregem": {
+   "founded": 1950,
+   "city": "Waregem"
+  },
+  "swansea": {
+   "founded": 1912,
+   "city": "Swansea"
+  },
+  "telstar-1963": {
+   "city": "Velsen"
+  },
+  "tenerife": {
+   "city": "Santa Cruz de Tenerife"
+  },
+  "torino": {
+   "city": "Torino"
+  },
+  "tottenham": {
+   "founded": 1882,
+   "city": "London"
+  },
+  "toulouse": {
+   "founded": 1970,
+   "city": "Toulouse"
+  },
+  "treviso": {
+   "city": "Treviso"
+  },
+  "troyes": {
+   "founded": 1986,
+   "city": "Troyes"
+  },
+  "twente": {
+   "founded": 1965,
+   "city": "Enschede"
+  },
+  "udinese": {
+   "city": "Udine"
+  },
+  "union-berlin": {
+   "founded": 1966,
+   "city": "Berlin"
+  },
+  "union-sg": {
+   "city": "Brussels"
+  },
+  "unterhaching": {
+   "city": "Unterhaching"
+  },
+  "utrecht": {
+   "founded": 1970,
+   "city": "Utrecht"
+  },
+  "valencia": {
+   "city": "Valencia"
+  },
+  "valenciennes": {
+   "city": "Valenciennes"
+  },
+  "venezia": {
+   "founded": 1907,
+   "city": "Venezia"
+  },
+  "verona": {
+   "founded": 1903,
+   "city": "Verona"
+  },
+  "vicenza": {
+   "city": "Vicenza"
+  },
+  "villarreal": {
+   "city": "Villarreal"
+  },
+  "vitoria-guimaraes": {
+   "city": "Guimar\u00e3es"
+  },
+  "watford": {
+   "founded": 1881,
+   "city": "Watford"
+  },
+  "werder": {
+   "founded": 1899,
+   "city": "Bremen"
+  },
+  "west-brom": {
+   "founded": 1878,
+   "city": "West Bromwich"
+  },
+  "west-ham": {
+   "founded": 1895,
+   "city": "London"
+  },
+  "wigan": {
+   "city": "Wigan"
+  },
+  "willem-ii-tilburg": {
+   "founded": 1896,
+   "city": "Tilburg"
+  },
+  "wolfsburg": {
+   "city": "Wolfsburg"
+  },
+  "wolves": {
+   "city": "Wolverhampton"
+  },
+  "wrexham": {
+   "city": "Wrexham"
+  },
+  "zaragoza": {
+   "city": "Zaragoza"
+  }
+ }
+}

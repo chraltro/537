@@ -254,6 +254,32 @@
    "n": 25
   }
  ],
+ "by_outcome": [
+  {
+   "outcome": "home",
+   "n": 1520,
+   "predicted": 0.4513,
+   "observed": 0.4414,
+   "bias": 0.0099,
+   "z": 0.78
+  },
+  {
+   "outcome": "draw",
+   "n": 1520,
+   "predicted": 0.2171,
+   "observed": 0.2428,
+   "bias": -0.0257,
+   "z": -2.33
+  },
+  {
+   "outcome": "away",
+   "n": 1520,
+   "predicted": 0.3316,
+   "observed": 0.3158,
+   "bias": 0.0158,
+   "z": 1.32
+  }
+ ],
  "calibration_priors": {
   "version": 3,
   "continuing": {

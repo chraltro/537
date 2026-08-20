@@ -106,9 +106,13 @@ def test_country_suffix_is_stripped_but_kept(reg):
     assert (got[0].home_assoc, got[0].away_assoc) == ("ESP", "ENG")
 
 
-def test_domestic_parsing_is_untouched_by_the_european_reader():
-    """The European extras are opt-in: a domestic file must parse exactly as it
-    did before, or the five published forecasts move for no reason."""
+def test_the_european_extras_stay_opt_in_for_a_domestic_file():
+    """The European reader's extras -- competition code, association suffixes,
+    knockout legs -- must not appear on a domestic match.
+
+    A domestic file does now get a stage, which is the one thing that changed:
+    it is how the Championship's play-off is told apart from its league season.
+    Everything else is still None."""
     reg = TeamRegistry()
     text = "\n".join([
         "▪ Matchday 1",
@@ -116,8 +120,73 @@ def test_domestic_parsing_is_untouched_by_the_european_reader():
         "    20:00  Arsenal FC              v Chelsea FC               2-1 (1-0)",
     ])
     got = parse_openfootball(text, "2026-27", reg)
-    assert (got[0].matchday, got[0].stage, got[0].comp) == (1, None, "")
+    assert (got[0].matchday, got[0].stage, got[0].comp) == (1, "league", "")
     assert got[0].home_assoc is None
+    assert got[0].leg is None
+
+
+def test_a_domestic_playoff_is_told_apart_from_the_league_season():
+    """The Championship's file carries its play-off in the same file as its 552
+    league matches: two semi-final legs each way and a final. They were being
+    read as league fixtures, which put a Wembley final in the league table and a
+    neutral-ground tie in the ratings fit."""
+    reg = TeamRegistry()
+    text = "\n".join([
+        "▪ Regular, Matchday 46",
+        "  Sat May 3 2025",
+        "    12:30  Bristol City FC         v Preston North End FC     2-2 (0-1)",
+        "",
+        "▪ Finals, Semifinals",
+        "  Thu May 8",
+        "    20:00  Bristol City FC         v Sheffield United FC      0-3 (0-1)",
+        "",
+        "▪ Finals, Final",
+        "  Sat May 24",
+        "    15:01  Sheffield United FC     v Sunderland AFC           1-2 (1-0)",
+    ])
+    got = parse_openfootball(text, "2024-25", reg)
+    assert [m.stage for m in got] == ["league", "playoff", "playoff"]
+    assert got[0].matchday == 46
+
+
+def test_a_split_season_keeps_its_rounds_and_loses_only_the_tie():
+    """Belgium is the case that makes "a named group means knockout" wrong.
+
+    Its regular season is followed by championship, Europe and relegation
+    rounds, all of which are league matches carrying league points, and by a
+    separate one-off tie for a Conference League place, which is not. Dropping
+    the split rounds would delete a third of every Belgian season."""
+    reg = TeamRegistry()
+    text = "\n".join([
+        "▪ Championship, Matchday 3",
+        "  Sat Apr 4 2026",
+        "    18:15  Club Brugge KV          v KRC Genk                 2-1 (1-0)",
+        "",
+        "▪ Relegation, Matchday 2",
+        "  Sun Apr 5",
+        "    16:00  KV Kortrijk             v SV Zulte Waregem         0-0",
+        "",
+        "▪ ECL Playoff, Final",
+        "  Thu May 21",
+        "    20:30  KAA Gent                v RSC Anderlecht           1-0 (0-0)",
+    ])
+    got = parse_openfootball(text, "2025-26", reg)
+    assert [m.stage for m in got] == ["league", "league", "playoff"]
+
+
+def test_an_unrecognised_stage_header_is_treated_as_league():
+    """This classifier also runs over forty-six smaller top flights that only
+    feed the pooled European fit, where a header nobody has seen is far more
+    likely to be a spelling of "matchday" than a knockout round. Dropping real
+    matches on a guess is the expensive mistake."""
+    reg = TeamRegistry()
+    text = "\n".join([
+        "▪ Apertura Grupo B, Fecha 7",
+        "  Sat Aug 22 2026",
+        "    20:00  Arsenal FC              v Chelsea FC               1-1 (0-0)",
+    ])
+    got = parse_openfootball(text, "2026-27", reg)
+    assert got[0].stage == "league"
 
 
 # ------------------------------------------------------------------ the gate
