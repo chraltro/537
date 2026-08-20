@@ -1243,6 +1243,43 @@ def build_clubs(ready: set[str]) -> None:
           "to the openfootball register)")
 
 
+def build_shooting(ready: set[str]) -> None:
+    """One file of per-club shooting, merged from the leagues that have it.
+
+    Each league already writes its own into `gamestate.json`; the comparison
+    page is not scoped to a league and cannot fetch nine of those to answer one
+    question. So this reads the files the build has just written -- no second
+    pass over the corpus -- and keys them by club.
+
+    Big five only. Four of the nine competitions here are read from openfootball,
+    which carries goals and nothing else, and a club from one of them is absent
+    rather than present with zeroes.
+    """
+    clubs, leagues_with = {}, {}
+    for lg in leagues.LEAGUES:
+        if lg.slug not in ready:
+            continue
+        try:
+            gs = json.load(open(os.path.join(OUT, lg.slug, "gamestate.json")))
+        except (OSError, ValueError):
+            continue
+        shot = gs.get("shooting") or {}
+        if not shot:
+            continue
+        leagues_with[lg.slug] = gs.get("shooting_average") or {}
+        for cid, row in shot.items():
+            clubs[cid] = {**row, "league": lg.slug}
+    json.dump({"generated": dt.datetime.now(dt.timezone.utc)
+               .isoformat(timespec="seconds"),
+               "note": ("Shots and shots on target, five seasons per club. The "
+                        "results mirror carries them for the big five only; no "
+                        "other feed this build can reach has a shot in it."),
+               "averages": leagues_with, "clubs": clubs},
+              open(os.path.join(OUT, "shooting.json"), "w"), indent=1)
+    print(f"  → shooting.json ({len(clubs)} clubs from "
+          f"{len(leagues_with)} competition(s) with a shot feed)")
+
+
 def build_seo(ready: set[str]) -> None:
     """robots.txt, the sitemap, and a static stub per club."""
     manifest = {"default": leagues.DEFAULT.slug,
@@ -1392,6 +1429,7 @@ def main(argv: list[str] | None = None) -> None:
     for name, fn in (("global rankings", build_rankings), ("feeds", build_feeds),
                      ("coverage", build_coverage),
                      ("club register", build_clubs),
+                     ("shooting", build_shooting),
                      ("retired flat files", lambda _r: drop_legacy_flat()),
                      ("feed freshness", check_feeds),
                      ("sitemap and club pages", build_seo),

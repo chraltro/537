@@ -186,6 +186,90 @@ def discipline(matches: list[Match], teams) -> dict[str, dict]:
     return out
 
 
+def shooting(matches: list[Match], teams) -> dict[str, dict]:
+    """How a club gets to its goals: volume, accuracy, and what it does with them.
+
+    The results mirror has carried `HS/AS` and `HST/AST` -- shots and shots on
+    target -- for every big-five match since 2000-01, and this pipeline read them
+    for exactly one purpose: fitting a single league-wide conversion rate to
+    blend into the ratings. Per club they were never aggregated at all, which
+    left the site with no answer to the most ordinary question anybody asks about
+    a team, which is whether it creates chances or takes them.
+
+    Six numbers, and each is a different question:
+
+    * **Shots** and **shots faced** -- who has the ball in dangerous areas.
+    * **On target** -- how much of that volume is a real attempt.
+    * **Accuracy**, on target over total, is a property of the shots a club
+      chooses to take: a side that only shoots from six yards has a high one.
+    * **Conversion**, goals over shots on target, is finishing. It is also the
+      noisiest thing here over a short run, which is why the window is five
+      seasons and why nothing on this site forecasts from it.
+    * **Save rate**, one minus goals conceded over shots on target faced, is the
+      same number read from the other end -- goalkeeper and defence together,
+      not the goalkeeper alone.
+
+    None of it is an input to any forecast. The ratings read the same matches
+    and read them better, weighted by age and by who the opponent was; this is a
+    plain count. Big five only: no other feed this build can reach carries a
+    shot at all, and the four competitions read from openfootball get nothing
+    here rather than a fabricated zero.
+    """
+    blank = {"n": 0, "shots": 0, "sot": 0, "goals": 0,
+             "shots_against": 0, "sot_against": 0, "goals_against": 0}
+    out = {t: dict(blank) for t in teams}
+    for m in _recent(matches):
+        if m.hs is None or m.as_ is None or m.hst is None or m.ast is None:
+            continue
+        for t, sh, st, g, sh2, st2, g2 in (
+                (m.home, m.hs, m.hst, m.hg, m.as_, m.ast, m.ag),
+                (m.away, m.as_, m.ast, m.ag, m.hs, m.hst, m.hg)):
+            row = out.get(t)
+            if row is None:
+                continue
+            row["n"] += 1
+            row["shots"] += sh or 0
+            row["sot"] += st or 0
+            row["goals"] += g or 0
+            row["shots_against"] += sh2 or 0
+            row["sot_against"] += st2 or 0
+            row["goals_against"] += g2 or 0
+    clean = {}
+    for t, row in out.items():
+        if not row["n"]:
+            continue
+        n = row["n"]
+        row["shots_pm"] = round(row["shots"] / n, 1)
+        row["sot_pm"] = round(row["sot"] / n, 1)
+        row["shots_against_pm"] = round(row["shots_against"] / n, 1)
+        row["sot_against_pm"] = round(row["sot_against"] / n, 1)
+        # Rates, each guarded: a club with no shots on target in the window has
+        # no conversion rate, and 0/0 must not become a confident zero.
+        row["accuracy"] = round(row["sot"] / row["shots"], 3) if row["shots"] else None
+        row["conversion"] = round(row["goals"] / row["sot"], 3) if row["sot"] else None
+        row["save_pct"] = (round(1 - row["goals_against"] / row["sot_against"], 3)
+                           if row["sot_against"] else None)
+        clean[t] = row
+    return clean
+
+
+def shooting_average(matches: list[Match]) -> dict:
+    """The same six numbers for the competition as a whole, to compare against."""
+    sh = st = g = n = 0
+    for m in _recent(matches):
+        if m.hs is None or m.as_ is None or m.hst is None or m.ast is None:
+            continue
+        n += 2                                   # two club-matches per fixture
+        sh += (m.hs or 0) + (m.as_ or 0)
+        st += (m.hst or 0) + (m.ast or 0)
+        g += (m.hg or 0) + (m.ag or 0)
+    if not n:
+        return {}
+    return {"n": n, "shots_pm": round(sh / n, 1), "sot_pm": round(st / n, 1),
+            "accuracy": round(st / sh, 3) if sh else None,
+            "conversion": round(g / st, 3) if st else None}
+
+
 def referees(matches: list[Match]) -> list[dict]:
     """One row per referee with a real record, busiest first.
 
@@ -224,21 +308,39 @@ def referees(matches: list[Match]) -> list[dict]:
 
 
 def league_average(matches: list[Match], seasons: int = 8) -> dict:
-    """The bar every referee and every club row is read against."""
+    """The bar every referee and every club row is read against.
+
+    Two of them, because they answer different questions and confusing the two
+    made a nonsense of the club page: the referee table wants a whole fixture
+    -- "3.55 yellows in a match this official refereed" -- and a club row wants
+    one side of one, "Liverpool take 1.54 a match". Printing the fixture figure
+    beside the club figure made every club in every league look half as dirty as
+    average, which is arithmetic, not discipline. `per_club` is the same numbers
+    halved, and it is what the club page reads.
+    """
     sel = [m for m in _recent(matches, seasons)
            if m.hy is not None and m.ay is not None]
     n = max(len(sel), 1)
     hw = sum(1 for m in sel if m.hg is not None and m.ag is not None and m.hg > m.ag)
     dr = sum(1 for m in sel if m.hg is not None and m.ag is not None and m.hg == m.ag)
-    return {
+    out = {
         "n": len(sel),
         "yellow_pm": round(sum((m.hy or 0) + (m.ay or 0) for m in sel) / n, 2),
         "red_pm": round(sum((m.hr or 0) + (m.ar or 0) for m in sel) / n, 3),
         "fouls_pm": round(sum((m.hf or 0) + (m.af or 0) for m in sel) / n, 1),
+        "corners_pm": round(sum((m.hc or 0) + (m.ac or 0) for m in sel) / n, 1),
         "goals_pm": round(sum((m.hg or 0) + (m.ag or 0) for m in sel) / n, 2),
         "home_win_pct": round(hw / n, 3),
         "draw_pct": round(dr / n, 3),
     }
+    out["per_club"] = {
+        "yellow_pm": round(out["yellow_pm"] / 2, 2),
+        "red_pm": round(out["red_pm"] / 2, 3),
+        "fouls_pm": round(out["fouls_pm"] / 2, 1),
+        "corners_pm": round(out["corners_pm"] / 2, 1),
+        "goals_pm": round(out["goals_pm"] / 2, 2),
+    }
+    return out
 
 
 def build(matches: list[Match], teams, ref_date: dt.date) -> dict:
@@ -248,5 +350,7 @@ def build(matches: list[Match], teams, ref_date: dt.date) -> dict:
         "average": league_average(matches),
         "state": game_state(matches, teams),
         "discipline": discipline(matches, teams),
+        "shooting": shooting(matches, teams),
+        "shooting_average": shooting_average(matches),
         "referees": referees(matches),
     }

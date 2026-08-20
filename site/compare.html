@@ -76,6 +76,10 @@ import { siteData, data, esc, ord, pct, initChrome, initPalette, setMeta, chipCo
 initChrome('compare');
 
 const g = await siteData('global');
+/* Shots exist for the big five only -- no other feed this build can reach has
+   one -- so this may be missing for either club, or for both. */
+let SHOTS = {};
+try { SHOTS = (await siteData('shooting')).clubs || {}; } catch { /* older build */ }
 const byId = Object.fromEntries(g.clubs.map((c) => [c.id, c]));
 let h2h = { pairs: {} };
 try { h2h = await siteData('h2h'); } catch { /* no pairs file yet */ }
@@ -128,10 +132,12 @@ document.getElementById('scalenote').textContent = g.note
   + ' Attack and defence are out of 100 against that same average big-five club, higher '
   + 'better both times, with the goals they come from underneath. Most of Europe sits '
   + 'below 50 on this scale, which is what it means to be ranked against the big five. '
-  + 'The rows below the ratings are a plain count of each club\u2019s last twenty matches '
-  + 'and feed nothing: the fit reads the same matches and reads them better, weighted by '
-  + 'age and by who the opponent was. A rating is only as fresh as the feed behind it, so '
-  + 'a club whose league stopped publishing carries the age of its newest result.';
+  + 'Below the ratings are plain counts that feed nothing: the last twenty matches each '
+  + 'club played, and — where a competition has a shot feed, which means the big five and '
+  + 'nowhere else — five seasons of shooting. The fit reads the same matches and reads '
+  + 'them better, weighted by age and by who the opponent was. A rating is only as fresh '
+  + 'as the feed behind it, so a club whose league stopped publishing carries the age of '
+  + 'its newest result.';
 
 const fmtStale = (c) => (c.stale > 13 ? ` · rated to ${c.last}` : '');
 
@@ -167,6 +173,34 @@ function formRows(A, B) {
           cmp2(a.clean_pct, b.clean_pct))
     + row('Failed to score', pctf(a.blank_pct), pctf(b.blank_pct),
           cmp2(a.blank_pct, b.blank_pct, false));
+}
+
+/* How each club gets to its goals. Shown only when both sides have it, because
+   half a shooting comparison is worse than none: a reader would read the blank
+   as "none taken" rather than "not published for this competition". */
+function shotRows(A, B) {
+  const a = SHOTS[A.id], b = SHOTS[B.id];
+  if (!a || !b || !a.n || !b.n) return '';
+  /* Compare what is printed, not what is stored. Two clubs both shown as 34%
+     must not have one of them marked the winner on a third decimal the reader
+     cannot see. */
+  const cmp2 = (x, y, hi = true) => (x == null || y == null || x === y ? -1
+    : ((x > y) === hi ? 0 : 1));
+  const rate = (x) => (x == null ? null : Math.round(x * 100));
+  const shown = (x) => (x == null ? '—' : `${x}%`);
+  const one = (x) => Number(x.toFixed(1));
+  const [aa, ba] = [rate(a.accuracy), rate(b.accuracy)];
+  const [ac, bc] = [rate(a.conversion), rate(b.conversion)];
+  const [as_, bs] = [rate(a.save_pct), rate(b.save_pct)];
+  return row('Shots per match', a.shots_pm.toFixed(1), b.shots_pm.toFixed(1),
+             cmp2(one(a.shots_pm), one(b.shots_pm)))
+    + row('On target', a.sot_pm.toFixed(1), b.sot_pm.toFixed(1),
+          cmp2(one(a.sot_pm), one(b.sot_pm)))
+    + row('Shooting accuracy', shown(aa), shown(ba), cmp2(aa, ba))
+    + row('Conversion', shown(ac), shown(bc), cmp2(ac, bc))
+    + row('Shots faced', a.shots_against_pm.toFixed(1), b.shots_against_pm.toFixed(1),
+          cmp2(one(a.shots_against_pm), one(b.shots_against_pm), false))
+    + row('Shots on target saved', shown(as_), shown(bs), cmp2(as_, bs));
 }
 
 function row(label, a, b, better) {
@@ -221,6 +255,7 @@ async function render() {
           rated(B.def_r, B.def, 'conceded'),
           cmp(A.def_r ?? 0, B.def_r ?? 0))
     + formRows(A, B)
+    + shotRows(A, B)
     + row('Matches in the fit', `${A.n}${fmtStale(A)}`, `${B.n}${fmtStale(B)}`, -1);
 
   /* neutral ground */

@@ -101,6 +101,13 @@
     <p class="hint" id="scennote" style="margin-top:14px"></p>
   </section>
 
+  <section class="card" id="shotcard" hidden>
+    <h2>Shooting</h2>
+    <p class="sub" id="shotsub"></p>
+    <div class="statgrid" id="shotgrid"></div>
+    <p class="hint" id="shotnote" style="margin-top:14px"></p>
+  </section>
+
   <section class="card" id="statecard" hidden>
     <h2>Before and after half time</h2>
     <p class="sub" id="statesub"></p>
@@ -195,7 +202,7 @@ window.addEventListener('themechange', render);
 const TAB_GROUPS = [
   { id: 'season', label: 'Season', ids: ['c-season', 'bracketcard'] },
   { id: 'fixtures', label: 'Fixtures', ids: ['c-fdr', 'c-big', 'c-fixtures'] },
-  { id: 'form', label: 'Form', ids: ['scencard', 'statecard'] },
+  { id: 'form', label: 'Form', ids: ['scencard', 'shotcard', 'statecard'] },
 ];
 const showTab = initTabs(
   document.getElementById('tabs'),
@@ -294,6 +301,48 @@ function renderScenarios(t) {
   draw();
 }
 
+/* ---- how a club gets to its goals ----
+   Shots and shots on target have been in the results feed since 2000-01 and
+   were read for one purpose only: fitting a single league-wide conversion rate
+   into the ratings. Per club they were never aggregated, which left the site
+   silent on the most ordinary question anybody asks about a team. Big five
+   only -- no other feed this build can reach carries a shot at all. */
+function renderShooting(t) {
+  const card = document.getElementById('shotcard');
+  const sh = gs && gs.shooting && gs.shooting[t.id];
+  if (!sh || !sh.n) { card.hidden = true; return; }
+  card.hidden = false;
+  const av = (gs && gs.shooting_average) || {};
+  const seasons = (gs.seasons || []);
+  const tile = (k, v, note) =>
+    `<div class="s"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div>
+     <div class="n">${esc(note)}</div></div>`;
+  const rate = (x) => (x == null ? '—' : pct(x, 0));
+  document.getElementById('shotsub').textContent =
+    `From ${sh.n} matches across ${seasons.length} seasons (${seasons[0]}–`
+    + `${seasons[seasons.length - 1]}).`;
+  document.getElementById('shotgrid').innerHTML = [
+    tile('Shots', sh.shots_pm.toFixed(1),
+         `per match · league average ${(av.shots_pm ?? 0).toFixed(1)}`),
+    tile('On target', sh.sot_pm.toFixed(1),
+         `per match · league average ${(av.sot_pm ?? 0).toFixed(1)}`),
+    tile('Accuracy', rate(sh.accuracy),
+         `of shots on target · league ${rate(av.accuracy)}`),
+    tile('Conversion', rate(sh.conversion),
+         `goals per shot on target · league ${rate(av.conversion)}`),
+    tile('Shots faced', sh.shots_against_pm.toFixed(1),
+         `per match, ${sh.sot_against_pm.toFixed(1)} on target`),
+    tile('Saved', rate(sh.save_pct), 'of the shots on target they face'),
+  ].join('');
+  document.getElementById('shotnote').textContent =
+    'Accuracy is a property of the shots a club chooses to take — a side that only '
+    + 'shoots from six yards has a high one. Conversion is finishing, and is the noisiest '
+    + 'figure here over a short run, which is why the window is five seasons. "Saved" is '
+    + 'goalkeeper and defence together, not the goalkeeper alone. None of this feeds any '
+    + 'forecast: the ratings read the same matches and read them better, weighted by age '
+    + 'and by who the opponent was.';
+}
+
 /* ---- either side of the interval ---- */
 function renderState(t) {
   const card = document.getElementById('statecard');
@@ -320,14 +369,20 @@ function renderState(t) {
     tile('First-half goal difference', signed(st.first_half_gd), 'per match'),
     tile('Second-half goal difference', signed(st.second_half_gd), 'per match'),
   ].join('');
+  /* The club figures are per club-match; the league averages beside them used
+     to be per fixture, counting both sides, which made every club in every
+     league look half as dirty as average. `per_club` is the comparable one. */
+  const per = avg.per_club || {};
   document.getElementById('discgrid').innerHTML = !dc || !dc.n ? '' : [
     tile('Yellow cards', dc.yellow_pm.toFixed(2),
-         `per match · league average ${(avg.yellow_pm ?? 0).toFixed(2)}`),
+         `per match · league average ${(per.yellow_pm ?? 0).toFixed(2)}`),
     tile('Red cards', dc.red_pm.toFixed(2),
-         `per match · league average ${(avg.red_pm ?? 0).toFixed(2)}`),
+         `per match · league average ${(per.red_pm ?? 0).toFixed(2)}`),
     tile('Fouls conceded', dc.fouls_pm.toFixed(1),
-         `per match · league average ${(avg.fouls_pm ?? 0).toFixed(1)}`),
-    tile('Corners', dc.corners_pm.toFixed(1), `per match, ${dc.corners_against_pm.toFixed(1)} against`),
+         `per match · league average ${(per.fouls_pm ?? 0).toFixed(1)}`),
+    tile('Corners', dc.corners_pm.toFixed(1),
+         `per match · league average ${(per.corners_pm ?? 0).toFixed(1)}, `
+         + `${dc.corners_against_pm.toFixed(1)} against`),
   ].join('');
 }
 
@@ -448,6 +503,7 @@ function render() {
   });
 
   renderScenarios(t);
+  renderShooting(t);
   renderState(t);
   const cal = document.getElementById('callink');
   cal.href = `cal/${W.slug}/${encodeURIComponent(t.id)}.ics`;
