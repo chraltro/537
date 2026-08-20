@@ -511,7 +511,7 @@ window.addEventListener('themechange', () => {
 initTabs(document.getElementById('tabs'), [
   { id: 'table', label: 'Table', sections: [document.getElementById('c-table')] },
   { id: 'ratings', label: 'Ratings', sections: [document.getElementById('c-ratings')] },
-  { id: 'finishes', label: 'Every finish', sections: [document.getElementById('c-dist')] },
+  { id: 'finishes', label: 'Every finish', short: 'Finishes', sections: [document.getElementById('c-dist')] },
   { id: 'luck', label: 'Luck', sections: [document.getElementById('c-luck')] },
   { id: 'next', label: W.isCup ? 'Next round' : 'Next up',
     sections: [document.getElementById('c-next')] },

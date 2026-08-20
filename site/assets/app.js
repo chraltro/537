@@ -216,6 +216,26 @@ export function url(path) {
 }
 
 /* For pages that rewrite their own query string (filters live in the URL). */
+/* Rewrite the query string without discarding the rest of the URL.
+
+   Three pages built a fresh `URLSearchParams`, stringified it and wrote
+   `?${q}` -- which drops the fragment, because a fragment is not a query
+   parameter. On the matches page that ran during the first draw, so the tab
+   named in `#all` was erased microseconds before the tab strip read it and a
+   shared link never opened the tab it named. On the club and comparison pages
+   it fired on every change of club, quietly removing the tab from the address
+   bar so "Copy link" copied a link to the wrong panel.
+
+   `makeSortable` in this same file had it right from the start: take the URL
+   you have, change the part you own, keep the rest. This is that, shared.
+*/
+export function replaceQuery(params) {
+  const u = new URL(location.href);
+  u.search = params && String(params) ? `?${params}` : '';
+  history.replaceState({}, '', u.pathname + u.search + u.hash);
+}
+
+
 export function withLg(params) {
   if (LG.slug !== DEFAULT_LEAGUE) params.set('lg', LG.slug);
   else params.delete('lg');
@@ -973,10 +993,16 @@ export function initTabs(host, groups, { param = '' } = {}) {
   const anchor = document.createElement('div');
   anchor.className = 'tabstrip';
   anchor.setAttribute('role', 'tablist');
+  /* `short` is used on a narrow screen so the strip does not have to wrap or,
+     worse, scroll. Both spellings are in the markup and CSS picks one, which
+     keeps the accessible name stable for whichever is displayed. */
   anchor.innerHTML = groups.map((g) => `
     <button class="tab-btn" role="tab" id="tab-${esc(g.id)}"
             aria-controls="panel-${esc(g.id)}" data-tab="${esc(g.id)}"
-            aria-selected="false" tabindex="-1">${esc(g.label)}</button>`).join('');
+            aria-selected="false" tabindex="-1">${g.short
+              ? `<span class="t-long">${esc(g.label)}</span><span
+                   class="t-short">${esc(g.short)}</span>`
+              : esc(g.label)}</button>`).join('');
   host.appendChild(anchor);
   wraps.forEach((w) => host.appendChild(w));
 

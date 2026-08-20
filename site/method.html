@@ -1002,12 +1002,12 @@ initTabs(document.getElementById('tabs'), [
     sections: ['seasoncard', 'acccard', 'tablecard', 'extcard', 'linescard',
                'movecard', 'calcard']
       .map((x) => document.getElementById(x)).filter(Boolean) },
-  { id: 'model', label: 'The model',
+  { id: 'model', label: 'The model', short: 'Model',
     sections: [document.getElementById('prosecard')].filter(Boolean) },
   { id: 'data', label: 'Data',
     sections: ['freshcard', 'compcard', 'refcard'].map((x) => document.getElementById(x))
       .filter(Boolean) },
-  { id: 'reference', label: 'Reference',
+  { id: 'reference', label: 'Reference', short: 'Terms',
     sections: ['glosscard', 'changecard'].map((x) => document.getElementById(x))
       .filter(Boolean) },
 ].filter((g) => g.sections.some((el) => !el.hidden)));

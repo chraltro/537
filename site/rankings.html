@@ -235,6 +235,11 @@ body.addEventListener('mousemove', (e) => {
     ['SPI', t.spi.toFixed(1)],
     ['Attack', `${t.att_r ?? '—'} · ${t.off.toFixed(2)} goals a game`],
     ['Defence', `${t.def_r ?? '—'} · ${t.def.toFixed(2)} conceded a game`],
+    /* Measured against this club's own division, unlike attack and defence
+       above, so the tooltip says which. */
+    ...(t.home_r != null ? [['Home (vs own league)', t.home_r]] : []),
+    ...(t.big_r != null ? [['Big games (vs own league)', t.big_r]] : []),
+    ...(t.consistency_r != null ? [['Consistency (vs own league)', t.consistency_r]] : []),
     ...(f.n ? [
       [`Last ${f.n} matches`, `${f.w}W ${f.d}D ${f.l}L · ${f.ppg.toFixed(2)} per game`],
       ['Scored / conceded', `${f.gf_pm.toFixed(2)} / ${f.ga_pm.toFixed(2)} a game`],

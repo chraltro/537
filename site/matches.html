@@ -27,6 +27,20 @@
     <div class="stamp" id="stamp"></div>
   </div>
 
+  <div id="tabs"></div>
+
+  <section class="card" id="c-big">
+    <div class="cardbar">
+      <h2>The matches that matter most</h2>
+      <button class="chip-btn" id="jumpstakes">See all, sorted by stakes</button>
+    </div>
+    <p class="sub" id="bigsub">Ranked by swing rather than by reputation. The score is how
+      far one club's title, qualification or relegation chance moves between a home win and an
+      away win, measured across every simulation.</p>
+    <div id="bigmatches"></div>
+  </section>
+
+  <section class="card" id="c-all">
   <div class="controls">
     <label for="fteam">Club</label>
     <select id="fteam"><option value="">All clubs</option></select>
@@ -51,17 +65,6 @@
       <i style="background:var(--away);width:14px;height:10px"></i></span><span>Away win</span>
   </div>
 
-  <section class="card" id="bigcard">
-    <div class="cardbar">
-      <h2>The matches that matter most</h2>
-      <button class="chip-btn" id="jumpstakes">Sort the whole season by stakes</button>
-    </div>
-    <p class="sub" id="bigsub">Ranked by swing rather than by reputation. The score is how
-      far one club's title, qualification or relegation chance moves between a home win and an
-      away win, measured across every simulation.</p>
-    <div id="bigmatches"></div>
-  </section>
-
   <div class="match matchhead">
     <span class="when">Kick-off</span><span class="home">Home</span>
     <span style="text-align:center"><span class="full">Win / draw / loss %</span><span class="abbr">W/D/L</span></span>
@@ -69,12 +72,13 @@
     <span class="stake">Stakes</span><span class="res">Result</span>
   </div>
   <div id="list"><p class="skeleton">Loading match forecasts…</p></div>
+  </section>
 </main>
 
 <script type="module">
 import { data, pct, esc, initChrome, tip, tipRows, chipColor, initPalette, matchModal,
          lg, withLg, setMeta, eventLabels, roundLabel, roundShort,
-         isMatchweek, cardUrl} from './assets/app.js';
+         isMatchweek, cardUrl, initTabs, replaceQuery } from './assets/app.js';
 initChrome('matches');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
@@ -180,7 +184,7 @@ function draw() {
   q.set('mw', w);            // recorded even when empty, so "all" survives a reload
   if (sort !== 'date') q.set('sort', sort);
   if (onlyPlayed) q.set('played', '1');
-  history.replaceState({}, '', q.toString() ? `?${q}` : location.pathname);
+  replaceQuery(q);
 
   const sel = matches.filter((m) =>
     (!t || m.h === t || m.a === t) && (!w || String(m.md) === w) && (!onlyPlayed || m.played));
@@ -279,11 +283,24 @@ document.getElementById('bigmatches').addEventListener('click', (e) => {
   const el = e.target.closest('.bigmatch');
   if (el) openMatch(matches[+el.dataset.i]);
 });
+/* Two questions, two tabs. "Which of these matter" and "show me all 380" are
+   different visits, and stacking the second under the first meant scrolling
+   past a card every time you wanted the list. The button between them keeps the
+   old path: it switches tab, drops the matchweek filter and sorts the whole
+   season by stakes. */
+const showTab = initTabs(document.getElementById('tabs'), [
+  { id: 'big', label: 'Matches that matter', short: 'Key games',
+    sections: [document.getElementById('c-big')] },
+  { id: 'all', label: `All ${matches.length} matches`, short: 'All matches',
+    sections: [document.getElementById('c-all')] },
+]);
+
 document.getElementById('jumpstakes').addEventListener('click', () => {
   document.getElementById('fmw').value = '';
   document.getElementById('fsort').value = 'lev';
   draw();
-  document.getElementById('list').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showTab('all', true);
+  document.getElementById('c-all').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 </script>
 </body>

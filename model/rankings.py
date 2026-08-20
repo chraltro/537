@@ -32,6 +32,7 @@ tested in a year is visibly that rather than quietly wrong.
 from __future__ import annotations
 
 import datetime as dt
+import statistics
 
 import numpy as np
 
@@ -152,6 +153,31 @@ def build(corpus: europe.Corpus, ref_date: dt.date | None = None, *,
     # both because the scale set is its own average opponent.
     ref_goals = float(np.exp(fit.mu + a_bar - d_bar))
 
+    # The top quarter of every competition in every season, for the big-game
+    # measure, and the raw profile of each club.
+    strong = _strong_sets(hist, club_league)
+    prof = {t: _profile(ms, t, strong) for t, ms in recent.items()}
+    # Each of these three is quoted against the club's *own* competition, not
+    # against Europe as a whole -- unlike attack and defence, which are on the
+    # big-five scale because goals are goals wherever they are scored.
+    #
+    # "Points against the top quarter of the division" has no cross-border
+    # meaning: a club that dominates a weak league beats a weak top quarter, and
+    # scored against a European average it comes out looking like the best
+    # big-game side in Europe. The first attempt did exactly that and rated
+    # Galatasaray 95 and Manchester City 88. Home advantage and consistency vary
+    # by country for the same sort of reason. Measured against its own division
+    # each says what it should, and matches the number the club's own forecast
+    # page already shows.
+    prefs: dict[tuple[str, str], float] = {}
+    for key in ("home_edge", "gd_sd", "top_ppg"):
+        buckets: dict[str, list[float]] = {}
+        for t, r in prof.items():
+            if r.get(key) is not None:
+                buckets.setdefault(club_league.get(t, "other"), []).append(r[key])
+        for grp, vals in buckets.items():
+            prefs[(key, grp)] = sum(vals) / len(vals)
+
     names = _league_names()
     meta = corpus.reg.meta
     rows = []
@@ -195,6 +221,16 @@ def build(corpus: europe.Corpus, ref_date: dt.date | None = None, *,
             "featured": bool(featured and t in featured),
             "form": _form(recent.get(t, []), t),
         })
+        # Three more ratings on the same 35-95 scale as attack and defence, so
+        # the comparison page can draw a radar for any club in Europe rather
+        # than only for the ones this site forecasts.
+        p = prof.get(t) or {}
+        for field, dim, key in (("home_r", "home", "home_edge"),
+                                ("big_r", "big", "top_ppg"),
+                                ("consistency_r", "consistency", "gd_sd")):
+            got = scale.dimension(dim, p.get(key), prefs.get((key, grp)))
+            if got is not None:
+                rows[-1][field] = got
     rows.sort(key=lambda r: -r["spi"])
     for k, r in enumerate(rows, 1):
         r["rank"] = k
@@ -229,6 +265,83 @@ def build(corpus: europe.Corpus, ref_date: dt.date | None = None, *,
 #: season: long enough that one thrashing does not define it, short enough that
 #: it is describing this squad rather than the last three.
 FORM_MATCHES = 20
+
+
+#: How many recent seasons the profile ratings are read over in the pooled
+#: corpus. The domestic feeds outside the big five are shallower and several
+#: are stale, so this is the window rather than a season count.
+PROFILE_MATCHES = 90
+
+
+def _profile(matches: list, club: str, strong: dict) -> dict:
+    """Home, big games and consistency for one club, from the pooled corpus.
+
+    The same three measures the league forecasts carry, computed here instead so
+    that every club in the ranking has them and not only the 174 this site
+    forecasts. A comparison page that offers 836 clubs and can rate 174 of them
+    is offering something it mostly cannot do.
+
+    `strong` is `{(group, season): {club ids}}` -- the top quarter of each
+    competition in each season, worked out from the corpus itself.
+    """
+    ms = sorted(matches, key=lambda m: m.date)[-PROFILE_MATCHES:]
+    if len(ms) < 30:
+        return {}
+    hp, ap, gd, top = [], [], [], []
+    for m in ms:
+        home = m.home == club
+        gf, ga = (m.hg, m.ag) if home else (m.ag, m.hg)
+        if gf is None or ga is None:
+            continue
+        p = 3 if gf > ga else (1 if gf == ga else 0)
+        (hp if home else ap).append(p)
+        gd.append(gf - ga)
+        opp = m.away if home else m.home
+        if opp in strong.get((getattr(m, "comp", None), m.season), ()):
+            top.append(p)
+    if len(hp) < 10 or len(ap) < 10 or len(gd) < 30:
+        return {}
+    out = {
+        "home_edge": round(sum(hp) / len(hp) - sum(ap) / len(ap), 3),
+        "gd_sd": round(statistics.pstdev(gd), 3),
+    }
+    if len(top) >= 8:
+        out["top_ppg"] = round(sum(top) / len(top), 2)
+    return out
+
+
+def _strong_sets(hist: list, club_league: dict) -> dict:
+    """The top quarter of every competition in every season it has, by points.
+
+    Built per competition rather than over the corpus as a whole: "a big game"
+    means one against the best of your own division, and pooling would make it
+    mean "against anyone from a good league".
+    """
+    tables: dict = {}
+    for m in hist:
+        if m.hg is None or m.ag is None:
+            continue
+        grp = club_league.get(m.home)
+        if grp is None or grp != club_league.get(m.away):
+            continue                       # a European tie is not a league match
+        key = (getattr(m, "comp", None), m.season)
+        tbl = tables.setdefault(key, {})
+        tbl.setdefault(m.home, 0)
+        tbl.setdefault(m.away, 0)
+        if m.hg > m.ag:
+            tbl[m.home] += 3
+        elif m.hg == m.ag:
+            tbl[m.home] += 1
+            tbl[m.away] += 1
+        else:
+            tbl[m.away] += 3
+    out = {}
+    for key, tbl in tables.items():
+        if len(tbl) < 8:
+            continue
+        k = max(1, round(len(tbl) / 4))
+        out[key] = set(sorted(tbl, key=lambda t: -tbl[t])[:k])
+    return out
 
 
 def _form(matches: list, club: str) -> dict:

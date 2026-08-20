@@ -79,7 +79,8 @@
 <script type="module">
 import { siteData, data, esc, ord, pct, initChrome, initPalette, setMeta, chipColor,
          scoreGrid, dcGrid, dcOutcome, neutralLambdas, spiCompare,
-         distinctPair, copyLink, initTabs, radar, DIMS } from './assets/app.js';
+         distinctPair, copyLink, initTabs, radar, DIMS,
+         replaceQuery } from './assets/app.js';
 initChrome('compare');
 
 const g = await siteData('global');
@@ -131,7 +132,7 @@ selB.value = pick(params.get('b'), (featured[1] || g.clubs[1] || g.clubs[0]).id)
   const q = new URLSearchParams();
   q.set('a', selA.value);
   q.set('b', selB.value);
-  history.replaceState({}, '', `?${q}`);
+  replaceQuery(q);
   render();
 }));
 
@@ -228,20 +229,33 @@ function row(label, a, b, better) {
    announced as playing in a competition this site does not forecast, which for
    Liverpool is a plainly false statement, and the sort of error message that
    sends a reader looking for a problem that is not there. */
-/* The eight ratings live on the club's row in its own league forecast. Same
-   fetch as the trajectory, and the browser's cache means the second call for a
-   given league costs nothing. */
+/* Which ratings a club can have here, and from where.
+
+   Five of the eight ride on the club's own row in the global ranking, so every
+   club in Europe has them rather than only the 174 this site forecasts -- a
+   comparison page that offers 836 clubs and can rate 174 was offering something
+   it mostly could not do.
+
+   The other three need a shot, which only the results mirror publishes and only
+   for the big five, and those live on the club's league forecast. Absent for
+   everybody else, and absent rather than zero. */
+const GLOBAL_DIMS = ['att_r', 'def_r', 'home_r', 'big_r', 'consistency_r'];
+const LEAGUE_DIMS = ['finishing_r', 'creation_r', 'discipline_r'];
+
 async function ratings(c) {
-  if (!c.slug) return null;
-  try {
-    const r = await fetch(`data/${c.slug}/forecast.json`, { cache: 'no-cache' });
-    if (!r.ok) return null;
-    const fc = await r.json();
-    const t = (fc.teams || []).find((x) => x.id === c.id);
-    if (!t) return null;
-    const out = Object.fromEntries(DIMS.map((d) => [d.key, t[d.key] ?? null]));
-    return Object.values(out).some((v) => v != null) ? out : null;
-  } catch { return null; }
+  const out = Object.fromEntries(DIMS.map((d) => [d.key, null]));
+  GLOBAL_DIMS.forEach((k) => { out[k] = c[k] ?? null; });
+  if (c.slug) {
+    try {
+      const r = await fetch(`data/${c.slug}/forecast.json`, { cache: 'no-cache' });
+      if (r.ok) {
+        const fc = await r.json();
+        const t = (fc.teams || []).find((x) => x.id === c.id);
+        if (t) LEAGUE_DIMS.forEach((k) => { out[k] = t[k] ?? null; });
+      }
+    } catch { /* the five from the ranking still stand */ }
+  }
+  return Object.values(out).some((v) => v != null) ? out : null;
 }
 
 async function trajectory(c) {
@@ -359,11 +373,14 @@ async function render() {
       `${(WORD[shown.length] || shown.length).replace(/^./, (m) => m.toUpperCase())} ratings, `
       + (both.length > 1 ? 'both clubs' : 'one club');
     document.getElementById('radarsub').innerHTML =
-      'Every one is the same transform over a different measurable: distance from that '
-      + 'club\u2019s own competition average, so 65 is average and higher is better on all '
-      + 'of them \u2014 defence and discipline included, where it is the <em>conceding</em> '
-      + 'and the <em>booking</em> that is low. Two clubs from different divisions are each '
-      + 'measured against their own, which is the same caveat SPI carries.';
+      'Every one is the same transform over a different measurable, and higher is better on '
+      + 'all of them \u2014 defence and discipline included, where it is the '
+      + '<em>conceding</em> and the <em>booking</em> that is low. '
+      + '<b>Attack</b> and <b>defence</b> are measured against an average big-five club, the '
+      + 'same reference SPI uses here, so they compare across borders and most of Europe '
+      + 'sits below 50. The rest are measured against each club\u2019s own division, because '
+      + '\u201chow you do against the best in your league\u201d has no cross-border meaning: '
+      + 'a club that dominates a weak division beats a weak top quarter.';
     document.getElementById('radarbody').innerHTML =
       `<div>${radar(both, { size: 320 })}
         <div class="tl-key">${both.map((c) => `
@@ -424,11 +441,11 @@ async function render() {
 /* Four screens rather than one long scroll. The pickers sit above the tabs
    because they belong to all four. */
 initTabs(document.getElementById('tabs'), [
-  { id: 'side', label: 'Side by side', sections: [document.getElementById('c-side')] },
+  { id: 'side', label: 'Side by side', short: 'Side', sections: [document.getElementById('c-side')] },
   { id: 'ratings', label: 'Ratings', sections: [document.getElementById('c-radar')] },
-  { id: 'match', label: 'Neutral match', sections: [document.getElementById('c-neutral')] },
-  { id: 'h2h', label: 'Head to head', sections: [document.getElementById('h2hcard')] },
-  { id: 'trajectory', label: 'Trajectory', sections: [document.getElementById('c-traj')] },
+  { id: 'match', label: 'Neutral match', short: 'Neutral', sections: [document.getElementById('c-neutral')] },
+  { id: 'h2h', label: 'Head to head', short: 'H2H', sections: [document.getElementById('h2hcard')] },
+  { id: 'trajectory', label: 'Trajectory', short: 'Trend', sections: [document.getElementById('c-traj')] },
 ]);
 
 initPalette([]);

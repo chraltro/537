@@ -153,7 +153,7 @@
 import { data, pct, signed, esc, ord, initChrome, tip, tipRows, timeline, chipColor,
          initPalette, matchModal, lg, withLg, setMeta, eventLabels, cardUrl,
          bracketStrip, roundLabel, roundShort, initTabs, followButton,
-         copyLink, siteData, radar, DIMS } from './assets/app.js';
+         copyLink, siteData, radar, DIMS, replaceQuery } from './assets/app.js';
 initChrome('team');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
@@ -196,7 +196,7 @@ pick.addEventListener('change', () => {
   current = pick.value;
   const q = withLg(new URLSearchParams());
   q.set('t', current);
-  history.replaceState({}, '', `?${q}`);
+  replaceQuery(q);
   render();
 });
 

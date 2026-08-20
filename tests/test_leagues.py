@@ -631,6 +631,35 @@ def test_every_forecast_competition_carries_its_slug_in_the_global_ranking():
             f"got {got.get('slug')!r} -- add it to rankings.GROUP_SLUG")
 
 
+def test_the_global_ranking_rates_far_more_than_the_clubs_we_forecast():
+    """The comparison page offers every club in Europe, so the ratings it draws
+    must exist for every club in Europe.
+
+    They did not: the radar read them off a club's league forecast, which exists
+    for nine competitions, so 662 of the 836 clubs on that page had no ratings at
+    all -- the page offered a comparison it could mostly not make. Five of the
+    eight are computable from the pooled corpus and are now carried on the
+    ranking itself.
+
+    Skipped when the pipeline has not run, like the other artefact tests.
+    """
+    path = os.path.join(HERE, "site", "data", "global.json")
+    if not os.path.exists(path):
+        pytest.skip("pipeline has not been run in this checkout")
+    with open(path, encoding="utf-8") as fh:
+        clubs = json.load(fh)["clubs"]
+    for key in ("att_r", "def_r", "home_r", "big_r", "consistency_r"):
+        got = sum(1 for c in clubs if c.get(key) is not None)
+        assert got > len(clubs) * 0.9, (
+            f"{key} is on {got} of {len(clubs)} ranked clubs; it should be on "
+            "nearly all of them, not only the ones with a forecast page")
+    featured = [c for c in clubs if c.get("featured")]
+    assert featured, "no featured clubs in the ranking"
+    # And the three that genuinely need a shot feed stay off it: those live on
+    # the league forecast, because the pooled corpus has no shots.
+    assert not any("finishing_r" in c for c in clubs)
+
+
 # ------------------------------------------------- arriving from above
 def test_only_a_second_tier_loads_the_division_above(dataset):
     """A top flight loads the tier below to rate the clubs coming up. A second
