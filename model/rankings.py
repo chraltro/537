@@ -35,7 +35,7 @@ import datetime as dt
 
 import numpy as np
 
-from . import config, europe, leagues, ratings
+from . import config, europe, leagues, ratings, scale
 
 #: SPI means "expected share of points against an average team", so the scale
 #: needs an average worth naming. The pooled corpus average is nine hundred
@@ -114,11 +114,13 @@ def build(corpus: europe.Corpus, ref_date: dt.date | None = None, *,
     # Counts and recency, from the same match list the fit saw.
     played: dict[str, int] = {}
     last: dict[str, dt.date] = {}
+    recent: dict[str, list] = {}
     for m in hist:
         for t in (m.home, m.away):
             played[t] = played.get(t, 0) + 1
             if t not in last or m.date > last[t]:
                 last[t] = m.date
+            recent.setdefault(t, []).append(m)
 
     # The scale: an average club of the five leagues we forecast. Those are the
     # clubs in the current fixture lists, which the caller passes as `featured`;
@@ -133,6 +135,11 @@ def build(corpus: europe.Corpus, ref_date: dt.date | None = None, *,
     a_bar = float(np.mean(fit.att[idx]))
     d_bar = float(np.mean(fit.dfn[idx]))
     home = fit.home_advantage(europe.EUROPE)
+
+    # Goals an average scale-set club scores, and concedes, against another of
+    # them: `exp(mu + a_bar - d_bar)` by construction, and the same number for
+    # both because the scale set is its own average opponent.
+    ref_goals = float(np.exp(fit.mu + a_bar - d_bar))
 
     names = _league_names()
     meta = corpus.reg.meta
@@ -163,10 +170,19 @@ def build(corpus: europe.Corpus, ref_date: dt.date | None = None, *,
             "spi": round(spi_from(off, dfn, home, fit.rho), 1),
             "off": round(off, 2),
             "def": round(dfn, 2),
+            # The same two as a rating out of 100, higher better both times.
+            # Centred on the scale set -- an average big-five club -- which is
+            # the reference SPI is already quoted against on this page, so all
+            # three numbers in a row mean "against the same opponent". Most of
+            # Europe therefore sits below 50, which is the point of a ranking
+            # that spans San Marino and the Premier League.
+            "att_r": scale.attack(off, ref_goals, scale.SD_EUROPE),
+            "def_r": scale.defence(dfn, ref_goals, scale.SD_EUROPE),
             "n": played.get(t, 0),
             "last": seen.isoformat() if seen else None,
             "stale": round(stale / 30.44, 1),
             "featured": bool(featured and t in featured),
+            "form": _form(recent.get(t, []), t),
         })
     rows.sort(key=lambda r: -r["spi"])
     for k, r in enumerate(rows, 1):
@@ -195,6 +211,53 @@ def build(corpus: europe.Corpus, ref_date: dt.date | None = None, *,
         "rho": round(float(fit.rho), 6),
         "rating_sd": config.RATING_SD,
         "clubs": rows,
+    }
+
+
+#: How many recent matches a club's form is read over. Twenty is about half a
+#: season: long enough that one thrashing does not define it, short enough that
+#: it is describing this squad rather than the last three.
+FORM_MATCHES = 20
+
+
+def _form(matches: list, club: str) -> dict:
+    """What actually happened to one club lately, as opposed to what it is rated.
+
+    None of this is an input to any forecast -- the fit reads the same matches
+    and reads them better, with time weighting and opponent strength. It is here
+    because a rating tells you how good a club is and says nothing about what
+    watching it has been like, and the two are different questions.
+    """
+    ms = sorted(matches, key=lambda m: m.date)[-FORM_MATCHES:]
+    if not ms:
+        return {}
+    w = d = l = gf = ga = cs = fail = 0
+    for m in ms:
+        home = m.home == club
+        f, a = (m.hg, m.ag) if home else (m.ag, m.hg)
+        gf += f
+        ga += a
+        if a == 0:
+            cs += 1
+        if f == 0:
+            fail += 1
+        if f > a:
+            w += 1
+        elif f == a:
+            d += 1
+        else:
+            l += 1
+    n = len(ms)
+    return {
+        "n": n,
+        "w": w, "d": d, "l": l,
+        "ppg": round((3 * w + d) / n, 2),
+        "gf_pm": round(gf / n, 2),
+        "ga_pm": round(ga / n, 2),
+        "clean_pct": round(cs / n, 3),
+        "blank_pct": round(fail / n, 3),
+        "from": ms[0].date.isoformat(),
+        "to": ms[-1].date.isoformat(),
     }
 
 

@@ -859,9 +859,22 @@ const GLOSS = [
     compares across borders, and it is built on a different fit: one that uses
     UEFA competition matches as the only evidence joining one league to
     another.`],
-  ['Attack / Defence', `Goals a club is expected to score, and concede, per
-    match against an average opponent. The two numbers the match model is built
-    from; everything else on the site is simulated out of them.`],
+  ['Attack / Defence', `Out of 100, and higher is better both times — including
+    defence, where it is the <em>conceding</em> that is low. On a competition
+    page 65 is an average ${esc(W.name)} club and the scale is that competition's
+    own, exactly as SPI's is; on the
+    <a href="${url('rankings.html')}">global rankings</a> 65 is an average
+    big-five club, which is why most of Europe sits below 50 there.
+    <br>The model itself thinks in goals — 1.91 expected against an average
+    opponent, 0.55 conceded — and those are still what every probability is
+    computed from and what the tooltips show. The rating is a readable form of
+    the same two numbers: the log of the ratio to average, put through a
+    logistic so the best attack in a division lands near 90 instead of running
+    off the end of the scale. The spread it is measured against is a fixed
+    constant, so a club's rating does not move when a rival's does — which
+    means a competition whose clubs are close together shows a narrower band of
+    ratings than one where they are spread out. That is the interesting part,
+    not a defect.`],
   ['Projected points', `The mean points total across every simulated season —
     which is why it carries a decimal and why no club is ever projected to a
     round number. The 80% range beside it is the 10th to 90th percentile.`],

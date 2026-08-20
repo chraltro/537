@@ -39,7 +39,7 @@ import time
 import numpy as np
 
 from . import (backtest, clubmeta, config, europe, feeds, gamestate, insight, knockout,
-               leagues, priors, rankings, ratings, seo, simulate, social)
+               leagues, priors, rankings, ratings, scale, seo, simulate, social)
 from .data import Dataset
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -429,6 +429,16 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
             "arrived": how[t],
         })
     rows.sort(key=lambda r: (-r["pts"], -r["gd"]))
+
+    # Attack and defence, again, as a rating out of 100 -- higher better both
+    # times. Centred on this competition's own average, so 65 is an average club
+    # here; see `model/scale` for why the spread is a fixed constant and not the
+    # spread of whoever happens to be in the division this year.
+    ref_off, ref_def = scale.league_reference([r["off"] for r in rows],
+                                              [r["def"] for r in rows])
+    for r in rows:
+        r["att_r"] = scale.attack(r["off"], ref_off, scale.SD_ATT)
+        r["def_r"] = scale.defence(r["def"], ref_def, scale.SD_DEF)
 
     print("Writing match forecasts…")
     lev_by_match = {}

@@ -376,30 +376,23 @@ function weekly() {
   sub.textContent = 'The three questions the season will answer, as the model sees them'
     + ' before a ball is kicked. Every later week is measured against this.';
 
+  /* Which race is actually live, in one sentence. The three tiles that used to
+     sit here repeated the favourite and the likeliest relegation, both of
+     which are the first and last rows of the table directly below them. */
   const alive = (k) => fc.teams.filter((t) => t[k] >= 0.05 && t[k] <= 0.95).length;
-  const races = [['title', W.isCup ? 'The trophy' : 'The title'],
-                 ['ucl', `The ${W.topWord}`],
-                 ['releg', W.isCup ? 'The cut' : 'Relegation']]
+  const races = [['title', W.isCup ? 'the trophy' : 'the title'],
+                 ['ucl', `the ${W.topWord}`],
+                 ['releg', W.isCup ? 'the cut' : 'relegation']]
     .map(([k, label]) => ({ k, label, n: alive(k) }))
     .sort((a, b) => b.n - a.n);
   const tightest = races[0];
-  const second = byTitle[1];
 
   body.innerHTML = `
-    <p class="hint" style="margin:0 0 16px">${esc(recap.note)}</p>
-    <div class="tiles" style="margin-bottom:0">
-      <div class="tile"><div class="k">Favourite</div>
-        <div class="v">${esc(lead.name)}</div>
-        <div class="n">${pct(lead.title)} to win it, then ${esc(second.name)} at ${pct(second.title)}</div></div>
-      <div class="tile"><div class="k">${W.isCup ? 'Most likely out' : 'Most likely down'}</div>
-        <div class="v">${esc(drop.name)}</div>
-        <div class="n">${pct(drop.down)}, then ${esc(byReleg[1].name)} at ${pct(byReleg[1].down)}</div></div>
-      <div class="tile"><div class="k">Tightest race</div>
-        <div class="v">${esc(tightest.label)}</div>
-        <div class="n">${tightest.n} clubs still between 5% and 95%, more than
-          ${esc(races[1].label.toLowerCase())} (${races[1].n}) or
-          ${esc(races[2].label.toLowerCase())} (${races[2].n})</div></div>
-    </div>`;
+    <p class="hint" style="margin:0">${esc(recap.note)}
+      The tightest of the three is ${esc(tightest.label)}, with
+      <b>${tightest.n}</b> clubs still between 5% and 95% — against
+      ${races[1].n} in ${esc(races[1].label)} and ${races[2].n} in
+      ${esc(races[2].label)}.</p>`;
 }
 
 /* ---- render everything that depends on club colours ---- */

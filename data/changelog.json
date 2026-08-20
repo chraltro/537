@@ -3,6 +3,18 @@
   "entries": [
     {
       "date": "2026-08-20",
+      "title": "Attack and defence are ratings out of 100",
+      "effect": "A new way of reading two numbers that already existed. No forecast changed.",
+      "body": "The model thinks in goals — 1.91 expected against an average opponent, 0.55 conceded — and those are still what every probability is computed from. But the defence column was backwards against every other column on the page: the smaller number was the better club. Both are now also published out of 100, higher better, sitting roughly between 40 and 90. On a competition page 65 is an average club there; on the global rankings 65 is an average big-five club, which is why most of Europe sits below 50. The spread each is measured against is a fixed constant, so a club's rating does not move when a rival's does."
+    },
+    {
+      "date": "2026-08-20",
+      "title": "Fewer cards, more tabs, and a comparison worth reading",
+      "effect": "No change to any number.",
+      "body": "The three summary tiles on the front page said the favourite, the projected champion and the likeliest relegation — which were the first row, the first row and the last row of the table directly beneath them. The same on the rankings and races pages. All gone. The Table page is now four tabs rather than one long scroll. The head-to-head page gained the last twenty matches for each club: results, points per game, goals scored and conceded, clean sheets, and how often each failed to score. None of it feeds the model, which reads the same matches better; it is there because a rating says how good a club is and nothing about what watching it has been like."
+    },
+    {
+      "date": "2026-08-20",
       "title": "The Championship play-off is no longer part of the Championship season",
       "effect": "Small. Every Championship rating and probability moves slightly; the season-accuracy card appears for the first time.",
       "body": "openfootball keeps the play-off in the same file as the league season — two semi-final legs each way and a Wembley final, five matches under a \"Finals\" header — and nothing was reading that header. So 557 matches a season were being fitted and tabled as if they were 552, with a neutral-ground final counting as league points and a knockout tie teaching the ratings model. Belgium had the same problem in reverse: its post-split rounds are league matches and had to be kept, while its one-off tie for a Conference League place had to go. Both are now read from the header. The Championship's walk-forward log-loss went from 1.0507 to 1.0500."

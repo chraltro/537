@@ -24,18 +24,11 @@
     <div class="stamp" id="stamp"></div>
   </div>
 
-  <div class="tiles" id="tiles"></div>
+  <div id="tabs"></div>
 
-  <section class="card">
-    <div class="cardbar">
-      <h2>The season, projected</h2>
-      <div class="chips" role="tablist" aria-label="View">
-        <button class="chip-btn" data-view="table" aria-pressed="true" role="tab">Table</button>
-        <button class="chip-btn" data-view="dist" aria-pressed="false" role="tab">Every finish</button>
-        <button class="chip-btn" data-view="luck" aria-pressed="false" role="tab" id="luckchip">Luck</button>
-      </div>
-    </div>
-    <p class="sub" id="viewsub">Average outcome across 50,000 simulated seasons.
+  <section class="card" id="c-table">
+    <h2>The season, projected</h2>
+    <p class="sub">Average outcome across 50,000 simulated seasons.
       Click a column to sort, or a club for its own page.</p>
 
     <div id="tableview">
@@ -51,8 +44,8 @@
             <th class="promoonly" data-k="p_up" id="uphead"><span class="full">Promoted</span><span class="abbr">Up</span></th>
             <th data-k="down" id="downhead">Down</th>
             <th class="x p3" data-k="spi" title="Expected share of points against an average team">SPI</th>
-            <th class="x p3" data-k="off" title="Goals expected to score vs an average team">Att</th>
-            <th class="x p3" data-k="def" title="Goals expected to concede vs an average team">Def</th>
+            <th class="x p3" data-k="att_r" title="Attack out of 100. 65 is an average club in this competition; higher is better">Att</th>
+            <th class="x p3" data-k="def_r" title="Defence out of 100. Higher is better — it is the conceding that is low">Def</th>
             <th class="x p3" data-k="gd">GD</th>
             <th class="x p3" data-k="sos" title="Average rating of the opponents left to play">Sched</th>
             <th class="x p3 leagueonly" data-k="europa">Europa</th>
@@ -64,7 +57,15 @@
               style="margin-top:14px">Show ratings and schedule</button>
     </div>
 
-    <div id="luckview" hidden>
+    <p class="hint" id="lines" style="margin-top:16px"></p>
+  </section>
+
+  <section class="card" id="c-luck" hidden>
+    <h2>Luck</h2>
+    <p class="sub">Points taken against points the pre-kick-off forecasts said those matches
+      were worth. The expectation uses the probabilities frozen before each kick-off, never
+      the ones computed today.</p>
+    <div id="luckview">
       <div class="scroller">
         <table id="lucktbl">
           <thead><tr>
@@ -81,7 +82,13 @@
       <p class="hint" id="lucknote" style="margin-top:16px"></p>
     </div>
 
-    <div id="distview" hidden>
+  </section>
+
+  <section class="card" id="c-dist">
+    <h2>Every finish</h2>
+    <p class="sub">Each row is one club's full spread of finishing positions. A tight band
+      means the model is confident; a smear across ten places means it is not.</p>
+    <div id="distview">
       <div id="strip"></div>
       <div class="legend">
         <span>Chance of finishing in that position</span>
@@ -95,10 +102,9 @@
         <span id="bandnote"></span>
       </div>
     </div>
-    <p class="hint" id="lines" style="margin-top:16px"></p>
   </section>
 
-  <section class="card">
+  <section class="card" id="c-next">
     <div class="cardbar">
       <h2 id="nexthead">Next up</h2>
       <a class="morelink" href="matches.html" id="alllink">All matches →</a>
@@ -128,7 +134,7 @@
 <script type="module">
 import { data, pct, signed, esc, ord, initChrome, tip, tipRows, rampColor,
          makeSortable, chipColor, initPalette, matchModal, roundLabel,
-         lg, url, setMeta, cardUrl } from './assets/app.js';
+         lg, url, setMeta, cardUrl, initTabs } from './assets/app.js';
 initChrome('table');
 
 /* forecast.json is 28KB and paints the whole page; matches.json is 350KB and
@@ -243,16 +249,6 @@ if (fc.lines) {
     + 'in nine seasons out of ten.';
 }
 
-document.getElementById('tiles').innerHTML = [
-  [W.isCup ? 'Trophy favourite' : 'Title favourite', esc(lead.name),
-    `${pct(lead.title)} across every simulation`],
-  [W.isCup ? 'Projected phase leader' : 'Projected champion', `${rows[0].pts.toFixed(0)} pts`,
-    `80% of seasons land ${rows[0].pts_lo}–${rows[0].pts_hi}`],
-  [W.isCup ? 'Most likely out' : 'Most likely down', esc(drop.name),
-    `${pct(drop.down)}, then ${esc(byReleg[1].name)} at ${pct(byReleg[1].down)}`],
-].map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div>
-    <div class="v">${v}</div><div class="n">${n}</div></div>`).join('');
-
 /* ---- table ---- */
 const maxPts = Math.max(...rows.map((r) => r.pts));
 const tbody = document.getElementById('tbody');
@@ -279,8 +275,8 @@ function render(list) {
       <td class="x p3" title="${t.spi_lo != null
         ? `One standard deviation either way: ${t.spi_lo}–${t.spi_hi}` : ''}">
         <b>${t.spi.toFixed(1)}</b></td>
-      <td class="x p3">${t.off.toFixed(2)}</td>
-      <td class="x p3">${t.def.toFixed(2)}</td>
+      <td class="x p3" title="${t.off.toFixed(2)} goals scored per match against an average opponent">${t.att_r ?? '—'}</td>
+      <td class="x p3" title="${t.def.toFixed(2)} conceded per match against an average opponent">${t.def_r ?? '—'}</td>
       <td class="x p3">${signed(t.gd)}</td>
       <td class="x p3 ${t.sos_rank && t.sos_rank <= 5 ? 'p-hi' : 'p-lo'}"
           title="${t.sos_rank ? ord(t.sos_rank) + ' hardest run left' : ''}">${t.sos ?? '—'}</td>
@@ -311,6 +307,8 @@ tbody.addEventListener('mousemove', (e) => {
          ['Relegated, either way', pct(t.down, 1)]] : []),
     ['Rating (SPI)', t.spi_lo != null ? `${t.spi.toFixed(1)} (${t.spi_lo}–${t.spi_hi})`
                                       : t.spi.toFixed(1)],
+    ['Attack', `${t.att_r ?? '—'} — ${t.off.toFixed(2)} goals a game vs average`],
+    ['Defence', `${t.def_r ?? '—'} — ${t.def.toFixed(2)} conceded a game vs average`],
     ['Schedule left', t.sos ? `${t.sos} avg opponent (${ord(t.sos_rank)} hardest)` : '—'],
     ['Schedule played', t.sos_played != null ? `${t.sos_played} avg opponent` : '—'],
   ]), e);
@@ -363,30 +361,12 @@ document.getElementById('strip').addEventListener('mousemove', (e) => {
 });
 document.getElementById('strip').addEventListener('mouseleave', () => tip(null));
 
-const VIEWSUB = {
-  table: 'Average outcome across 50,000 simulated seasons. Click a column to sort, or a club for its own page.',
-  dist: "Each row is one club's full spread of finishing positions. A tight band means the model is confident; a smear across ten places means it is not.",
-  luck: 'Points taken against points the pre-kick-off forecasts said those matches were worth. '
-      + 'The expectation uses the probabilities frozen before each kick-off, never the ones computed today.',
-};
-document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => {
-  const v = b.dataset.view;
-  document.querySelectorAll('[data-view]').forEach((x) =>
-    x.setAttribute('aria-pressed', String(x === b)));
-  document.getElementById('tableview').hidden = v !== 'table';
-  document.getElementById('distview').hidden = v !== 'dist';
-  document.getElementById('luckview').hidden = v !== 'luck';
-  document.getElementById('viewsub').textContent = VIEWSUB[v] || VIEWSUB.table;
-}));
-
 /* ---- form against expectation ----
    Nothing to show until matches have been played AND frozen forecasts exist for
-   them, so the chip hides itself rather than offering an empty table. */
+   them, so the tab is not offered rather than offering an empty table. */
 const luckRows = rows.filter((t) => (t.xp_played || 0) > 0);
-const luckChip = document.getElementById('luckchip');
-if (!luckRows.length) {
-  luckChip.hidden = true;
-} else {
+if (luckRows.length) {
+  document.getElementById('c-luck').hidden = false;
   const worst = Math.max(1, ...luckRows.map((t) => Math.abs(t.xp_diff)));
   const ranked = [...luckRows].sort((a, b) => b.xp_diff - a.xp_diff);
   document.getElementById('luckbody').innerHTML = ranked.map((t, i) => {
@@ -471,6 +451,19 @@ window.addEventListener('themechange', () => {
     if (t) el.style.background = chipColor(t.primary);
   });
 });
+
+/* Four screens, grouped into four tabs, the way the method, races and club
+   pages already are. The table is the first and the default, because it is the
+   answer to the question in the headline. Luck only exists once matches have
+   been played and frozen forecasts exist for them, so its tab is not offered
+   until then rather than offered empty. */
+initTabs(document.getElementById('tabs'), [
+  { id: 'table', label: 'Table', sections: [document.getElementById('c-table')] },
+  { id: 'finishes', label: 'Every finish', sections: [document.getElementById('c-dist')] },
+  { id: 'luck', label: 'Luck', sections: [document.getElementById('c-luck')] },
+  { id: 'next', label: W.isCup ? 'Next round' : 'Next up',
+    sections: [document.getElementById('c-next')] },
+].filter((g) => g.sections.every((el) => el && !el.hidden)));
 </script>
 </body>
 </html>

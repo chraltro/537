@@ -29,8 +29,6 @@
     <div class="stamp" id="stamp"></div>
   </div>
 
-  <div class="tiles" id="tiles"></div>
-
   <section class="card">
     <div class="cardbar">
       <h2>The ranking</h2>
@@ -58,13 +56,14 @@
           <th class="l" data-k="name">Club</th>
           <th class="l" data-k="league">League</th>
           <th data-k="spi" title="Expected share of points against an average club of the big five leagues">SPI</th>
-          <th class="p3" data-k="off" title="Goals expected to score against that average club">Att</th>
-          <th class="p3" data-k="def" title="Goals expected to concede against that average club">Def</th>
+          <th class="p3" data-k="att_r" title="Attack out of 100 against an average big-five club. Higher is better">Att</th>
+          <th class="p3" data-k="def_r" title="Defence out of 100. Higher is better — it is the conceding that is low">Def</th>
+          <th class="p3" data-k="ppg" title="Points per game over this club's last 20 matches in the corpus">Form</th>
           <th class="p3" data-k="league_rank" title="Rank within its own league">In league</th>
           <th class="p4" data-k="n" title="Matches in the fitted corpus">Matches</th>
           <th class="l p2" aria-label="Follow"></th>
         </tr></thead>
-        <tbody id="rkbody"><tr><td colspan="9" class="skeleton">Loading…</td></tr></tbody>
+        <tbody id="rkbody"><tr><td colspan="10" class="skeleton">Loading…</td></tr></tbody>
       </table>
     </div>
     <p class="hint" id="note" style="margin-top:16px"></p>
@@ -93,6 +92,9 @@ initChrome('rankings');
 
 const g = await siteData('global');
 const rows = g.clubs;
+/* `makeSortable` sorts on a row's own properties, so the one figure worth
+   sorting from the form block gets lifted onto the row. */
+rows.forEach((r) => { r.ppg = r.form?.ppg ?? null; });
 
 setMeta({
   title: 'Global club rankings',
@@ -114,15 +116,6 @@ document.getElementById('stamp').innerHTML = `
   <span>Fitted to <b>${g.asof}</b></span>
   <span>Scale set: <b>${g.scale_clubs}</b> big-five clubs</span>
   <span>Updated <b>${fmtStamp(g.generated)}</b></span>`;
-
-const top = rows.slice(0, 3);
-document.getElementById('tiles').innerHTML = top.map((t, i) => `
-  <div class="tile"><div class="k">${ord(i + 1)} in Europe</div>
-    <div class="v">${esc(t.name)}</div>
-    <div class="n">SPI ${t.spi.toFixed(1)} · ${esc(t.league)}</div></div>`).join('')
-  + `<div class="tile"><div class="k">Leagues represented</div>
-       <div class="v">${g.n_leagues}</div>
-       <div class="n">from San Marino to the Premier League</div></div>`;
 
 /* league filter, ordered by how many ranked clubs each league has */
 const byLeague = new Map();
@@ -164,12 +157,14 @@ function render(list) {
       <td class="l lgname">${esc(t.league)}${t.country ? ` <span>${esc(t.country)}</span>` : ''}</td>
       <td class="spi"><b>${t.spi.toFixed(1)}</b>
         <span class="minibar" style="width:${(t.spi / maxSpi * 100).toFixed(1)}%"></span></td>
-      <td class="p3">${t.off.toFixed(2)}</td>
-      <td class="p3">${t.def.toFixed(2)}</td>
+      <td class="p3" title="${t.off.toFixed(2)} goals a game against an average big-five club">${t.att_r ?? '—'}</td>
+      <td class="p3" title="${t.def.toFixed(2)} conceded a game against an average big-five club">${t.def_r ?? '—'}</td>
+      <td class="p3" title="${t.form?.n ? `${t.form.w}W ${t.form.d}D ${t.form.l}L over ${t.form.n} matches to ${t.form.to}` : ''}">${
+        t.form?.ppg != null ? t.form.ppg.toFixed(2) : '—'}</td>
       <td class="p3">${ord(t.league_rank)}</td>
       <td class="p4">${t.n}</td>
       <td class="l p2">${t.featured ? followButton(t.id, t.name) : ''}</td>
-    </tr>`).join('') || '<tr><td colspan="9" class="empty">Nothing matches that.</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="10" class="empty">Nothing matches that.</td></tr>';
   count.textContent = list.length > shown.length
     ? `Showing ${shown.length} of ${list.length}`
     : `${list.length} club${list.length === 1 ? '' : 's'}`;
@@ -233,11 +228,19 @@ body.addEventListener('mousemove', (e) => {
   const tr = e.target.closest('tr[data-id]');
   if (!tr) return tip(null);
   const t = rows.find((r) => r.id === tr.dataset.id);
+  const f = t.form || {};
   tip(tipRows(esc(t.name), [
     ['Rank in Europe', ord(t.rank)],
     ['Rank in its league', `${ord(t.league_rank)} of ${byLeague.get(t.league)}`],
     ['SPI', t.spi.toFixed(1)],
-    ['Attack / defence', `${t.off.toFixed(2)} / ${t.def.toFixed(2)}`],
+    ['Attack', `${t.att_r ?? '—'} · ${t.off.toFixed(2)} goals a game`],
+    ['Defence', `${t.def_r ?? '—'} · ${t.def.toFixed(2)} conceded a game`],
+    ...(f.n ? [
+      [`Last ${f.n} matches`, `${f.w}W ${f.d}D ${f.l}L · ${f.ppg.toFixed(2)} per game`],
+      ['Scored / conceded', `${f.gf_pm.toFixed(2)} / ${f.ga_pm.toFixed(2)} a game`],
+      ['Clean sheets', `${Math.round(f.clean_pct * 100)}% · failed to score ${
+        Math.round(f.blank_pct * 100)}%`],
+    ] : []),
     ['Matches in the fit', t.n],
     ['Newest result', t.last || 'unknown'],
   ]), e);

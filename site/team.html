@@ -376,8 +376,10 @@ function render() {
     `<span title="Expected share of points against an average club in this competition">SPI
        <b>${t.spi.toFixed(1)}</b>${t.spi_lo != null
          ? ` <span class="muted">${t.spi_lo}–${t.spi_hi}</span>` : ''}</span>
-     <span>Attack <b>${t.off.toFixed(2)}</b> goals/game vs average</span>
-     <span>Defence <b>${t.def.toFixed(2)}</b> conceded/game vs average</span>
+     <span title="${t.off.toFixed(2)} goals a game against an average opponent">Attack
+       <b>${t.att_r ?? '—'}</b> out of 100</span>
+     <span title="${t.def.toFixed(2)} conceded a game against an average opponent">Defence
+       <b>${t.def_r ?? '—'}</b> out of 100</span>
      ${ARRIVED_FROM[t.arrived] || ''}
      ${register(t.id)}`;
 

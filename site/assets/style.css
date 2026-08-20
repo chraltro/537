@@ -448,9 +448,33 @@ footer a { color: var(--ink2); }
   /* A club column sized to "Borussia Mönchengladbach" pushes the last
      probability column off the edge, and the column that falls off is the one
      the reader came for. Cap it and let the long names wrap onto two lines --
-     vertical space is the one thing a phone has plenty of. */
-  tbody td.l .club a { overflow-wrap: anywhere; }
-  tbody td.l:nth-child(2), thead th.l:nth-child(2) { max-width: 116px; }
+     vertical space is the one thing a phone has plenty of.
+
+     `break-word`, not `anywhere`: `anywhere` breaks mid-word even when a normal
+     wrap point exists, and on the rankings table -- where the row also carries
+     a staleness badge that refuses to wrap -- it squeezed the name into a
+     column one character wide. "CD Leganes" was eight lines tall. The badge now
+     takes a line of its own before anything gets broken. */
+  tbody td.l .club { flex-wrap: wrap; row-gap: 2px; }
+  /* `flex-basis: 0`, not `auto`. Flex wraps an item onto the next line by
+     comparing its *hypothetical* size against the space left, and with
+     `auto` that hypothetical size is the full width of the club's name -- so
+     a long name jumped to its own line and left the colour chip stranded above
+     it. A basis of zero means it never wraps to a new line; it shrinks and
+     wraps its own text instead, which is what was wanted.
+     `hyphens` because "Middlesbrough" has to break somewhere, and breaking it
+     with a hyphen reads as a word rather than as a bug. */
+  tbody td.l .club a {
+    overflow-wrap: break-word; hyphens: auto; flex: 1 1 0; min-width: 0;
+  }
+  tbody td.l .club .stale-tag { flex-basis: 100%; margin-left: 0; }
+  tbody td.l:nth-child(2), thead th.l:nth-child(2) { max-width: min(31vw, 116px); }
+  /* The global ranking shows four columns on a phone rather than the league
+     table's six, so its club column can afford the extra sixteen pixels that
+     fit "Middlesbrough" on one line. It comes off the league column, which
+     wraps happily -- "Super League / Greece" already does. */
+  #rk tbody td:nth-child(2), #rk thead th:nth-child(2) { max-width: min(34vw, 132px); }
+  #rk tbody td:nth-child(3), #rk thead th:nth-child(3) { max-width: min(28vw, 104px); }
   tbody td, thead th { padding-left: 5px; padding-right: 5px; }
   tbody td { font-size: 13px; }
   .masthead .wrap { gap: 6px; }
@@ -982,6 +1006,13 @@ tr.rowcursor > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 }
 @media (max-width: 620px) {
   .changelog li { grid-template-columns: 1fr; gap: 4px; }
+}
+
+/* The narrowest phones still in use are 360px wide, and at that width the
+   league table is about ten pixels over. Cell padding is the cheapest ten
+   pixels on the page: five columns, two edges each. */
+@media (max-width: 380px) {
+  tbody td, thead th { padding-left: 3px; padding-right: 3px; }
 }
 
 /* ---- follow star and copy-link ----

@@ -120,11 +120,43 @@ selB.value = pick(params.get('b'), (featured[1] || g.clubs[1] || g.clubs[0]).id)
 }));
 
 document.getElementById('scalenote').textContent = g.note
-  + ' Attack and defence are goals against that same average club. A rating is only as '
-  + 'fresh as the feed behind it, so a club whose league stopped publishing carries the '
-  + 'age of its newest result.';
+  + ' Attack and defence are out of 100 against that same average big-five club, higher '
+  + 'better both times, with the goals they come from underneath. Most of Europe sits '
+  + 'below 50 on this scale, which is what it means to be ranked against the big five. '
+  + 'The rows below the ratings are a plain count of each club\u2019s last twenty matches '
+  + 'and feed nothing: the fit reads the same matches and reads them better, weighted by '
+  + 'age and by who the opponent was. A rating is only as fresh as the feed behind it, so '
+  + 'a club whose league stopped publishing carries the age of its newest result.';
 
 const fmtStale = (c) => (c.stale > 13 ? ` · rated to ${c.last}` : '');
+
+/* A rating out of 100 with the goals it came from underneath, because the
+   rating is the readable number and the goals are the honest one. */
+const rated = (r, goals) => (r == null
+  ? goals.toFixed(2)
+  : `${r}<span class="hint" style="display:block">${goals.toFixed(2)} a game</span>`);
+
+/* What has actually been happening to these two, as opposed to how good the
+   model thinks they are. Both are worth knowing and they are not the same
+   question: the rating is time-weighted and opponent-adjusted, this is a plain
+   count of the last twenty matches each played. Absent for a club too new or
+   too obscure to have twenty, so every row here is conditional. */
+function formRows(A, B) {
+  const a = A.form || {}, b = B.form || {};
+  if (!a.n || !b.n) return '';
+  const cmp2 = (x, y, hi = true) => (x === y ? -1 : ((x > y) === hi ? 0 : 1));
+  const wdl = (f) => `${f.w}W ${f.d}D ${f.l}L`;
+  const pctf = (x) => `${Math.round(x * 100)}%`;
+  return row(`Last ${Math.min(a.n, b.n)} matches`, wdl(a), wdl(b), -1)
+    + row('Points per game', a.ppg.toFixed(2), b.ppg.toFixed(2), cmp2(a.ppg, b.ppg))
+    + row('Scored per game', a.gf_pm.toFixed(2), b.gf_pm.toFixed(2), cmp2(a.gf_pm, b.gf_pm))
+    + row('Conceded per game', a.ga_pm.toFixed(2), b.ga_pm.toFixed(2),
+          cmp2(a.ga_pm, b.ga_pm, false))
+    + row('Clean sheets', pctf(a.clean_pct), pctf(b.clean_pct),
+          cmp2(a.clean_pct, b.clean_pct))
+    + row('Failed to score', pctf(a.blank_pct), pctf(b.blank_pct),
+          cmp2(a.blank_pct, b.blank_pct, false));
+}
 
 function row(label, a, b, better) {
   const lead = better === 0 ? 'a' : (better === 1 ? 'b' : '');
@@ -172,8 +204,11 @@ async function render() {
     + row('Rank in Europe', ord(A.rank), ord(B.rank), cmp(A.rank, B.rank, false))
     + row('League', `${esc(A.league)} (${ord(A.league_rank)})`,
           `${esc(B.league)} (${ord(B.league_rank)})`, -1)
-    + row('Attack', A.off.toFixed(2), B.off.toFixed(2), cmp(A.off, B.off))
-    + row('Defence', A.def.toFixed(2), B.def.toFixed(2), cmp(A.def, B.def, false))
+    + row('Attack', rated(A.att_r, A.off), rated(B.att_r, B.off),
+          cmp(A.att_r ?? 0, B.att_r ?? 0))
+    + row('Defence', rated(A.def_r, A.def), rated(B.def_r, B.def),
+          cmp(A.def_r ?? 0, B.def_r ?? 0))
+    + formRows(A, B)
     + row('Matches in the fit', `${A.n}${fmtStale(A)}`, `${B.n}${fmtStale(B)}`, -1);
 
   /* neutral ground */
