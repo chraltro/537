@@ -19,7 +19,8 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from model import config, insight, leagues, priors, ratings, run, simulate  # noqa: E402
+from model import (config, europe, insight, leagues, priors, rankings,  # noqa: E402
+                   ratings, run, simulate)
 from model.data import Dataset                                          # noqa: E402
 from model.parse import TeamRegistry, normalise                         # noqa: E402
 
@@ -510,6 +511,38 @@ def test_the_flat_duplicates_of_one_league_are_gone():
     for name in ("leagues.json", "global.json", "h2h.json"):
         assert os.path.exists(os.path.join(base, name)), \
             f"{name} belongs to the whole site and must not be swept up"
+
+
+# ------------------------------------------------- the pooled corpus
+def test_every_forecast_competition_carries_its_slug_in_the_global_ranking():
+    """A competition this site forecasts must be recognised as itself in the
+    pooled fit, so its clubs keep a link to their own pages.
+
+    `rankings.GROUP_SLUG` is a hand-kept map from a pooled-corpus group id to a
+    site slug, and it rotted silently when Belgium was added: sixteen Belgian
+    clubs sat in the global ranking with no link and no rating trajectory, and
+    the comparison page told the reader this site does not forecast the Belgian
+    Pro League. Nothing failed -- a missing entry just produces `slug: None`,
+    which reads exactly like a competition that genuinely is not built.
+
+    So this asserts the reverse: every domestic source in the pooled corpus that
+    *is* one of the nine must resolve to that competition's own slug.
+    """
+    names = rankings._league_names()
+    # Match a pooled source to a forecast competition by UEFA association code,
+    # which is the only identifier the two sides share.
+    assoc = {"Netherlands": "NED", "Portugal": "POR", "Belgium": "BEL"}
+    for lg in leagues.LEAGUES:
+        code = assoc.get(lg.country)
+        if not code:
+            continue                     # big five and England's second tier
+        src = next((s for s in europe.DOMESTIC if s.assoc == code), None)
+        if src is None:
+            continue                     # not in the pooled corpus at all
+        got = names.get(src.group, {})
+        assert got.get("slug") == lg.slug, (
+            f"{src.group} ({src.name}) should carry slug {lg.slug!r}, "
+            f"got {got.get('slug')!r} -- add it to rankings.GROUP_SLUG")
 
 
 # ------------------------------------------------- arriving from above

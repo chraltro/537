@@ -101,6 +101,13 @@
     <p class="hint" id="scennote" style="margin-top:14px"></p>
   </section>
 
+  <section class="card" id="radarcard" hidden>
+    <h2>The eight ratings</h2>
+    <p class="sub" id="radarsub"></p>
+    <div class="split" id="radarbody"></div>
+    <p class="hint" id="radarnote" style="margin-top:14px"></p>
+  </section>
+
   <section class="card" id="shotcard" hidden>
     <h2>Shooting</h2>
     <p class="sub" id="shotsub"></p>
@@ -146,7 +153,7 @@
 import { data, pct, signed, esc, ord, initChrome, tip, tipRows, timeline, chipColor,
          initPalette, matchModal, lg, withLg, setMeta, eventLabels, cardUrl,
          bracketStrip, roundLabel, roundShort, initTabs, followButton,
-         copyLink, siteData } from './assets/app.js';
+         copyLink, siteData, radar, DIMS } from './assets/app.js';
 initChrome('team');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
@@ -200,7 +207,7 @@ window.addEventListener('themechange', render);
    data for them, and a tab whose sections are all hidden is dropped rather than
    offered as an empty panel. */
 const TAB_GROUPS = [
-  { id: 'season', label: 'Season', ids: ['c-season', 'bracketcard'] },
+  { id: 'season', label: 'Season', ids: ['c-season', 'radarcard', 'bracketcard'] },
   { id: 'fixtures', label: 'Fixtures', ids: ['c-fdr', 'c-big', 'c-fixtures'] },
   { id: 'form', label: 'Form', ids: ['scencard', 'shotcard', 'statecard'] },
 ];
@@ -299,6 +306,40 @@ function renderScenarios(t) {
     draw();
   };
   draw();
+}
+
+/* ---- the eight ratings, as a shape ----
+   Every one is the same transform over a different measurable: distance from
+   this competition's own average, through a logistic, so 65 is average and
+   higher is better on all eight. Three of them need a shot and so exist for the
+   big five alone; the radar drops an axis nobody has rather than pinning it at
+   the middle, which would read as "average" and be a claim. */
+function renderRadar(t) {
+  const card = document.getElementById('radarcard');
+  const values = Object.fromEntries(DIMS.map((d) => [d.key, t[d.key] ?? null]));
+  const have = DIMS.filter((d) => values[d.key] != null);
+  if (have.length < 3) { card.hidden = true; return; }
+  card.hidden = false;
+  document.getElementById('radarbody').innerHTML =
+    `<div>${radar([{ label: t.name, color: chipColor(t.primary), values }],
+                  { size: 320 })}</div>`
+    + `<div><table class="rdtbl">${have.map((d) => `
+        <tr><td title="${esc(d.hint)}">${esc(d.label)}</td>
+            <td class="v">${values[d.key]}</td></tr>`).join('')}</table></div>`;
+  document.getElementById('radarsub').innerHTML =
+    `All eight on the same scale: 65 is an average ${esc(W.name)} club and higher is `
+    + `better every time, defence and discipline included — for those it is the `
+    + `<em>conceding</em> and the <em>booking</em> that is low. The dashed ring is 65.`;
+  document.getElementById('radarnote').textContent = have.length < DIMS.length
+    ? 'Creation, finishing and discipline need shots, cards and fouls, which only the '
+      + 'results mirror publishes and only for the big five. This competition is read from '
+      + 'openfootball, which carries goals and nothing else, so those axes are absent '
+      + 'rather than guessed.'
+    : 'Attack and creation are deliberately separate: a club that creates plenty and '
+      + 'finishes badly is the interesting case, and one number cannot show it. '
+      + 'Consistency measures how little the goal difference moves match to match — it is '
+      + 'a description, not a compliment, since a side that loses narrowly every week '
+      + 'scores well on it.';
 }
 
 /* ---- how a club gets to its goals ----
@@ -502,6 +543,7 @@ function render() {
     copyLink(e.currentTarget, u.toString());
   });
 
+  renderRadar(t);
   renderScenarios(t);
   renderShooting(t);
   renderState(t);

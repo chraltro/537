@@ -62,6 +62,67 @@ SD_DEF = 0.168
 #: Bayern to the Luxembourg National Division and is therefore far wider.
 SD_EUROPE = 0.55
 
+# --------------------------------------------------------------------------
+# The other six
+# --------------------------------------------------------------------------
+#: Every rating on this site is the same transform over a different measurable,
+#: and each spread below was measured across all nine competitions (five
+#: seasons, 2021-22 to 2025-26) and then frozen -- see the module docstring for
+#: why they are constants rather than recomputed.
+#:
+#: Each entry is (spread, higher-is-better). Where the flag is False the z-score
+#: is negated before the logistic, so that every rating on the site reads the
+#: same way round: bigger is better, always, without exception.
+DIMENSIONS: dict[str, tuple[float, bool]] = {
+    # Universal -- goals and dates only, so every competition has them.
+    #
+    # How much the ground is worth to this club: points per game at home minus
+    # points per game away. The league's own home advantage is already in the
+    # model; this is the part that belongs to the club.
+    "home": (0.20, True),
+    # Points per game against the top quarter of that season's table. A club
+    # cannot be in its own top quarter for this purpose -- otherwise the best
+    # side in the division would be scored on the matches it did not play.
+    "big": (0.23, True),
+    # Standard deviation of goal difference, match to match, inverted. High
+    # means predictable, and predictable is not the same as good: a side that
+    # loses narrowly every week scores well here. It is a description, not a
+    # compliment, and the page says so.
+    "consistency": (0.14, False),
+    # Big five only -- these need a shot, and only the results mirror has one.
+    #
+    # Goals per shot on target, logged.
+    "finishing": (0.098, True),
+    # Shots on target per match, logged. Deliberately separate from attack:
+    # a club that creates plenty and finishes badly is the interesting case,
+    # and one number cannot show it.
+    "creation": (0.176, True),
+    # Yellow + three per red + a sixth of a foul, per match, inverted -- so a
+    # high rating is a clean side.
+    "discipline": (0.48, False),
+}
+
+
+def dimension(name: str, value: float, ref: float, *, log: bool = False) -> int | None:
+    """One measurable against its competition's average, as a rating out of 100.
+
+    `log` for quantities that are ratios rather than differences -- a shot count
+    or a conversion rate, where twice the average is as far above it as half is
+    below. Points-per-game differences are already differences and are not
+    logged.
+    """
+    spread = DIMENSIONS.get(name)
+    if spread is None or value is None or ref is None:
+        return None
+    sd, higher = spread
+    if log:
+        if value <= 0 or ref <= 0:
+            return None
+        z = (math.log(value) - math.log(ref)) / sd
+    else:
+        z = (value - ref) / sd
+    return rating(z if higher else -z)
+
 
 def rating(z: float) -> int:
     """A z-score onto the 35-95 band. Whole numbers: a rating is not precise."""

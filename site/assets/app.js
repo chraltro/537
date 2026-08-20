@@ -1418,6 +1418,87 @@ export function distinctPair(a, b) {
   return ['var(--accent)', 'var(--away)'];
 }
 
+/* The eight ratings, in the order they are drawn round a radar and listed in a
+   table. Order matters: attack and creation sit next to each other because they
+   are the pair a reader should compare, and defence next to discipline for the
+   same reason. */
+export const DIMS = [
+  { key: 'att_r', label: 'Attack',
+    hint: 'Goals against an average opponent' },
+  { key: 'creation_r', label: 'Creation',
+    hint: 'Shots on target per match. Big five only — no other feed has a shot in it' },
+  { key: 'finishing_r', label: 'Finishing',
+    hint: 'Goals per shot on target. Big five only' },
+  { key: 'big_r', label: 'Big games',
+    hint: 'Points per game against the top quarter of the division' },
+  { key: 'home_r', label: 'Home',
+    hint: 'Points per game at home minus points per game away' },
+  { key: 'consistency_r', label: 'Consistency',
+    hint: 'How little the goal difference moves match to match. Predictable, which is not the same as good' },
+  { key: 'discipline_r', label: 'Discipline',
+    hint: 'Cards and fouls, inverted — a high rating is a clean side. Big five only' },
+  { key: 'def_r', label: 'Defence',
+    hint: 'Goals conceded against an average opponent' },
+];
+
+/* A radar of the ratings, for one club or two.
+
+   Drawn on 35-95, the band the ratings themselves live on, with a ring at the
+   competition average so a shape can be read against something rather than
+   admired in the abstract. An axis is dropped entirely when neither club has
+   it -- four of the nine competitions have no shot feed, and an axis pinned at
+   the middle for want of data reads as "average", which is a claim. */
+export function radar(clubs, { size = 300, mid = 65 } = {}) {
+  const have = DIMS.filter((d) => clubs.some((c) => c.values[d.key] != null));
+  if (have.length < 3) return '';
+  /* The frame is wider than the chart. "Consistency" set outside the leftmost
+     spoke needs about sixty pixels of its own, and a square viewBox clipped it
+     to "onsistency" -- so the box gains room either side rather than the radar
+     shrinking to make space for its own labels. */
+  const W = size + 150, H = size + 16;
+  const cx = W / 2, cy = H / 2;
+  const r = size / 2 - 22;
+  const LO = 35, HI = 95;
+  const at = (i, v) => {
+    const a = (i / have.length) * 2 * Math.PI - Math.PI / 2;
+    const k = Math.max(0, Math.min(1, (v - LO) / (HI - LO)));
+    return [cx + Math.cos(a) * r * k, cy + Math.sin(a) * r * k];
+  };
+  const ring = (v, extra = '') => `<polygon points="${
+    have.map((_, i) => at(i, v).map((n) => n.toFixed(1)).join(',')).join(' ')}"
+    fill="none" stroke="var(--grid)" stroke-width="1" ${extra}/>`;
+  const label = (d, i) => {
+    const a = (i / have.length) * 2 * Math.PI - Math.PI / 2;
+    const lx = cx + Math.cos(a) * (r + 16);
+    const ly = cy + Math.sin(a) * (r + 16);
+    const anchor = Math.abs(Math.cos(a)) < 0.3 ? 'middle'
+      : (Math.cos(a) > 0 ? 'start' : 'end');
+    return `<text class="rd-lab" x="${lx.toFixed(1)}" y="${(ly + 4).toFixed(1)}"
+      text-anchor="${anchor}">${esc(d.label)}</text>`;
+  };
+  return `<div class="radar"><svg viewBox="0 0 ${W} ${H}" role="img"
+      aria-label="Rating radar: ${have.map((d) => esc(d.label)).join(', ')}">
+    ${[LO + 15, mid, HI - 10].map((v) => ring(v)).join('')}
+    ${ring(mid, 'stroke="var(--rule)" stroke-dasharray="3 3"')}
+    ${have.map((_, i) => {
+      const [ex, ey] = at(i, HI);
+      return `<line x1="${cx}" y1="${cy}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}"
+        stroke="var(--grid)" stroke-width="1"/>`;
+    }).join('')}
+    ${clubs.map((c) => {
+      /* A club missing one axis is drawn on the rest rather than dropped: the
+         shape is still the truth about the axes it does have. */
+      const pts = have.map((d, i) => (c.values[d.key] == null ? null : at(i, c.values[d.key])))
+        .filter(Boolean);
+      if (pts.length < 3) return '';
+      return `<polygon points="${pts.map((p) => p.map((n) => n.toFixed(1)).join(',')).join(' ')}"
+        fill="${c.color}" fill-opacity="${clubs.length > 1 ? 0.16 : 0.22}"
+        stroke="${c.color}" stroke-width="2" stroke-linejoin="round"/>`;
+    }).join('')}
+    ${have.map(label).join('')}
+  </svg></div>`;
+}
+
 /* Two clubs' rating histories on one pair of axes.
 
    They used to be two charts side by side, each on its own vertical scale, on

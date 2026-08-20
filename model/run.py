@@ -540,6 +540,7 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
     gs = gamestate.build(ds.top, teams, ref)
     json.dump(gs, open(os.path.join(out, "gamestate.json"), "w"),
               separators=(",", ":"))
+    _rate_dimensions(rows, gs)
     print(f"  → gamestate.json ({len(gs['referees'])} referees, "
           f"{gs['average']['n']} matches of discipline)")
 
@@ -1278,6 +1279,61 @@ def build_shooting(ready: set[str]) -> None:
               open(os.path.join(OUT, "shooting.json"), "w"), indent=1)
     print(f"  → shooting.json ({len(clubs)} clubs from "
           f"{len(leagues_with)} competition(s) with a shot feed)")
+
+
+#: Every rating a club carries, in the order they are drawn: the name of the
+#: field on a forecast row, the label, and where the measure comes from. Attack
+#: and defence are computed earlier, from the fit itself; the other six come out
+#: of the results feed and are attached here.
+#:
+#: `(field, scale-dimension, source-block, source-key, log)`
+DIMENSION_FIELDS = (
+    ("home_r", "home", "profile", "home_edge", False),
+    ("big_r", "big", "profile", "top_ppg", False),
+    ("consistency_r", "consistency", "profile", "gd_sd", False),
+    ("finishing_r", "finishing", "shooting", "conversion", True),
+    ("creation_r", "creation", "shooting", "sot_pm", True),
+    ("discipline_r", "discipline", "profile", "foul_index", False),
+)
+
+
+def _rate_dimensions(rows: list[dict], gs: dict) -> None:
+    """Attach the six results-derived ratings to each club's forecast row.
+
+    Each is the same transform as attack and defence -- distance from this
+    competition's own average, through a logistic -- over a different
+    measurable. Three come from goals and dates and exist everywhere; three need
+    a shot and so exist for the big five alone, and are absent rather than zero
+    for the other four.
+    """
+    prof = gs.get("profile") or {}
+    shot = gs.get("shooting") or {}
+    # Discipline is not in either block as one number, so it is assembled here:
+    # a yellow, three for a red, and a sixth of a foul, which puts the three on
+    # a comparable footing without pretending a foul is a booking.
+    disc = gs.get("discipline") or {}
+    for cid, d in disc.items():
+        if d.get("n"):
+            prof.setdefault(cid, {})["foul_index"] = round(
+                d["yellow_pm"] + 3 * d["red_pm"] + d["fouls_pm"] / 6, 3)
+
+    blocks = {"profile": prof, "shooting": shot}
+    # The reference for each is this competition's own average, computed over
+    # exactly the clubs that have the measure.
+    refs: dict[str, float] = {}
+    for _f, _dim, block, key, _log in DIMENSION_FIELDS:
+        vals = [r[key] for r in blocks[block].values()
+                if isinstance(r, dict) and r.get(key) is not None]
+        if vals:
+            refs[f"{block}.{key}"] = sum(vals) / len(vals)
+
+    for row in rows:
+        for field, dim, block, key, log in DIMENSION_FIELDS:
+            src = blocks[block].get(row["id"]) or {}
+            ref = refs.get(f"{block}.{key}")
+            got = scale.dimension(dim, src.get(key), ref, log=log)
+            if got is not None:
+                row[field] = got
 
 
 def build_seo(ready: set[str]) -> None:

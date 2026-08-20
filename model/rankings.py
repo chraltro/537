@@ -60,8 +60,19 @@ MAX_STALE_DAYS = 900
 #: corpus labels Dutch clubs `dom-ned` because that is the feed they came from;
 #: the site forecasts them as `eredivisie`, and without this mapping a club
 #: would rank on this page with no page of its own to link to.
+#: Competition-group ids in the pooled corpus that are the *same competition* as
+#: one this site forecasts, and so should carry its slug -- which is what makes a
+#: club on the global ranking a link to its own page, and what lets the
+#: comparison page find its season-by-season line.
+#:
+#: This is a hand-kept map and it silently rotted the moment Belgium was added
+#: as a forecast competition: sixteen Belgian clubs sat in the ranking with no
+#: link and no trajectory, and the comparison page told the reader this site
+#: does not forecast the Belgian Pro League, which it plainly does.
+#: `tests/test_leagues.py` now fails if a forecast competition appears in the
+#: pooled corpus without a mapping, so the next one cannot rot the same way.
 GROUP_SLUG = {"dom-ned": "eredivisie", "dom-por": "primeira-liga",
-              "premier-league-2": "championship"}
+              "dom-bel": "pro-league", "premier-league-2": "championship"}
 
 
 def _league_names() -> dict[str, dict]:

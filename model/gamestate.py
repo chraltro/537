@@ -32,6 +32,7 @@ Coverage, measured across all 33 season files per league:
 from __future__ import annotations
 
 import datetime as dt
+import statistics
 from dataclasses import replace
 
 from .parse import Match
@@ -184,6 +185,146 @@ def discipline(matches: list[Match], teams) -> dict[str, dict]:
                   "yellow_against", "fouls_against", "corners_against"):
             row[f"{k}_pm"] = round(row[k] / n, 2)
     return out
+
+
+def _season_tables(matches: list[Match]) -> dict[str, dict[str, int]]:
+    """Points per club per season, from the matches themselves.
+
+    Needed to say what "a strong opponent" means without a second data source:
+    the top quarter of the division that season, as it finished.
+    """
+    out: dict[str, dict[str, int]] = {}
+    for m in matches:
+        if m.hg is None or m.ag is None:
+            continue
+        tbl = out.setdefault(m.season, {})
+        tbl.setdefault(m.home, 0)
+        tbl.setdefault(m.away, 0)
+        if m.hg > m.ag:
+            tbl[m.home] += 3
+        elif m.hg == m.ag:
+            tbl[m.home] += 1
+            tbl[m.away] += 1
+        else:
+            tbl[m.away] += 3
+    return out
+
+
+def profile(matches: list[Match], teams) -> dict[str, dict]:
+    """Three things about a club that its attack and defence do not say.
+
+    A rating for how good a side is answers one question well and several others
+    not at all. These are measurable from goals and dates alone, which means
+    every competition here has them rather than only the five with a shot feed:
+
+    * **Home.** Points per game at home minus points per game away. The model
+      already carries a home advantage for the competition; this is the part
+      that belongs to the club, and it varies more than people expect -- the
+      spread across these nine divisions runs from almost nothing to three
+      quarters of a point a game.
+    * **Big games.** Points per game against the top quarter of that season's
+      table -- for every club, including the clubs in that top quarter, whose
+      matches against each other are precisely the big games. The first attempt
+      excluded a club from its own bracket on the reasoning that the best side
+      would otherwise be scored on matches it did not play, which produced no
+      rating at all for Arsenal or Liverpool: they were in the top quarter all
+      five seasons. The cost of including them is a mild asymmetry -- a top-five
+      club plays four such opponents where a bottom club plays five -- and that
+      is a far smaller distortion than having no number for the clubs anybody
+      most wants to compare.
+    * **Consistency.** The standard deviation of goal difference, match to
+      match. High variance is a side that wins 4-0 and loses 0-3; low variance
+      is one that grinds out 1-0 either way. It is a description, not a
+      compliment -- a club that loses narrowly every week is very consistent.
+
+    Also counted, because they are the numbers people actually argue about:
+    both teams scoring, matches over two and a half goals, clean sheets, blanks,
+    the longest unbeaten run and the biggest win.
+    """
+    tables = _season_tables(_recent(matches))
+    strong: dict[str, set[str]] = {}
+    for season, tbl in tables.items():
+        k = max(1, round(len(tbl) / 4))
+        strong[season] = set(sorted(tbl, key=lambda t: -tbl[t])[:k])
+
+    acc: dict[str, dict] = {t: {
+        "home_pts": 0, "home_n": 0, "away_pts": 0, "away_n": 0,
+        "top_pts": 0, "top_n": 0, "gd": [], "bts": 0, "over25": 0,
+        "clean": 0, "blank": 0, "n": 0, "best": None, "run": 0, "unbeaten": 0,
+    } for t in teams}
+    for m in sorted(_recent(matches), key=lambda x: x.date):
+        if m.hg is None or m.ag is None:
+            continue
+        both = m.hg > 0 and m.ag > 0
+        over = (m.hg + m.ag) > 2.5
+        for t, gf, ga, home in ((m.home, m.hg, m.ag, True),
+                                (m.away, m.ag, m.hg, False)):
+            r = acc.get(t)
+            if r is None:
+                continue
+            p = 3 if gf > ga else (1 if gf == ga else 0)
+            r["n"] += 1
+            r["gd"].append(gf - ga)
+            if home:
+                r["home_pts"] += p
+                r["home_n"] += 1
+            else:
+                r["away_pts"] += p
+                r["away_n"] += 1
+            # Matches against the top quarter, for everybody.
+            if (m.away if home else m.home) in strong.get(m.season, ()):
+                r["top_pts"] += p
+                r["top_n"] += 1
+            r["bts"] += both
+            r["over25"] += over
+            r["clean"] += ga == 0
+            r["blank"] += gf == 0
+            r["run"] = 0 if p == 0 else r["run"] + 1
+            r["unbeaten"] = max(r["unbeaten"], r["run"])
+            if r["best"] is None or (gf - ga, gf) > (r["best"][0] - r["best"][1],
+                                                     r["best"][0]):
+                r["best"] = (gf, ga)
+
+    out = {}
+    for t, r in acc.items():
+        # Under a season of matches, or a club that never played away, has no
+        # split worth quoting. Absent rather than noisy.
+        if r["n"] < 30 or r["home_n"] < 10 or r["away_n"] < 10:
+            continue
+        home_ppg = r["home_pts"] / r["home_n"]
+        away_ppg = r["away_pts"] / r["away_n"]
+        row = {
+            "n": r["n"],
+            "home_ppg": round(home_ppg, 2),
+            "away_ppg": round(away_ppg, 2),
+            "home_edge": round(home_ppg - away_ppg, 3),
+            "gd_sd": round(statistics.pstdev(r["gd"]), 3) if len(r["gd"]) > 1 else None,
+            "bts_pct": round(r["bts"] / r["n"], 3),
+            "over25_pct": round(r["over25"] / r["n"], 3),
+            "clean_pct": round(r["clean"] / r["n"], 3),
+            "blank_pct": round(r["blank"] / r["n"], 3),
+            "unbeaten": r["unbeaten"],
+            "best_win": f"{r['best'][0]}-{r['best'][1]}" if r["best"] else None,
+        }
+        # A club that spent the window in the top quarter every season has no
+        # "against the top quarter" record at all, which is itself the answer.
+        row["top_ppg"] = round(r["top_pts"] / r["top_n"], 2) if r["top_n"] >= 8 else None
+        row["top_n"] = r["top_n"]
+        out[t] = row
+    return out
+
+
+def profile_average(prof: dict[str, dict]) -> dict:
+    """The competition's own average for each measure, which is what a rating
+    for one club is quoted against."""
+    if not prof:
+        return {}
+    def mean(key):
+        vals = [r[key] for r in prof.values() if r.get(key) is not None]
+        return round(sum(vals) / len(vals), 3) if vals else None
+    return {k: mean(k) for k in
+            ("home_edge", "gd_sd", "top_ppg", "bts_pct", "over25_pct",
+             "clean_pct", "blank_pct", "home_ppg", "away_ppg")}
 
 
 def shooting(matches: list[Match], teams) -> dict[str, dict]:
@@ -345,6 +486,7 @@ def league_average(matches: list[Match], seasons: int = 8) -> dict:
 
 def build(matches: list[Match], teams, ref_date: dt.date) -> dict:
     """The whole `gamestate.json` payload for one league."""
+    prof = profile(matches, teams)
     return {
         "seasons": sorted({m.season for m in _recent(matches)}),
         "average": league_average(matches),
@@ -352,5 +494,7 @@ def build(matches: list[Match], teams, ref_date: dt.date) -> dict:
         "discipline": discipline(matches, teams),
         "shooting": shooting(matches, teams),
         "shooting_average": shooting_average(matches),
+        "profile": prof,
+        "profile_average": profile_average(prof),
         "referees": referees(matches),
     }

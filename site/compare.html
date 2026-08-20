@@ -44,6 +44,13 @@
     <p class="hint" id="scalenote" style="margin-top:14px"></p>
   </section>
 
+  <section class="card" id="c-radar">
+    <h2>Eight ratings, both clubs</h2>
+    <p class="sub" id="radarsub"></p>
+    <div class="split" id="radarbody"></div>
+    <p class="hint" id="radarnote" style="margin-top:14px"></p>
+  </section>
+
   <section class="card" id="c-neutral">
     <h2>On neutral ground</h2>
     <p class="sub" id="neutralsub">The match these ratings imply, with no home advantage for
@@ -72,7 +79,7 @@
 <script type="module">
 import { siteData, data, esc, ord, pct, initChrome, initPalette, setMeta, chipColor,
          scoreGrid, dcGrid, dcOutcome, neutralLambdas, spiCompare,
-         distinctPair, copyLink, initTabs } from './assets/app.js';
+         distinctPair, copyLink, initTabs, radar, DIMS } from './assets/app.js';
 initChrome('compare');
 
 const g = await siteData('global');
@@ -212,18 +219,46 @@ function row(label, a, b, better) {
   </div>`;
 }
 
-async function trajectory(c) {
-  /* The per-season rating line lives in the club's own league forecast, which
-     only exists for competitions this site builds. Anything else shows nothing
-     rather than a made-up line. */
+/* The per-season rating line lives in the club's own league forecast, which
+   only exists for competitions this site builds.
+
+   Returns `{points}` when there is a line, and otherwise `{why}` -- because
+   "no line" has three quite different causes and the page was reporting all
+   three as the first one. A club whose league failed to load was being
+   announced as playing in a competition this site does not forecast, which for
+   Liverpool is a plainly false statement, and the sort of error message that
+   sends a reader looking for a problem that is not there. */
+/* The eight ratings live on the club's row in its own league forecast. Same
+   fetch as the trajectory, and the browser's cache means the second call for a
+   given league costs nothing. */
+async function ratings(c) {
   if (!c.slug) return null;
   try {
     const r = await fetch(`data/${c.slug}/forecast.json`, { cache: 'no-cache' });
     if (!r.ok) return null;
     const fc = await r.json();
     const t = (fc.teams || []).find((x) => x.id === c.id);
-    return t && t.history && t.history.length > 1 ? t.history : null;
+    if (!t) return null;
+    const out = Object.fromEntries(DIMS.map((d) => [d.key, t[d.key] ?? null]));
+    return Object.values(out).some((v) => v != null) ? out : null;
   } catch { return null; }
+}
+
+async function trajectory(c) {
+  if (!c.slug) return { why: `this site does not forecast ${c.league}` };
+  try {
+    const r = await fetch(`data/${c.slug}/forecast.json`, { cache: 'no-cache' });
+    if (!r.ok) return { why: `its forecast did not load (${r.status})` };
+    const fc = await r.json();
+    const t = (fc.teams || []).find((x) => x.id === c.id);
+    if (!t) return { why: 'it is not in this season\u2019s squad list' };
+    if (!t.history || t.history.length < 2) {
+      return { why: 'it has only one season on record' };
+    }
+    return { points: t.history };
+  } catch (e) {
+    return { why: 'its forecast could not be fetched' };
+  }
 }
 
 async function render() {
@@ -300,12 +335,65 @@ async function render() {
   }
   card.hidden = false;
 
+  /* ---- the eight ratings, overlaid ----
+     Both clubs' league forecasts carry them, which is where the numbers come
+     from -- the pooled European fit has no shot feed and no league table to
+     define a big game, so it cannot produce these. A club in a competition this
+     site does not build has none, and the card says so rather than drawing half
+     a comparison. */
+  const [dimsA, dimsB] = await Promise.all([ratings(A), ratings(B)]);
+  const rcard = document.getElementById('c-radar');
+  const [rcolA, rcolB] = distinctPair(A.primary, B.primary);
+  const both = [dimsA && { label: A.name, color: rcolA, values: dimsA },
+                dimsB && { label: B.name, color: rcolB, values: dimsB }].filter(Boolean);
+  if (!both.length) {
+    document.getElementById('radarbody').innerHTML =
+      '<p class="empty">Neither club plays in a competition this site forecasts, '
+      + 'so there are no ratings to compare.</p>';
+    document.getElementById('radarsub').textContent = '';
+    document.getElementById('radarnote').textContent = '';
+  } else {
+    const shown = DIMS.filter((d) => both.some((c) => c.values[d.key] != null));
+    document.getElementById('radarsub').innerHTML =
+      'Every one is the same transform over a different measurable: distance from that '
+      + 'club\u2019s own competition average, so 65 is average and higher is better on all '
+      + 'of them \u2014 defence and discipline included, where it is the <em>conceding</em> '
+      + 'and the <em>booking</em> that is low. Two clubs from different divisions are each '
+      + 'measured against their own, which is the same caveat SPI carries.';
+    document.getElementById('radarbody').innerHTML =
+      `<div>${radar(both, { size: 320 })}
+        <div class="tl-key">${both.map((c) => `
+          <span><i style="background:${c.color}"></i>${esc(c.label)}</span>`).join('')}</div>
+      </div>`
+      + `<div><table class="rdtbl">${shown.map((d) => {
+        const x = both[0].values[d.key], y = both.length > 1 ? both[1].values[d.key] : null;
+        /* The winner of each row is marked in that club's own line colour, so
+           the table and the radar say the same thing. A single accent colour
+           marked Liverpool's wins in Manchester City's blue. */
+        const win = (v, o, col) => (v == null || o == null || v <= o ? ''
+          : ` style="color:${col}"`);
+        return `<tr><td class="v"${win(x, y, both[0].color)}>${x ?? '—'}</td>
+          <td style="text-align:center" title="${esc(d.hint)}">${esc(d.label)}</td>
+          <td class="v"${both.length > 1 ? win(y, x, both[1].color) : ''}>${
+            both.length > 1 ? (y ?? '—') : ''}</td></tr>`;
+      }).join('')}</table></div>`;
+    document.getElementById('radarnote').textContent = shown.length < DIMS.length
+      ? 'Creation, finishing and discipline need shots, cards and fouls, which only the '
+        + 'results mirror publishes and only for the big five. An axis neither club has is '
+        + 'dropped rather than pinned at the middle, which would read as "average".'
+      : 'Attack and creation are deliberately separate: a club that creates plenty and '
+        + 'finishes badly is the interesting case. Consistency is how little the goal '
+        + 'difference moves match to match — a description, not a compliment.';
+  }
+  rcard.hidden = false;
+
   /* trajectory */
-  const [ha, hb] = await Promise.all([trajectory(A), trajectory(B)]);
+  const [ra, rb] = await Promise.all([trajectory(A), trajectory(B)]);
+  const ha = ra.points || null, hb = rb.points || null;
   const el = document.getElementById('traj');
   if (!ha && !hb) {
-    el.innerHTML = '<p class="empty">Neither club plays in a competition this site '
-      + 'forecasts, so there is no season-by-season line to draw.</p>';
+    el.innerHTML = `<p class="empty">No line for either club: ${esc(A.name)} because `
+      + `${esc(ra.why)}, ${esc(B.name)} because ${esc(rb.why)}.</p>`;
     return;
   }
   /* One chart, one axis. Two panels on separate vertical scales invited exactly
@@ -313,14 +401,14 @@ async function render() {
      does not start at zero, which was the only real argument for splitting
      them. */
   const [colA, colB] = distinctPair(A.primary, B.primary);
-  const missing = [!ha && A, !hb && B].filter(Boolean);
+  const missing = [!ha && [A, ra], !hb && [B, rb]].filter(Boolean);
   el.innerHTML = spiCompare(
     ha && { label: A.name, color: colA, points: ha },
     hb && { label: B.name, color: colB, points: hb },
     { w: 860, h: 300 })
-    + (missing.length ? `<p class="hint" style="margin-top:10px">No line for ${
-        missing.map((c) => `<b>${esc(c.name)}</b>`).join(' or ')}: this site does not
-        forecast ${missing.map((c) => esc(c.league)).join(' or ')}.</p>` : '')
+    + (missing.length ? missing.map(([c, r]) =>
+        `<p class="hint" style="margin-top:10px">No line for <b>${esc(c.name)}</b>: ${
+          esc(r.why)}.</p>`).join('') : '')
     + `<p class="hint" style="margin-top:10px">Each point is fitted only on matches played
       before that season began, so the line is a walk-forward record rather than a curve
       drawn through hindsight. Both clubs share one vertical scale.${
@@ -333,6 +421,7 @@ async function render() {
    because they belong to all four. */
 initTabs(document.getElementById('tabs'), [
   { id: 'side', label: 'Side by side', sections: [document.getElementById('c-side')] },
+  { id: 'ratings', label: 'Ratings', sections: [document.getElementById('c-radar')] },
   { id: 'match', label: 'Neutral match', sections: [document.getElementById('c-neutral')] },
   { id: 'h2h', label: 'Head to head', sections: [document.getElementById('h2hcard')] },
   { id: 'trajectory', label: 'Trajectory', sections: [document.getElementById('c-traj')] },
