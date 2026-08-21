@@ -109,9 +109,31 @@ ARMED: frozenset[str] = frozenset({"NOR", "LUX", "BLR"})
 CANDIDATES: frozenset[str] = frozenset({"NOR", "BLR", "LUX", "UKR", "POL"})
 
 #: Names the twin check flags as looking like a club we already hold, which are
-#: genuinely their own club. Ukraine has both a Vorskla Poltava and an FC
-#: Poltava, and the check cannot tell them apart from the names alone.
-DISTINCT: dict[str, frozenset[str]] = {}
+#: genuinely their own club.
+#:
+#: The check is deliberately blunt, because minting a second id for a club that
+#: is already in the ranking is the one mistake here that cannot be seen from
+#: the outside: the club appears twice, each copy holding half a record and
+#: neither one right. So it stops on a resemblance and asks for a decision, and
+#: this is where the decision is written down, with what settled it.
+#:
+#: UKR/Poltava, settled 2026-08-21. Ukraine has two clubs in the same city and
+#: the names alone cannot separate them. Vorskla Poltava went down at the end of
+#: 2024-25 after eighteen seasons up, and SC Poltava is a different club, which
+#: finished sixteenth in 2025-26 and went down in its turn. So the 'Poltava' in
+#: the grid is not a short form of the club we already hold; the two are never
+#: in the league in the same season, which is why the same-season rule below
+#: could not settle it either.
+#:
+#: This one is not from a page that could be fetched and checked -- the sandbox
+#: reaches GitHub and nothing else, and the runner does not carry the question
+#: back -- so it rests on two independent searches agreeing on the specifics.
+#: Weaker evidence than the rest of this file runs on, and recorded as such.
+#: What limits the damage if it is wrong is that it is one club in one league:
+#: the ranking would carry an SC Poltava that is really Vorskla, and the
+#: projected table would show a club with a season's results under a name that
+#: belongs to another. Nothing else moves.
+DISTINCT: dict[str, frozenset[str]] = {"UKR": frozenset({"Poltava"})}
 
 #: Leagues whose grid drives a projected final table. A separate set from ARMED
 #: because the two answer different questions. ARMED is "does this feed's
