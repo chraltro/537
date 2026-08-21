@@ -146,8 +146,43 @@ def season_midpoint(season: str) -> dt.date:
 
 _MATCH = re.compile(r"\|\s*match_([A-Za-z0-9_]+)_([A-Za-z0-9_]+)\s*=\s*"
                     r"(\d+)\s*[–—-]\s*(\d+)")
-_NAME = re.compile(r"\|\s*name_([A-Za-z0-9_]+)\s*=\s*([^\n|}]+)")
+#: A club's display name. The value is a wiki link about half the time --
+#: `|name_BRE=[[FC Dynamo Brest|Dynamo Brest]]` -- and stopping at the first
+#: pipe reads that as "[[FC Dynamo Brest", which resolves to nothing and blocked
+#: five leagues on the first probe. So a link is matched whole and taken apart
+#: below; anything else stops at the pipe as before.
+_NAME = re.compile(r"\|\s*name_([A-Za-z0-9_]+)\s*=\s*(\[\[[^\]\n]*\]\]|[^\n|}]+)")
 _TEAM = re.compile(r"\|\s*team\d+\s*=\s*([A-Za-z0-9_]+)")
+
+
+def name_variants(raw: str) -> tuple[str, ...]:
+    """The spellings one `name_X=` value offers, most readable first.
+
+    `[[FC Dynamo Brest|Dynamo Brest]]` is two names for one club: the article's
+    title and what the table prints. Both are worth having, because which one
+    the registry knows depends on what openfootball wrote, and the two feeds
+    disagree in both directions -- Wikipedia's title is the formal one for
+    Norwegian clubs ("Vålerenga Fotball") and the short one for Ukrainian
+    ("Obolon Kyiv"). Trying each in turn is not a guess: the link says they are
+    the same club.
+    """
+    v = " ".join(raw.split()).strip()
+    m = re.match(r"^\[\[([^\]|]+)(?:\|([^\]]*))?\]\]$", v)
+    if not m:
+        return (v,) if v else ()
+    target = m.group(1).strip()
+    shown = (m.group(2) or "").strip()
+    return tuple(dict.fromkeys(x for x in (shown, target) if x))
+
+
+def grid_names(text: str) -> dict[str, tuple[str, ...]]:
+    """Every club code in the grid, with the spellings its name line offers."""
+    out: dict[str, tuple[str, ...]] = {}
+    for code, val in _NAME.findall(text):
+        got = name_variants(val)
+        if got:
+            out[code] = got
+    return out
 
 
 def parse_grid(text: str) -> list[tuple[str, str, int, int]]:
@@ -158,7 +193,8 @@ def parse_grid(text: str) -> list[tuple[str, str, int, int]]:
     club's short name as the code itself, which is why a missing name falls
     back to the code rather than dropping the row.
     """
-    names = {code: val.strip() for code, val in _NAME.findall(text)}
+    variants = grid_names(text)
+    names = {code: v[0] for code, v in variants.items()}
     codes = set(_TEAM.findall(text)) | set(names)
     cells = _MATCH.findall(text)
     if not cells:
@@ -185,7 +221,7 @@ def grid_clubs(text: str) -> list[str]:
     and that list is what a remaining-fixture derivation has to start from,
     because a club missing from it loses every one of its fixtures silently.
     """
-    names = {code: val.strip() for code, val in _NAME.findall(text)}
+    names = {code: v[0] for code, v in grid_names(text).items()}
     order = _TEAM.findall(text)
     seen, out = set(), []
     for code in order or sorted(names):
@@ -213,8 +249,22 @@ def load(assoc: str, reg: TeamRegistry,
             continue
         reached += 1
         when = season_midpoint(season)
+        # Which of a club's spellings to hand over: an alias if one is written
+        # for it, otherwise whichever the registry already knows, otherwise the
+        # one the table prints -- which is then what the probe reports as
+        # unresolved, and what an alias gets written for.
+        best: dict[str, str] = {}
+        for names in grid_names(text).values():
+            for name in names:
+                if name in alias:
+                    best[names[0]] = alias[name]
+                    break
+                if reg.known(name):
+                    best[names[0]] = name
+                    break
         for home, away, hg, ag in parse_grid(text):
-            h, a = alias.get(home, home), alias.get(away, away)
+            h = best.get(home, alias.get(home, home))
+            a = best.get(away, alias.get(away, away))
             m = Match(date=when, home=h, away=a, hg=hg, ag=ag,
                       season=season, played=True,
                       extra={"date_approx": True, "source": "wikipedia"})

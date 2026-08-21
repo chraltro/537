@@ -249,26 +249,23 @@ def probe(src: ExternalSource, reg: TeamRegistry, existing: list[Match],
         src.verdict = v
         return v
 
-    # -- 2b. and no two of those names may be the same club ----------------
-    # An alias is a mapping written by hand, and the way one goes wrong is by
-    # being too broad: "Zaglebie" means Lubin today and would mean Sosnowiec the
-    # season Sosnowiec comes up. Two spellings landing on one id is what that
-    # looks like from here, and it is worth catching for its own sake -- the
-    # club would take both sets of results, play itself, and stand in a table
-    # with twice as many matches as anybody else.
-    for szn, rowset in theirs_by_season.items():
-        by_id: dict[str, set[str]] = {}
-        for _, home_raw, away_raw in rowset:
-            for raw in (home_raw, away_raw):
-                tid = reg.known(raw)
-                if tid:
-                    by_id.setdefault(tid, set()).add(raw)
-        clash = sorted((tid, sorted(v)) for tid, v in by_id.items() if len(v) > 1)
-        if clash:
-            tid, spellings = clash[0]
-            v.reason = (f"{' and '.join(repr(s) for s in spellings)} are both "
-                        f"read as {reg.display(tid)} in {szn}, so one of the "
-                        "aliases covers two different clubs")
+    # -- 2b. and no alias may fold two clubs into one ----------------------
+    # An alias is written by hand and the way one goes wrong is by being too
+    # broad: "Zaglebie" is Lubin while Lubin is the only Zagłębie in the league,
+    # and becomes wrong the season Sosnowiec comes up. What that looks like from
+    # here is unmistakable and cannot happen any other way -- the two clubs'
+    # fixture against each other becomes a club playing itself.
+    #
+    # Two spellings of one club inside a season is NOT that, and refusing it
+    # was wrong: football-data.co.uk writes both "Dinamo Bucuresti" and "Dinamo
+    # Bucureşti" in the same file, and they are the same club by any reading.
+    # Only the self-fixture is evidence, so only the self-fixture refuses.
+    for _, home_raw, away_raw in rows:
+        h, a = reg.known(home_raw), reg.known(away_raw)
+        if h is not None and h == a:
+            v.reason = (f"{home_raw!r} and {away_raw!r} are both read as "
+                        f"{reg.display(h)}, which would have the club playing "
+                        "itself, so one of the aliases covers two clubs")
             src.verdict = v
             return v
 

@@ -528,17 +528,82 @@ def test_one_alias_covering_two_clubs_is_caught_before_they_merge():
     reg = TeamRegistry()
     have = trusted(reg)
     rows = second()
-    merged = []
-    for i, (m, h, a) in enumerate(rows):
-        # Two spellings of one club inside one season, exactly what a too-broad
-        # alias produces: half the file says "Legia Warszawa" and half says
-        # "Legia Warsaw", and both are spellings of the club we already hold.
-        if i % 2:
-            h = "Legia Warsaw" if h == "Legia Warszawa" else h
-            a = "Legia Warsaw" if a == "Legia Warszawa" else a
-        merged.append((m, h, a))
+    # What a too-broad alias does: a second club's name mapped onto the first,
+    # so the fixture between them becomes one club against itself.
+    merged = [(m, "Legia Warsaw" if h == "Lech Poznan" else h,
+               "Legia Warsaw" if a == "Lech Poznan" else a) for m, h, a in rows]
     src = make(merged, assoc="POL")
     v = external.probe(src, reg, have, today=dt.date(2025, 6, 1))
     assert not v.ok
-    assert "same club" in v.reason or "two different clubs" in v.reason, v.reason
+    assert "playing itself" in v.reason, v.reason
     assert external.matches(src, reg, have) == []
+
+
+def test_two_spellings_of_one_club_are_not_an_error():
+    """The false positive the check above was written with and then lost.
+
+    football-data.co.uk writes "Dinamo Bucuresti" in some rows and "Dinamo
+    Bucureşti" in others, inside one season of one file. Both are the same club
+    by any reading, `normalise` folds them together, and refusing the league for
+    it took Romania back out of service after it had armed cleanly on 315 of 315
+    results.
+    """
+    reg = TeamRegistry()
+    have = trusted(reg)
+    rows = second()
+    mixed = [(m, "Legia Warsaw" if i % 2 and h == "Legia Warszawa" else h,
+              "Legia Warsaw" if i % 2 and a == "Legia Warszawa" else a)
+             for i, (m, h, a) in enumerate(rows)]
+    v = external.probe(make(mixed, assoc="POL"), reg, have,
+                       today=dt.date(2025, 6, 1))
+    assert v.ok, v.reason
+
+
+# ------------------------------------------------------------------ wiki names
+LINKED_GRID = """
+{{#invoke:sports results|main|style=WDL
+|team1=BRE|team2=GOM|team3=MIN|team4=VIT
+|name_BRE=[[FC Dynamo Brest|Dynamo Brest]]
+|name_GOM=[[FC Gomel]]
+|name_MIN=Minsk
+|name_VIT=[[Strømsgodset Toppfotball|Strømsgodset]]
+|match_BRE_GOM=3–0
+|match_GOM_BRE=1–1
+|match_MIN_VIT=0–2
+}}
+"""
+
+
+def test_a_club_name_written_as_a_wiki_link_is_read_as_a_club():
+    """The whole of the first Wikipedia probe's failure, in one line.
+
+    Half these articles write `|name_BRE=[[FC Dynamo Brest|Dynamo Brest]]`, and
+    a reader that stops at the first pipe reads that as "[[FC Dynamo Brest".
+    Every one of the ten names Belarus refused on, and four of Norway's and six
+    of Ukraine's, was this and nothing else.
+    """
+    assert wikifootball.name_variants("[[FC Dynamo Brest|Dynamo Brest]]") == (
+        "Dynamo Brest", "FC Dynamo Brest")
+    assert wikifootball.name_variants("[[FC Gomel]]") == ("FC Gomel",)
+    assert wikifootball.name_variants("Minsk") == ("Minsk",)
+    got = wikifootball.parse_grid(LINKED_GRID)
+    assert ("Dynamo Brest", "FC Gomel", 3, 0) in got
+    assert all("[[" not in n for row in got for n in row[:2])
+
+
+def test_the_grid_hands_over_whichever_spelling_we_already_know(monkeypatch):
+    """A link gives two names for one club and the feeds disagree about which
+    one to use, so the reader tries both against the registry rather than
+    picking one and needing an alias for every club that went the other way."""
+    reg = TeamRegistry()
+    # The registry holds the article's title and not what the table prints,
+    # which is the way round Norway's clubs go.
+    formal = reg.resolve("Strømsgodset Toppfotball")
+    assert reg.known("Strømsgodset") is None
+    monkeypatch.setattr(wikifootball.fetch, "get", lambda *a, **k: LINKED_GRID)
+    rows = wikifootball.load("BLR", reg, ("2025",))
+    names = {n for _, h, a in rows for n in (h, a)}
+    assert "Strømsgodset Toppfotball" in names, (
+        "the spelling the registry holds was not chosen")
+    assert reg.known("Strømsgodset Toppfotball") == formal
+    assert "Minsk" in names, "a plain name still comes through as itself"

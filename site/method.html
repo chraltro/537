@@ -1057,7 +1057,11 @@ try {
   const sj = await siteData('sources');
   const rows = sj.sources || [];
   if (rows.length) {
-    const armed = rows.filter((r) => r.ok);
+    /* A watched feed is one being probed to find out what it would do. It is
+       fetched and judged like the rest and then read by nothing, so counting it
+       as in use would be a straight lie about where the numbers come from. */
+    const armed = rows.filter((r) => r.ok && !r.watching);
+    const watched = rows.filter((r) => r.watching);
     document.getElementById('srcsub').innerHTML =
       `Everything else on this site comes from GitHub. These do not, and they exist
        because the GitHub feed for these competitions stopped publishing. A feed here
@@ -1069,17 +1073,23 @@ try {
            ${esc(r.overlap_season)}, and carries ${r.matches.toLocaleString()} matches
            through ${esc(r.latest)}`
         : esc(r.reason);
+      const tag = r.watching ? '<span class="warn">being checked</span> '
+        : (r.ok ? '' : '<span class="warn">not in use</span> ');
       return `<tr>
         <td class="l">${esc(r.league)}</td>
         <td class="l"><span class="hint">${esc(r.source)}</span></td>
-        <td class="l">${r.ok ? '' : '<span class="warn">not in use</span> '}
-          <span class="hint">${how}</span></td>
+        <td class="l">${tag}<span class="hint">${how}</span></td>
       </tr>`;
     }).join('');
+    const checking = watched.length
+      ? ` ${watched.length} more ${watched.length === 1 ? 'is' : 'are'} being checked
+          against a season this site already holds, and ${watched.length === 1
+          ? 'contributes' : 'contribute'} nothing until that check passes.`
+      : '';
     document.getElementById('srcnote').innerHTML = armed.length
-      ? `${armed.length} of ${rows.length} in use. A competition not listed here has no
-         second feed anywhere that does not want an API key, and is rated from the last
-         season its own feed published.`
+      ? `${armed.length} of ${rows.length - watched.length} in use.${checking} A
+         competition not listed here has no second feed anywhere that does not want an
+         API key, and is rated from the last season its own feed published.`
       : `None are in use, so every competition on this site is running on its GitHub feed
          alone. That is the state the site shipped in and nothing is worse for it; the
          stale competitions simply stay stale.`;
