@@ -4,7 +4,7 @@
 /* ================= where the site lives =================
    Resolved from this module's own URL rather than the page's, so a 404 served
    at an arbitrary depth still finds the data and still links home correctly. */
-const ROOT = new URL('..', import.meta.url).pathname;      // '/', '/537/', …
+export const ROOT = new URL('..', import.meta.url).pathname;      // '/', '/537/', …
 const DATA = `${ROOT}data/`;
 
 /* ================= league state =================
@@ -404,6 +404,7 @@ export const PAGES = [
   { id: 'review',   label: 'Season review',   short: 'Review',              long: 'How wrong were we?',   file: 'review.html',    group: 'league' },
   { id: 'rankings', label: 'Global rankings', short: 'Rankings',            long: 'Global club rankings', file: 'rankings.html',  group: 'europe', site: true },
   { id: 'compare',  label: 'Compare clubs',   short: 'Compare',             long: 'Compare two clubs',    file: 'compare.html',   group: 'europe', site: true },
+  { id: 'projection', label: 'Projected leagues', short: 'Projected',         long: 'Projected leagues',    file: 'projection.html', group: 'europe', site: true },
   { id: 'method',   label: 'Method',          long: 'Method and accuracy',  file: 'method.html',    group: 'about' },
 ];
 
@@ -476,8 +477,16 @@ export function initChrome(page) {
   const ratedOpts = rated.length ? `<optgroup label="Rated, not forecast">${
     rated.map((l) => `<option value="rated:${esc(l.name)}">${esc(l.name)} (${l.n})</option>`)
       .join('')}</optgroup>` : '';
-  const group = ratedOpts
-    ? `<optgroup label="Forecast here">${opts}</optgroup>${ratedOpts}` : opts;
+  /* A third state, between the two. These leagues have no fixture list anywhere,
+     so they cannot have a fixture page or a matchweek; what they do have is a
+     results grid, which is enough to project the final table. They go to the
+     page that says so. */
+  const projected = (MANIFEST.projected || []);
+  const projOpts = projected.length ? `<optgroup label="Projected table only">${
+    projected.map((l) => `<option value="proj:${esc(l.slug)}">${esc(l.name)}</option>`)
+      .join('')}</optgroup>` : '';
+  const group = (ratedOpts || projOpts)
+    ? `<optgroup label="Forecast here">${opts}</optgroup>${projOpts}${ratedOpts}` : opts;
 
   document.body.insertAdjacentHTML('afterbegin', `
     <a class="skip" href="#main">Skip to content</a>
@@ -544,6 +553,10 @@ export function initChrome(page) {
      page's own default rather than an error. */
   document.getElementById('lgsel').addEventListener('change', (e) => {
     const v = e.target.value;
+    if (v.startsWith('proj:')) {
+      location.href = `${ROOT}projection.html?league=${encodeURIComponent(v.slice(5))}`;
+      return;
+    }
     if (v.startsWith('rated:')) {
       /* No forecast to switch to, so this is a jump rather than a switch: the
          ranking, filtered to that league, which is the only page that has

@@ -1054,6 +1054,89 @@ def shared_corpus(reg=None, *, quiet: bool = True) -> europe.Corpus:
     return _CORPUS
 
 
+#: Where a projected league's files go, keyed by association. A slug and not a
+#: derived slugification, because these are URLs: once one is published it is
+#: someone's bookmark, and a rename made by tweaking a helper is a dead link.
+PROJECTION_SLUG: dict[str, str] = {
+    "NOR": "eliteserien",
+    "BLR": "belarusian-premier-league",
+    "LUX": "luxembourg-national-division",
+    "UKR": "ukrainian-premier-league",
+    "POL": "ekstraklasa",
+}
+
+
+def _projection_season(src) -> str:
+    """The season a projected league is currently playing.
+
+    A winter league is labelled the way `config.SEASON` is; a summer league by
+    the bare year, which is the year that season started and, in August, the one
+    running now.
+    """
+    latest = max(src.seasons) if src.seasons else config.SEASON
+    if "-" in latest:
+        return config.SEASON
+    return config.SEASON.split("-")[0]
+
+
+def build_projections(_ready: set[str]) -> list[str]:
+    """A projected final table for every league whose grid armed.
+
+    These are the leagues with no fixture list anywhere: the club list and the
+    results come from a Wikipedia results grid, and the matches left over are
+    the pairs that have not met, which in a plain double round-robin is the
+    whole of the rest of the season. See `model/projection.py` for what that
+    does and does not entitle the site to say.
+
+    The ratings are the pooled ones -- the same fit the global ranking
+    publishes -- so a projection cannot drift onto a scale of its own.
+    """
+    from . import projection, roundrobin, wikifootball
+    live = sorted(wikifootball.ARMED & wikifootball.CANDIDATES)
+    if not live:
+        return []
+    corpus = shared_corpus()
+    reg = corpus.reg
+    hist = corpus.before(RANK_REF)
+    pool = sorted({m.home for m in hist} | {m.away for m in hist})
+    fit = ratings.fit_pooled(hist, pool, RANK_REF, group_of=corpus.group_of,
+                             club_league=corpus.club_leagues())
+    done: list[str] = []
+    for assoc in live:
+        src = europe.BY_ASSOC[assoc]
+        slug = PROJECTION_SLUG[assoc]
+        season = _projection_season(src)
+        try:
+            got = wikifootball.read(assoc, reg, season)
+            if got is None:
+                raise roundrobin.ShapeError(f"no {season} article for {assoc}")
+            names, _rows = got
+            clubs = [reg.known(n) for n in names]
+            if any(c is None for c in clubs):
+                missing = [n for n, c in zip(names, clubs) if c is None]
+                raise roundrobin.ShapeError(
+                    f"{len(missing)} club(s) in the {season} grid resolve to "
+                    f"nothing: {', '.join(missing)}")
+            played = [m for m in corpus.matches
+                      if m.comp == src.group and m.season == season and m.played]
+            proj = projection.Projection(
+                slug=slug, name=src.name, country=src.country or src.assoc,
+                season=season, source="wikipedia", clubs=clubs, played=played)
+            out = projection.run(proj, fit)
+        except Exception as exc:                       # noqa: BLE001
+            print(f"  ! {slug}: no projection ({exc})")
+            continue
+        out["generated"] = dt.datetime.now(dt.timezone.utc).isoformat(
+            timespec="seconds")
+        path = os.path.join(OUT, slug)
+        os.makedirs(path, exist_ok=True)
+        json.dump(out, open(os.path.join(path, "projection.json"), "w"), indent=1)
+        print(f"  → {slug}/projection.json ({out['matches_played']}/"
+              f"{out['matches_total']} played, {len(out['teams'])} clubs)")
+        done.append(slug)
+    return done
+
+
 def build_rankings(ready: set[str]) -> None:
     """The cross-league rating, written to site/data/global.json.
 
@@ -1569,6 +1652,21 @@ def _rated_only() -> list[dict]:
             for (name, country), n in sorted(counts.items(), key=lambda kv: -kv[1])]
 
 
+def _projected() -> list[dict]:
+    """Leagues with a projection written on disk, in the order the picker lists."""
+    out = []
+    for assoc, slug in sorted(PROJECTION_SLUG.items(), key=lambda kv: kv[1]):
+        path = os.path.join(OUT, slug, "projection.json")
+        try:
+            with open(path, encoding="utf-8") as fh:
+                p = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        out.append({"slug": slug, "name": p["name"], "country": p["country"],
+                    "season": p["season"], "n_teams": p["n_teams"]})
+    return out
+
+
 def write_manifest(ready: set[str]) -> dict:
     """Regenerate site/data/leagues.json from the registry.
 
@@ -1591,6 +1689,12 @@ def write_manifest(ready: set[str]) -> dict:
         # only door to the other fifty-one was a filter on one page that did not
         # even survive being linked to. The picker sends these to that filter.
         "rated": _rated_only(),
+        # And the ones in between: no fixture list anywhere, so no forecast
+        # page, but a results grid this site has checked, which is enough to
+        # project the final table. Read off what was actually written, so a
+        # league whose article went missing this run leaves the picker rather
+        # than sending a reader to a file that is not there.
+        "projected": _projected(),
     }
     os.makedirs(OUT, exist_ok=True)
     json.dump(payload, open(os.path.join(OUT, "leagues.json"), "w"), indent=1)
@@ -1691,7 +1795,8 @@ def main(argv: list[str] | None = None) -> None:
     # Cross-competition outputs, once, after every league has been written.
     # Each is optional: a failure here must not cost the forecasts that already
     # landed, so it is reported and the run carries on.
-    for name, fn in (("global rankings", build_rankings), ("feeds", build_feeds),
+    for name, fn in (("projections", build_projections),
+                     ("global rankings", build_rankings), ("feeds", build_feeds),
                      ("coverage", build_coverage),
                      ("second feeds", build_sources),
                      ("club register", build_clubs),

@@ -29,7 +29,7 @@ HOME = "https://chraltro.github.io/537/"
 LEAGUE_PAGES = ("index.html", "matches.html", "team.html", "races.html",
                 "simulator.html", "review.html", "method.html")
 #: Pages that are not scoped to a competition at all.
-SITE_PAGES = ("rankings.html", "compare.html")
+SITE_PAGES = ("rankings.html", "compare.html", "projection.html")
 
 
 def _esc(s: str) -> str:

@@ -606,4 +606,24 @@ def test_the_grid_hands_over_whichever_spelling_we_already_know(monkeypatch):
     assert "Strømsgodset Toppfotball" in names, (
         "the spelling the registry holds was not chosen")
     assert reg.known("Strømsgodset Toppfotball") == formal
-    assert "Minsk" in names, "a plain name still comes through as itself"
+    # "Minsk" is in the alias table for Belarus, so it arrives as the spelling
+    # the GitHub feed uses. An alias beats the registry, which is the order that
+    # lets one be written for a name the registry would otherwise get wrong.
+    assert "FK Minsk" in names, sorted(names)
+
+
+@pytest.mark.parametrize("assoc", sorted(wikifootball.ALIASES))
+def test_every_grid_alias_names_a_club_that_league_actually_had(assoc):
+    """Same rule as the football-data table: the target is checked against the
+    feed that defined the club ids, so an alias cannot point at a spelling
+    nobody uses and quietly mint a duplicate the day the league arms."""
+    from model import europe
+
+    reg = TeamRegistry()
+    dom = europe.load_domestic(reg, assocs=[assoc], quiet=True)
+    if len(dom) < 200:
+        pytest.skip(f"{assoc}'s GitHub feed is not reachable in this checkout")
+    for src_name, held in wikifootball.ALIASES[assoc].items():
+        assert reg.known(held) is not None, (
+            f"{assoc}: {src_name!r} points at {held!r}, which is not a club the "
+            "GitHub feed ever named")

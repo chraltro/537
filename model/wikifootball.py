@@ -111,7 +111,56 @@ CANDIDATES: frozenset[str] = frozenset({"NOR", "BLR", "LUX", "UKR", "POL"})
 #: Extra spellings this source uses for clubs the registry already holds, keyed
 #: by association so a fix for Malta cannot collide with one for Moldova. Filled
 #: in from what a probe reports, never from guesswork.
-ALIASES: dict[str, dict[str, str]] = {}
+#:
+#: Every entry below is a name a runner refused, matched against the club list
+#: openfootball published for the same season, and every target is checked by a
+#: test against that feed. Two kinds of difference turn up and neither is one
+#: `normalise` can fold. The article drops a prefix the feed keeps -- Wikipedia
+#: writes "Gomel" where openfootball writes "FK Gomel", and FK is not in the
+#: dropped-token list because dropping it would merge clubs elsewhere. Or the
+#: two transliterate the same Cyrillic differently: Dynamo and Dinamo, Zorya
+#: Luhansk and Zorya Lugansk, Chornomorets Odesa and Chernomorets Odessa.
+ALIASES: dict[str, dict[str, str]] = {
+    "NOR": {
+        "KFUM": "KFUM Oslo",
+        "KFUM-Kameratene Oslo": "KFUM Oslo",
+        "Sarpsborg": "Sarpsborg 08",
+        "Sarpsborg 08 FF": "Sarpsborg 08",
+        "Strømsgodset": "Strømsgodset IF",
+        "Strømsgodset Toppfotball": "Strømsgodset IF",
+    },
+    "BLR": {
+        "Dynamo Brest": "Dinamo Brest",
+        "FC Dynamo Brest": "Dinamo Brest",
+        "Dynamo Minsk": "Dinamo Minsk",
+        "Gomel": "FK Gomel",
+        "Isloch Minsk Raion": "FK Isloch Minsk",
+        "Minsk": "FK Minsk",
+        "Slavia Mozyr": "FK Slaviya Mozyr",
+        "Slutsk": "FK Slutsk",
+        "Smorgon": "FK Smorgon",
+        "Vitebsk": "FK Vitebsk",
+    },
+    "LUX": {
+        "Mondorf-les-Bains": "US Mondorf",
+        "US Mondorf-les-Bains": "US Mondorf",
+        "Progrès Niederkorn": "Progrès Niedercorn",
+        "FC Progrès Niederkorn": "Progrès Niedercorn",
+        "Racing Union": "RFCU Luxemburg",
+        "Racing FC Union Luxembourg": "RFCU Luxemburg",
+    },
+    "UKR": {
+        "Chornomorets Odesa": "Chernomorets Odessa",
+        "Livyi Bereh Kyiv": "Livyi Bereh",
+        "Obolon Kyiv": "FK Obolon",
+        "Oleksandriya": "FK Oleksandriya",
+        "Veres Rivne": "NK Veres",
+        "Zorya Luhansk": "Zorya Lugansk",
+    },
+    "POL": {
+        "Stal Mielec": "FKS Stal Mielec",
+    },
+}
 
 
 class GridError(RuntimeError):
@@ -232,6 +281,45 @@ def grid_clubs(text: str) -> list[str]:
     return out
 
 
+def _chosen(text: str, reg: TeamRegistry, alias: dict[str, str]) -> dict[str, str]:
+    """Which of each club's spellings to hand over.
+
+    An alias if one is written for it, otherwise whichever spelling the registry
+    already knows, otherwise the one the table prints -- which is then what the
+    probe reports as unresolved, and what an alias gets written for. Keyed by
+    that printed name, since that is what `parse_grid` returns.
+    """
+    out: dict[str, str] = {}
+    for names in grid_names(text).values():
+        for name in names:
+            if name in alias:
+                out[names[0]] = alias[name]
+                break
+            if reg.known(name):
+                out[names[0]] = name
+                break
+    return out
+
+
+def read(assoc: str, reg: TeamRegistry, season: str):
+    """One season's article: its entrants and its results, spellings resolved.
+
+    Returns `(clubs, [(home, away, hg, ag)])`, or None if the article is not
+    there. The club list is the template's own `team1=`..`teamN=` and not the
+    clubs that happen to appear in a filled cell, because a season two weeks old
+    has clubs with no result yet and they still have a full fixture list.
+    """
+    text = fetch.get(url(assoc, season), required=False, tries=2)
+    if not text or "match_" not in text:
+        return None
+    alias = ALIASES.get(assoc, {})
+    best = _chosen(text, reg, alias)
+    pick = lambda n: best.get(n, alias.get(n, n))          # noqa: E731
+    clubs = [pick(n) for n in grid_clubs(text)]
+    rows = [(pick(h), pick(a), hg, ag) for h, a, hg, ag in parse_grid(text)]
+    return clubs, rows
+
+
 def load(assoc: str, reg: TeamRegistry,
          seasons: tuple[str, ...] = ("2025-26",)) -> list[tuple[Match, str, str]]:
     """Played matches for one association, as `(match, home_name, away_name)`.
@@ -240,35 +328,19 @@ def load(assoc: str, reg: TeamRegistry,
     alias added for one league's article cannot change how any other source
     reads the same string.
     """
-    alias = ALIASES.get(assoc, {})
     out: list[tuple[Match, str, str]] = []
     reached = 0
     for season in seasons:
-        text = fetch.get(url(assoc, season), required=False, tries=2)
-        if not text or "match_" not in text:
+        got = read(assoc, reg, season)
+        if got is None:
             continue
         reached += 1
         when = season_midpoint(season)
-        # Which of a club's spellings to hand over: an alias if one is written
-        # for it, otherwise whichever the registry already knows, otherwise the
-        # one the table prints -- which is then what the probe reports as
-        # unresolved, and what an alias gets written for.
-        best: dict[str, str] = {}
-        for names in grid_names(text).values():
-            for name in names:
-                if name in alias:
-                    best[names[0]] = alias[name]
-                    break
-                if reg.known(name):
-                    best[names[0]] = name
-                    break
-        for home, away, hg, ag in parse_grid(text):
-            h = best.get(home, alias.get(home, home))
-            a = best.get(away, alias.get(away, away))
-            m = Match(date=when, home=h, away=a, hg=hg, ag=ag,
+        for home, away, hg, ag in got[1]:
+            m = Match(date=when, home=home, away=away, hg=hg, ag=ag,
                       season=season, played=True,
                       extra={"date_approx": True, "source": "wikipedia"})
-            out.append((m, h, a))
+            out.append((m, home, away))
     if not reached:
         raise GridError(f"no article reachable for {assoc} in {list(seasons)}")
     return out

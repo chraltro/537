@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projected leagues</title>
+<meta name="description" content="Projected final tables for the leagues no fixture list reaches: the results so far, the matches still to play, and where the season is heading.">
+<meta property="og:title" content="Projected leagues">
+<meta property="og:description" content="Projected final tables for leagues whose fixture list nobody publishes, worked out from the results so far.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="og/global.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="og/global.png">
+<link rel="canonical" href="https://chraltro.github.io/537/projection.html">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
+<style>
+  /* One cell per finishing position, shaded by how often the club landed there.
+     The whole output of a projection is this distribution, so it is drawn
+     rather than summarised: a club with a flat row is one nobody can call. */
+  .posgrid { display: flex; gap: 1px; }
+  .posgrid i {
+    flex: 1 1 0; height: 15px; border-radius: 1px; min-width: 3px;
+    background: var(--accent); display: block;
+  }
+  .lgpick { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; }
+  .lgpick a {
+    text-decoration: none; padding: 7px 12px; border-radius: 999px;
+    border: 1px solid var(--grid); color: var(--ink2); font-size: 13px;
+    font-weight: 550;
+  }
+  .lgpick a[aria-current] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .lgpick a:hover { text-decoration: none; color: var(--ink); }
+  td.pos { min-width: 130px; }
+</style>
+</head>
+<body>
+<main class="wrap" id="main">
+  <div class="pagehead">
+    <h1 id="h1">Projected leagues</h1>
+    <p class="lede" id="lede">Loading…</p>
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <nav class="lgpick" id="lgpick" aria-label="Projected leagues"></nav>
+
+  <section class="card" id="tablecard" hidden>
+    <h2 id="tabletitle">Projected table</h2>
+    <p class="sub" id="tablesub"></p>
+    <div class="scroller">
+      <table id="tbl">
+        <thead><tr>
+          <th class="l">Club</th>
+          <th title="Matches played so far">Pl</th>
+          <th class="p2">W</th><th class="p2">D</th><th class="p2">L</th>
+          <th class="p2" title="Goal difference">GD</th>
+          <th title="Points on the board now">Pts</th>
+          <th title="Points at the end of the season, on average across the simulations">Projected</th>
+          <th title="Chance of finishing first">Win</th>
+          <th class="pos p2" title="How often the club finished in each position, first on the left">Where it finishes<span class="vh"> (first on the left)</span></th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <p class="hint" id="tablenote" style="margin-top:16px"></p>
+  </section>
+
+  <section class="card" id="nonecard" hidden>
+    <h2>Nothing projected yet</h2>
+    <p class="sub" id="nonesub"></p>
+  </section>
+
+  <nav class="deeper" aria-label="Go deeper">
+    <a href="rankings.html"><b>Global club rankings</b>
+      <span>Every club this site rates, on one scale, including these.</span></a>
+    <a href="method.html"><b>Method</b>
+      <span>Where the numbers come from, which feeds are in use, and what each one carries.</span></a>
+  </nav>
+</main>
+
+<script type="module">
+import { pct, esc, initChrome, initPalette, chipColor, setMeta, ROOT, siteData }
+  from './assets/app.js';
+initChrome('projection');
+
+const manifest = await siteData('leagues');
+const list = manifest.projected || [];
+const asked = new URLSearchParams(location.search).get('league');
+const here = list.find((l) => l.slug === asked) || list[0] || null;
+
+document.getElementById('lgpick').innerHTML = list.map((l) => `
+  <a href="projection.html?league=${esc(l.slug)}"${
+    here && l.slug === here.slug ? ' aria-current="page"' : ''}>${esc(l.name)}</a>`).join('');
+
+if (!here) {
+  document.getElementById('lede').textContent =
+    'No league is being projected at the moment.';
+  document.getElementById('nonesub').innerHTML =
+    `A projection needs a results grid this site has checked against a season it already
+     holds, and none is in use right now. The <a href="method.html">method page</a> lists
+     every feed and says what happened to each.`;
+  document.getElementById('nonecard').hidden = false;
+} else {
+  const p = await (await fetch(`${ROOT}data/${here.slug}/projection.json`,
+                               { cache: 'no-cache' })).json();
+  const names = Object.fromEntries(
+    ((await siteData('global')).clubs || []).map((c) => [c.id, c]));
+  const nm = (id) => names[id]?.name || id;
+  const left = p.matches_total - p.matches_played;
+
+  setMeta({
+    title: `${p.name} ${p.season}: projected table`,
+    description: `Where the ${p.name} ${p.season} season is heading, from the `
+      + `${p.matches_played} results so far and the ${left} matches still to play.`,
+  });
+  document.getElementById('h1').textContent = `${p.name} ${p.season}`;
+  document.getElementById('lede').innerHTML =
+    `Nobody publishes a fixture list for ${esc(p.name)} that this site can read. What is
+     published is a results grid, and in a league where every club plays every other twice,
+     once at home and once away, the pairs with no score against them are the matches still
+     to come. So the season can be played out even though its running order is unknown.`;
+  document.getElementById('stamp').innerHTML = `
+    <span>Season <b>${esc(p.season)}</b></span>
+    <span><b>${p.matches_played}</b> of ${p.matches_total} matches played</span>
+    <span><b>${left}</b> still to play</span>
+    <span><b>${p.n_sims.toLocaleString()}</b> simulated seasons</span>`;
+  document.getElementById('tabletitle').textContent = `Projected table, ${p.season}`;
+  document.getElementById('tablesub').innerHTML =
+    `Ordered by projected points. The ratings behind it are the same pooled ratings the
+     <a href="rankings.html">global ranking</a> publishes, so a club here is on the same
+     scale as one in the Premier League. The last column runs from first place on the left
+     to last on the right, shaded by how often the club finished there.`;
+  document.getElementById('tablenote').innerHTML =
+    `No dates: the grid carries none, so there is no fixture list, no matchweek and no
+     calendar for this competition. No European or relegation line either. This site has no
+     machine-readable source for what a finishing position in ${esc(p.name)} is worth, and
+     those rules move from season to season, so the table is projected and the lines are
+     left undrawn.`;
+
+  initPalette(p.teams.map((t) => ({ id: t.id, name: nm(t.id) })));
+  const most = Math.max(...p.teams.flatMap((t) => t.position));
+  document.getElementById('tbody').innerHTML = p.teams.map((t) => `
+    <tr>
+      <td class="l"><span class="club">
+        <span class="chip" style="background:${chipColor(names[t.id]?.primary)}"></span>
+        <span class="nm">${esc(nm(t.id))}</span>
+      </span></td>
+      <td>${t.pld}</td>
+      <td class="p2">${t.w}</td><td class="p2">${t.d}</td><td class="p2">${t.l}</td>
+      <td class="p2">${t.gd > 0 ? '+' : ''}${t.gd}</td>
+      <td><b>${t.now}</b></td>
+      <td>${t.pts.toFixed(1)} <span class="hint">${t.pts_lo.toFixed(0)}–${t.pts_hi.toFixed(0)}</span></td>
+      <td>${pct(t.title)}</td>
+      <td class="pos p2"><span class="posgrid" role="img"
+        aria-label="Finishing positions for ${esc(nm(t.id))}">${
+        t.position.map((v, i) => `<i style="opacity:${(v / most).toFixed(3)}"
+          title="${i + 1}${['st','nd','rd'][i] || 'th'}: ${pct(v)}"></i>`).join('')}</span></td>
+    </tr>`).join('');
+  document.getElementById('tablecard').hidden = false;
+
+  /* A club colour is adjusted against the page's background, so it has to be
+     recomputed when the background changes rather than kept from paint time. */
+  window.addEventListener('themechange', () => {
+    document.querySelectorAll('#tbody tr').forEach((tr, i) => {
+      const el = tr.querySelector('.chip');
+      if (el) el.style.background = chipColor(names[p.teams[i].id]?.primary);
+    });
+  });
+}
+</script>
+</body>
+</html>

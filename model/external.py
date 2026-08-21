@@ -235,7 +235,19 @@ def probe(src: ExternalSource, reg: TeamRegistry, existing: list[Match],
                     "nothing here can be checked against anything")
         src.verdict = v
         return v
-    season = shared[0]
+    # The newest shared season we hold a real season's worth of, not simply the
+    # newest we hold anything of. openfootball opens a file when a season starts
+    # and then, for the leagues that went quiet, stops: its 2025 Norway file has
+    # 44 matches of 240 and its 2025 Belarus file has 8. Anchoring on one of
+    # those fails the thinness test below, and worse, reads every club promoted
+    # into that season as a misspelling of a club we hold -- because the rule
+    # that makes an unresolved name a misspelling is that we know who played
+    # that season, and in a stub we do not.
+    counts: dict[str, int] = {}
+    for key, n in ours.items():
+        counts[key[0]] = counts.get(key[0], 0) + n
+    full = [s for s in shared if counts.get(s, 0) >= MIN_OVERLAP_MATCHES]
+    season = full[0] if full else shared[0]
     v.overlap_season = season
 
     # -- 2. names in the overlap must all be clubs we already hold ----------
