@@ -1092,7 +1092,7 @@ def build_projections(_ready: set[str]) -> list[str]:
     publishes -- so a projection cannot drift onto a scale of its own.
     """
     from . import projection, roundrobin, wikifootball
-    live = sorted(wikifootball.ARMED & wikifootball.CANDIDATES)
+    live = sorted(wikifootball.PROJECTED & wikifootball.CANDIDATES)
     if not live:
         return []
     corpus = shared_corpus()

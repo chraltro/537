@@ -270,7 +270,7 @@ async function trajectory(c) {
      club whose rating is on the screen beside the sentence is worse than saying
      nothing. */
   return { why: c.league === 'No domestic feed'
-    ? 'no feed reaches its league, so its rating comes from European ties alone'
+    ? 'its rating comes from European ties alone'
     : 'the pooled fit has too little of its league to place it season by season' };
 }
 
@@ -329,8 +329,7 @@ async function render() {
   const card = document.getElementById('h2hcard');
   if (!rec) {
     document.getElementById('h2hsub').textContent =
-      `${A.name} and ${B.name} have not met in any competition the corpus covers: `
-      + 'UEFA competition back to 2011-12, every domestic league with a feed, and the\n         division below each competition this site forecasts.';
+      `${A.name} and ${B.name} have never met.`;
     document.getElementById('h2hbody').innerHTML = '';
   } else {
     const first = x === A.id;
@@ -361,8 +360,7 @@ async function render() {
                 dimsB && { label: B.name, color: rcolB, values: dimsB }].filter(Boolean);
   if (!both.length) {
     document.getElementById('radarbody').innerHTML =
-      '<p class="empty">Neither club plays in a competition this site forecasts, '
-      + 'so there are no ratings to compare.</p>';
+      '<p class="empty">No ratings on record for either club.</p>';
     document.getElementById('radarsub').textContent = '';
     document.getElementById('radarnote').textContent = '';
   } else {
@@ -438,8 +436,8 @@ async function render() {
            takes whichever of the two is nearer its own colour. Testing for one
            order missed half the cases. */
         colA.startsWith('var(') || colB.startsWith('var(')
-          ? ' These two play in colours too close to tell apart on a chart, so it uses the'
-            + ' two this site uses for the sides of a match.' : ''}</p>`;
+          ? ' These two play in colours too close to tell apart, so the chart uses the'
+            + ' home and away colours instead.' : ''}</p>`;
 }
 
 /* Four screens rather than one long scroll. The pickers sit above the tabs

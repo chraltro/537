@@ -108,6 +108,18 @@ ARMED: frozenset[str] = frozenset()
 #: 16/240, Luxembourg 16/240, Ukraine 16/240, Poland 18/306.
 CANDIDATES: frozenset[str] = frozenset({"NOR", "BLR", "LUX", "UKR", "POL"})
 
+#: Leagues whose grid drives a projected final table. A separate set from ARMED
+#: because the two answer different questions. ARMED is "does this feed's
+#: results go into the pooled corpus", and only one feed per league may say yes
+#: or the same matches are counted twice. PROJECTED is "is this grid good enough
+#: to take the season's entrant list and the matches left from", which is a
+#: thing a grid can be even when its results are not the ones being used.
+#:
+#: Poland is exactly that case: football-data.co.uk carries its results with
+#: dates on them and is the feed in service, while the Wikipedia article is
+#: where the list of who is in the league this season comes from.
+PROJECTED: frozenset[str] = frozenset()
+
 #: Extra spellings this source uses for clubs the registry already holds, keyed
 #: by association so a fix for Malta cannot collide with one for Moldova. Filled
 #: in from what a probe reports, never from guesswork.

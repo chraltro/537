@@ -332,10 +332,34 @@ def test_the_wikipedia_reader_asks_for_a_season_it_can_be_checked_on():
     assert "2025-26" in got and "2026-27" in got
 
 
-def test_no_wikipedia_league_is_armed_without_a_probe_behind_it():
+def test_no_wikipedia_league_is_armed_without_a_receipt():
     """Arming a league is a deliberate act taken after reading a green probe on a
-    runner. If this ever fails, someone added a code from an armchair."""
-    assert wikifootball.ARMED == frozenset()
+    runner, and the probe is the only thing that can be read: nothing here can
+    reach Wikipedia. So every armed code carries a copy of the verdict that
+    armed it -- the date, the season it was lined up on, and the counts -- which
+    can be checked against the run it names. A code without one was added from
+    an armchair."""
+    import json
+    import os
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        "data", "armed.json")
+    seen = {}
+    if os.path.exists(path):
+        seen = {r["assoc"]: r for r in json.load(open(path))["probes"]}
+    for assoc in wikifootball.ARMED | wikifootball.PROJECTED:
+        r = seen.get(assoc)
+        assert r, f"{assoc} is armed with no probe recorded in data/armed.json"
+        assert r["agreed"] == r["compared"] > 0, r
+        assert r["overlap_season"] and r["run"], r
+
+
+def test_a_league_feeds_the_corpus_or_only_its_own_projection():
+    """Poland has two verified feeds. Only one may put matches in the pooled
+    corpus -- two would count the same season twice -- while the other is still
+    the place the season's entrant list comes from."""
+    assert "POL" not in wikifootball.ARMED, (
+        "Poland's results come from football-data.co.uk, which carries dates; "
+        "arming the grid as well would add the same season twice")
 
 
 # ------------------------------------------------------------------ real names

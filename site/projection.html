@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Projected leagues</title>
-<meta name="description" content="Projected final tables for the leagues no fixture list reaches: the results so far, the matches still to play, and where the season is heading.">
+<meta name="description" content="Projected final tables: the results so far, the matches still to play, and where each season is heading.">
 <meta property="og:title" content="Projected leagues">
-<meta property="og:description" content="Projected final tables for leagues whose fixture list nobody publishes, worked out from the results so far.">
+<meta property="og:description" content="Projected final tables, from the results so far.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="og/global.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -63,7 +63,6 @@
         <tbody id="tbody"></tbody>
       </table>
     </div>
-    <p class="hint" id="tablenote" style="margin-top:16px"></p>
   </section>
 
   <section class="card" id="nonecard" hidden>
@@ -73,9 +72,9 @@
 
   <nav class="deeper" aria-label="Go deeper">
     <a href="rankings.html"><b>Global club rankings</b>
-      <span>Every club this site rates, on one scale, including these.</span></a>
+      <span>Every rated club in Europe, on one scale.</span></a>
     <a href="method.html"><b>Method</b>
-      <span>Where the numbers come from, which feeds are in use, and what each one carries.</span></a>
+      <span>Where the numbers come from and how well they have done.</span></a>
   </nav>
 </main>
 
@@ -97,9 +96,8 @@ if (!here) {
   document.getElementById('lede').textContent =
     'No league is being projected at the moment.';
   document.getElementById('nonesub').innerHTML =
-    `A projection needs a results grid this site has checked against a season it already
-     holds, and none is in use right now. The <a href="method.html">method page</a> lists
-     every feed and says what happened to each.`;
+    `No league is being projected right now. The <a href="method.html">method page</a>
+     lists every feed and what happened to each.`;
   document.getElementById('nonecard').hidden = false;
 } else {
   const p = await (await fetch(`${ROOT}data/${here.slug}/projection.json`,
@@ -109,17 +107,17 @@ if (!here) {
   const nm = (id) => names[id]?.name || id;
   const left = p.matches_total - p.matches_played;
 
+  const lead = p.teams[0];
   setMeta({
     title: `${p.name} ${p.season}: projected table`,
     description: `Where the ${p.name} ${p.season} season is heading, from the `
       + `${p.matches_played} results so far and the ${left} matches still to play.`,
   });
   document.getElementById('h1').textContent = `${p.name} ${p.season}`;
-  document.getElementById('lede').innerHTML =
-    `Nobody publishes a fixture list for ${esc(p.name)} that this site can read. What is
-     published is a results grid, and in a league where every club plays every other twice,
-     once at home and once away, the pairs with no score against them are the matches still
-     to come. So the season can be played out even though its running order is unknown.`;
+  document.getElementById('lede').innerHTML = left
+    ? `<b>${esc(nm(lead.id))}</b> finish top in ${pct(lead.title)} of ${
+        p.n_sims.toLocaleString()} simulations of the ${left} matches left.`
+    : `<b>${esc(nm(lead.id))}</b> won it on ${lead.now} points.`;
   document.getElementById('stamp').innerHTML = `
     <span>Season <b>${esc(p.season)}</b></span>
     <span><b>${p.matches_played}</b> of ${p.matches_total} matches played</span>
@@ -127,16 +125,8 @@ if (!here) {
     <span><b>${p.n_sims.toLocaleString()}</b> simulated seasons</span>`;
   document.getElementById('tabletitle').textContent = `Projected table, ${p.season}`;
   document.getElementById('tablesub').innerHTML =
-    `Ordered by projected points. The ratings behind it are the same pooled ratings the
-     <a href="rankings.html">global ranking</a> publishes, so a club here is on the same
-     scale as one in the Premier League. The last column runs from first place on the left
-     to last on the right, shaded by how often the club finished there.`;
-  document.getElementById('tablenote').innerHTML =
-    `No dates: the grid carries none, so there is no fixture list, no matchweek and no
-     calendar for this competition. No European or relegation line either. This site has no
-     machine-readable source for what a finishing position in ${esc(p.name)} is worth, and
-     those rules move from season to season, so the table is projected and the lines are
-     left undrawn.`;
+    `Ordered by projected points. The last column runs from first place on the left to
+     last on the right, shaded by how often the club finished there.`;
 
   initPalette(p.teams.map((t) => ({ id: t.id, name: nm(t.id) })));
   const most = Math.max(...p.teams.flatMap((t) => t.position));

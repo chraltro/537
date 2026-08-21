@@ -61,7 +61,7 @@
         <thead><tr>
           <th class="l" data-k="rank">#</th>
           <th class="l" data-k="name">Club</th>
-          <th data-k="spi" title="Expected share of points against an average club of the big five leagues. The same scale on every page of this site, so most of Europe sits below 50">SPI</th>
+          <th data-k="spi" title="Expected share of points against an average club of the big five leagues. One scale everywhere, so most of Europe sits below 50">SPI</th>
           <th data-k="att_r" title="Attack out of 100. Higher is better">Attack</th>
           <th data-k="def_r" title="Defence out of 100. Higher is better, because it is the conceding that is low">Defence</th>
           <th data-k="off" title="Goals expected against an average opponent">Scored</th>
@@ -372,18 +372,17 @@ const bestDef = [...rows].sort((a, b) => (b.def_r ?? 0) - (a.def_r ?? 0))[0];
 document.getElementById('ratingsub').innerHTML =
   `Attack and defence are out of 100. Higher is better both times, including defence, `
   + `where it is the <em>conceding</em> that is low. The scale is European, not `
-  + `${esc(W.name)}'s: 65 is an average club of the big five, so a 70 here is the same `
-  + `club as a 70 on any other page of this site. Most of Europe sits below 50. `
+  + `${esc(W.name)}'s: 65 is an average club of the big five, and a 70 means the same `
+  + `everywhere. Most of Europe sits below 50. `
   + `Click a column to sort.`;
 document.getElementById('ratingfoot').innerHTML =
   `<b>${esc(bestAtt.name)}</b> have the best attack at ${bestAtt.att_r}, worth `
   + `${bestAtt.off.toFixed(2)} goals a match against an average opponent; `
   + `<b>${esc(bestDef.name)}</b> the best defence at ${bestDef.def_r}, conceding `
   + `${bestDef.def.toFixed(2)}. The two goal columns are this competition's own: what a `
-  + `club is expected to score and concede against an average opponent <em>here</em>, and `
-  + `what every probability on this site is computed from. The ratings beside them are `
-  + `not, which is why the order of the two pairs can differ: a good attack in a hard `
-  + `division outscores a better one in an easy division.`;
+  + `club is expected to score and concede against an average opponent <em>here</em>. The `
+  + `ratings beside them are European, which is why the order of the two pairs can differ: `
+  + `a good attack in a hard division outscores a better one in an easy division.`;
 
 /* ---- distribution view ---- */
 /* One column per finishing position, however many the league has. The two
