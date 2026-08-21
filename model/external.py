@@ -359,11 +359,21 @@ def probe(src: ExternalSource, reg: TeamRegistry, existing: list[Match],
     # write "Chornomorets Odesa" in one season and "Chornomorets" in the next,
     # and minting the second is how a club ends up in the ranking twice, each
     # copy with half a record and neither one right.
+    seasons_of: dict[str, set[str]] = {}
+    for szn, rowset in theirs_by_season.items():
+        for _, h, a in rowset:
+            for raw in (h, a):
+                seasons_of.setdefault(raw, set()).add(szn)
     twins = []
     for name in v.new_clubs:
         if name in src.distinct:
             continue
         held = _twin(name, overlap_names, reg)
+        # Unless the two turn up in the same season, which settles it: no feed
+        # writes a club under two names in one table, so a season holding both
+        # 'Poltava' and 'Vorskla Poltava' is a season with two clubs in it.
+        if held and seasons_of.get(name, set()) & seasons_of.get(held, set()):
+            held = None
         if held:
             twins.append(f"{name!r} looks like {held!r}")
     if twins:

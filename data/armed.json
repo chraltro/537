@@ -12,7 +12,27 @@
    "agreed": 238,
    "matches": 578,
    "latest": "2026-07-01",
-   "new_clubs": ["Start", "Vålerenga"]
+   "new_clubs": [
+    "Start",
+    "Vålerenga"
+   ]
+  },
+  {
+   "assoc": "BLR",
+   "league": "Belarusian Premier League",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32494556036",
+   "date": "2026-08-21",
+   "overlap_season": "2024",
+   "compared": 240,
+   "agreed": 240,
+   "matches": 464,
+   "latest": "2026-07-01",
+   "new_clubs": [
+    "Baranovichi",
+    "Maxline Vitebsk",
+    "Molodechno"
+   ]
   },
   {
    "assoc": "LUX",
@@ -25,8 +45,15 @@
    "agreed": 240,
    "matches": 504,
    "latest": "2027-01-01",
-   "new_clubs": ["Atert Bissen", "Etzella Ettelbruck", "Jeunesse Canach",
-                 "Käerjeng 97", "Mamer 32", "Rumelange", "Résidence Walferdange"]
+   "new_clubs": [
+    "Atert Bissen",
+    "Etzella Ettelbruck",
+    "Jeunesse Canach",
+    "Käerjeng 97",
+    "Mamer 32",
+    "Rumelange",
+    "Résidence Walferdange"
+   ]
   },
   {
    "assoc": "POL",
@@ -39,7 +66,10 @@
    "agreed": 240,
    "matches": 534,
    "latest": "2027-01-01",
-   "new_clubs": ["Bruk-Bet Termalica Nieciecza", "Wisła Kraków"],
+   "new_clubs": [
+    "Bruk-Bet Termalica Nieciecza",
+    "Wisła Kraków"
+   ],
    "used_for": "the season's entrant list only; the results in service come from football-data.co.uk, which carries dates"
   }
  ]

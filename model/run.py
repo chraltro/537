@@ -1117,6 +1117,22 @@ def build_projections(_ready: set[str]) -> list[str]:
                 raise roundrobin.ShapeError(
                     f"{len(missing)} club(s) in the {season} grid resolve to "
                     f"nothing: {', '.join(missing)}")
+            # Did the grid give us a whole league? A season article can list
+            # its entrants in more than one place, and reading the wrong list
+            # gives a league a club short -- which nothing downstream would
+            # notice while that club has no results yet, and which would put a
+            # season of the wrong length on the page. The league's own last
+            # complete season is what it is checked against.
+            sizes: dict[str, set[str]] = {}
+            for m in corpus.matches:
+                if m.comp == src.group and m.played and m.season < season:
+                    sizes.setdefault(m.season, set()).update((m.home, m.away))
+            if sizes:
+                was = len(sizes[max(sizes)])
+                if len(clubs) != was:
+                    raise roundrobin.ShapeError(
+                        f"the {season} grid lists {len(clubs)} clubs and "
+                        f"{max(sizes)} had {was}")
             played = [m for m in corpus.matches
                       if m.comp == src.group and m.season == season and m.played]
             proj = projection.Projection(

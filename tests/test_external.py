@@ -733,3 +733,34 @@ def test_a_season_the_github_feed_has_in_full_is_left_alone():
     external.probe(src, reg, have, today=dt.date(2025, 12, 1))
     assert external.matches(src, reg, have) == []
     assert src.superseded == frozenset()
+
+
+def test_two_clubs_in_one_season_are_two_clubs_whatever_their_names_look_like():
+    """The other half of the twin rule, and the one that keeps it usable.
+
+    Ukraine has a Vorskla Poltava and an FC Poltava, and no reading of the two
+    names separates them. What separates them is the table: no feed writes one
+    club under two names in one season, so a season carrying both is a season
+    with two clubs in it.
+    """
+    reg = TeamRegistry()
+    have = trusted(reg)
+    later = second(clubs=CLUBS + ["Legia"], season="2025-26",
+                   start=dt.date(2025, 8, 1))
+    v = external.probe(make(second() + later, assoc="POL"), reg, have,
+                       today=dt.date(2026, 6, 1))
+    assert v.ok, v.reason
+    assert v.new_clubs == ("Legia",), v.new_clubs
+
+
+def test_a_result_already_played_is_never_dated_in_the_future():
+    """A grid has no dates, so every match takes its season's midpoint -- and in
+    August the midpoint of 2026-27 is next January. The rating fit sees only
+    what is in the past, so a whole season would be invisible to it and a club
+    promoted this summer would have no matches at all, no rating, and no place
+    in its own league's projection."""
+    today = dt.date(2026, 8, 21)
+    assert wikifootball.season_midpoint("2026-27", today) == today
+    assert wikifootball.season_midpoint("2025-26", today) == dt.date(2026, 1, 1)
+    assert wikifootball.season_midpoint("2026", today) == dt.date(2026, 7, 1)
+    assert wikifootball.season_midpoint("2027", today) == today

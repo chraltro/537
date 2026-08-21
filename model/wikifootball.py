@@ -90,7 +90,7 @@ TITLES: dict[str, str] = {
 #: which therefore contribute matches. Empty by design; see the module docstring.
 #: Adding a code here without a green probe behind it is the one thing this
 #: whole arrangement exists to prevent.
-ARMED: frozenset[str] = frozenset({"NOR", "LUX"})
+ARMED: frozenset[str] = frozenset({"NOR", "LUX", "BLR"})
 
 #: Leagues being watched: probed on every run, reported beside the armed ones,
 #: and contributing nothing at all until they move up into ARMED.
@@ -123,7 +123,7 @@ DISTINCT: dict[str, frozenset[str]] = {}
 #: Poland is exactly that case: football-data.co.uk carries its results with
 #: dates on them and is the feed in service, while the Wikipedia article is
 #: where the list of who is in the league this season comes from.
-PROJECTED: frozenset[str] = frozenset({"NOR", "LUX", "POL"})
+PROJECTED: frozenset[str] = frozenset({"NOR", "LUX", "BLR", "POL"})
 
 #: Extra spellings this source uses for clubs the registry already holds, keyed
 #: by association so a fix for Malta cannot collide with one for Moldova. Filled
@@ -205,16 +205,23 @@ def url(assoc: str, season: str) -> str:
     return f"{API}?{q}"
 
 
-def season_midpoint(season: str) -> dt.date:
+def season_midpoint(season: str, today: dt.date | None = None) -> dt.date:
     """One date for a whole season, because the grid carries no other.
 
     A winter season labelled 2025-26 turns the year at its middle, so 1 January
     of the later year is both the arithmetic midpoint and the obvious one. A
     summer season labelled 2025 runs roughly April to October, so 1 July.
+
+    Never later than today, which matters for the season being played right now:
+    in August the midpoint of 2026-27 is next January, and a match dated next
+    January is a match the rating fit cannot see -- `corpus.before(today)` drops
+    it -- so a club promoted this summer had no matches at all, was not in the
+    fit, and the projection fell over looking for its rating. A result already
+    on the board did not happen in the future.
     """
-    if "-" in season:
-        return dt.date(int(season.split("-")[0]) + 1, 1, 1)
-    return dt.date(int(season), 7, 1)
+    mid = (dt.date(int(season.split("-")[0]) + 1, 1, 1) if "-" in season
+           else dt.date(int(season), 7, 1))
+    return min(mid, today or dt.date.today())
 
 
 _MATCH = re.compile(r"\|\s*match_([A-Za-z0-9_]+)_([A-Za-z0-9_]+)\s*=\s*"
@@ -295,13 +302,18 @@ def grid_clubs(text: str) -> list[str]:
     because a club missing from it loses every one of its fixtures silently.
     """
     names = {code: v[0] for code, v in grid_names(text).items()}
-    order = _TEAM.findall(text)
+    order = [c for c in _TEAM.findall(text) if c in names]
+    # A `teamN=` code with no `name_` line beside it is not a club this article
+    # is naming, it is a code from another template on the same page: Poland's
+    # season article carries a league table whose entrant list uses its own
+    # short codes, and reading those as clubs produced two entrants called "G"
+    # and "WP". Only a code the grid names is an entrant.
     seen, out = set(), []
     for code in order or sorted(names):
         if code in seen:
             continue
         seen.add(code)
-        out.append(names.get(code, code))
+        out.append(names[code])
     return out
 
 

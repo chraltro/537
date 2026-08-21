@@ -139,3 +139,14 @@ def test_the_club_list_comes_from_the_grids_own_entrants():
     played = [(h, a) for h, a, _, _ in wikifootball.parse_grid(text)]
     got = roundrobin.remaining(wikifootball.grid_clubs(text), played)
     assert len(got) == 11 and ("Alpha", "Beta") not in got
+
+
+def test_a_team_code_with_no_name_beside_it_is_not_a_club():
+    """Poland's season article carries a league table whose entrant list uses
+    its own short codes, next to the results grid with its own. Reading both
+    gave the Ekstraklasa two extra clubs called "G" and "WP"."""
+    from model import wikifootball
+    text = ("|team1=AAA|team2=BBB|team3=CCC|team4=DDD|team5=G|team6=WP\n"
+            "|name_AAA=Alpha\n|name_BBB=Beta\n|name_CCC=Gamma\n|name_DDD=Delta\n"
+            "|match_AAA_BBB=1–0\n")
+    assert wikifootball.grid_clubs(text) == ["Alpha", "Beta", "Gamma", "Delta"]
