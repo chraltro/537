@@ -170,6 +170,10 @@ class ExternalSource:
     distinct: frozenset[str] = field(default=frozenset(), repr=False)
     verdict: Verdict | None = field(default=None, repr=False)
     allow_new: frozenset[str] = field(default=frozenset(), repr=False)
+    #: Seasons where the GitHub feed has a stub and this source has the season.
+    #: The caller drops the stub, or the two are added together and every match
+    #: the stub holds is counted twice.
+    superseded: frozenset[str] = field(default=frozenset(), repr=False)
 
     @property
     def armed(self) -> bool:
@@ -386,18 +390,34 @@ def matches(src: ExternalSource, reg: TeamRegistry,
             existing: list[Match] | None = None) -> list[Match]:
     """The matches an armed source contributes, with ids filled in.
 
-    Only seasons the trusted feed does not already carry: where both describe a
-    season, the GitHub one wins, because it is the one with dates on it and the
-    one whose club names defined the ids in the first place.
+    Where both feeds describe a season, the GitHub one wins: it is the one with
+    dates on it and the one whose club names defined the ids in the first place.
+
+    Except where the GitHub feed's copy is a stub. openfootball opens a file
+    when a season kicks off and then, for the leagues that went quiet, stops --
+    its 2025 Norway file holds 44 matches of 240 -- and letting 44 matches shut
+    out 240 is how a league stays a year stale beside a feed that has the whole
+    thing. Those seasons are named in `src.superseded`, and the caller drops the
+    stub before adding these.
 
     Calling this on a source that did not arm returns nothing rather than
     raising, so the pipeline reads the same whether a probe passed or failed.
     """
     if not src.armed:
         return []
-    have = {m.season for m in (existing or []) if m.played}
+    counts: dict[str, int] = {}
+    for m in (existing or []):
+        if m.played:
+            counts[m.season] = counts.get(m.season, 0) + 1
+    rows = list(src.load(reg))                     # type: ignore[operator]
+    theirs: dict[str, int] = {}
+    for m, _h, _a in rows:
+        theirs[m.season] = theirs.get(m.season, 0) + 1
+    have = {s for s, n in counts.items()
+            if n >= MIN_OVERLAP_MATCHES or n >= theirs.get(s, 0)}
+    src.superseded = frozenset(s for s in counts if s not in have)
     out: list[Match] = []
-    for m, home_raw, away_raw in src.load(reg):    # type: ignore[operator]
+    for m, home_raw, away_raw in rows:
         if m.season in have:
             continue
         ids = []

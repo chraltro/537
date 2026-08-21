@@ -350,6 +350,10 @@ def load_external(reg: TeamRegistry, domestic: list[Match],
     out: list[Match] = []
     verdicts = []
     fed: set[str] = set()
+    #: (group, season) pairs where the GitHub feed opened a file and abandoned
+    #: it, and a second feed carries the whole season. The caller drops these
+    #: from the domestic corpus before adding what came back.
+    stale: set[tuple[str, str]] = set()
     for src in srcs:
         mine = by_group.get(src.group, [])
         v = external.probe(src, reg, mine)
@@ -369,6 +373,8 @@ def load_external(reg: TeamRegistry, domestic: list[Match],
                 f"{src.group}; arm one of them, not both")
         fed.add(src.group)
         out.extend(external.matches(src, reg, mine))
+        for season in src.superseded:
+            stale.add((src.group, season))
     if say:
         armed = sum(1 for v in verdicts if v.ok and not v.watching)
         watch = sum(1 for v in verdicts if v.watching)
@@ -376,7 +382,11 @@ def load_external(reg: TeamRegistry, domestic: list[Match],
               + (f", {watch} watched" if watch else ""))
         _ANNOUNCED.append(True)
     LAST_VERDICTS[:] = verdicts
-    return out, verdicts
+    if say and stale:
+        for group, season in sorted(stale):
+            print(f"  · {group} {season}: the GitHub file is a stub, "
+                  "so the second feed's season replaces it")
+    return out, verdicts, stale
 
 
 # --------------------------------------------------------------------------
@@ -646,7 +656,11 @@ class Corpus:
         if domestic:
             dom = load_domestic(self.reg, quiet=quiet)
             self.matches.extend(dom)
-            ext, self.verdicts = load_external(self.reg, dom, quiet=quiet)
+            ext, self.verdicts, stale = load_external(self.reg, dom, quiet=quiet)
+            if stale:
+                keep = [m for m in self.matches
+                        if (m.comp, m.season) not in stale]
+                self.matches[:] = keep
             self.matches.extend(ext)
         if big_five:
             self.matches.extend(load_big_five(self.reg, from_year=from_year,

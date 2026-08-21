@@ -1321,7 +1321,7 @@ def probe_external(quiet: bool = False) -> list[dict]:
     from .parse import TeamRegistry
     reg = TeamRegistry()
     dom = europe.load_domestic(reg, quiet=True)
-    _, verdicts = europe.load_external(reg, dom, quiet=quiet)
+    _, verdicts, _stale = europe.load_external(reg, dom, quiet=quiet)
     return [v.as_json() for v in verdicts]
 
 

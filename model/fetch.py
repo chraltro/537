@@ -26,6 +26,14 @@ def _cache_path(url: str) -> str:
     return os.path.join(CACHE, url.replace("://", "_").replace("/", "_"))
 
 
+#: URLs that could not be reached this run. A host that is blocked or down
+#: answers identically every time, and the corpus is rebuilt once per
+#: competition, so without this a single unreachable feed costs its retries and
+#: its backoff nine times over. Only optional sources go in: a required one
+#: raises rather than returning, and is not something to remember.
+_DEAD: set[str] = set()
+
+
 def get(url: str, max_age: float = 6 * 3600, required: bool = True,
         tries: int = 4) -> str | None:
     """Fetch `url`, using a cached copy when it is younger than `max_age`.
@@ -42,6 +50,8 @@ def get(url: str, max_age: float = 6 * 3600, required: bool = True,
     path = _cache_path(url)
     if os.path.exists(path) and time.time() - os.path.getmtime(path) < max_age:
         return open(path, encoding="utf-8").read()
+    if url in _DEAD:
+        return None
 
     last: Exception | None = None
     for attempt in range(max(1, tries)):
@@ -66,6 +76,7 @@ def get(url: str, max_age: float = 6 * 3600, required: bool = True,
         return open(path, encoding="utf-8").read()
     if required:
         raise SourceError(f"cannot fetch {url}: {last}")
+    _DEAD.add(url)
     print(f"  ! optional source unavailable: {url}")
     return None
 

@@ -702,3 +702,34 @@ def test_the_eager_check_can_be_overruled_for_a_club_that_really_is_separate():
     v = external.probe(src, reg, have, today=dt.date(2026, 6, 1))
     assert v.ok, v.reason
     assert v.new_clubs == ("Legia",)
+
+
+def test_a_full_season_replaces_an_abandoned_stub():
+    """openfootball opens a file when a season kicks off and, for the leagues
+    that went quiet, stops: its 2025 Norway file holds 44 matches of 240. The
+    rule that the GitHub feed wins a shared season would let those 44 shut out
+    the 240, and the league would stay a year stale beside a feed that has the
+    whole thing."""
+    reg = TeamRegistry()
+    have = trusted(reg)
+    stub = trusted(reg, season="2025", start=dt.date(2025, 4, 1))[:20]
+    src = make(second() + second(season="2025", start=dt.date(2025, 4, 1)),
+               assoc="POL")
+    v = external.probe(src, reg, have + stub, today=dt.date(2025, 12, 1))
+    assert v.ok, v.reason
+    assert v.overlap_season == "2024-25", (
+        "the overlap must be the season we hold in full, not the stub")
+    got = external.matches(src, reg, have + stub)
+    assert {m.season for m in got} == {"2025"}
+    assert len(got) == 132, "the whole season, not the part the stub is missing"
+    assert src.superseded == frozenset({"2025"}), src.superseded
+
+
+def test_a_season_the_github_feed_has_in_full_is_left_alone():
+    reg = TeamRegistry()
+    have = trusted(reg) + trusted(reg, season="2025", start=dt.date(2025, 4, 1))
+    src = make(second() + second(season="2025", start=dt.date(2025, 4, 1)),
+               assoc="POL")
+    external.probe(src, reg, have, today=dt.date(2025, 12, 1))
+    assert external.matches(src, reg, have) == []
+    assert src.superseded == frozenset()
