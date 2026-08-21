@@ -5,8 +5,9 @@ Global Club Soccer Rankings existed to do: put Real Madrid, Brentford and
 Bodø/Glimt in one ordering and mean it.
 
 The mechanism is already in the repository and is not new maths. `model.europe`
-assembles a corpus of roughly fifty-four thousand matches -- fifteen seasons of
-UEFA competition, forty-six non-big-five domestic leagues and the big five --
+assembles a corpus of roughly a hundred thousand matches -- every season of
+UEFA competition, forty-six non-big-five domestic leagues, the big five and the
+division below each competition this site forecasts --
 and `ratings.fit_pooled` fits one Dixon-Coles model over all of it with a
 per-competition home term and a ridge that shrinks each club toward its own
 league's mean rather than toward the global one. The European matches are the
@@ -18,7 +19,7 @@ Two things this module is careful about.
 
 *It does not touch the league forecasts.* `run.POOLED_DOMESTIC` stays off. SPI
 is defined against an average opponent, and a pooled fit redefines "average" as
-the average of nine hundred clubs in fifty-two leagues; publishing that number
+the average of every club in the pooled corpus; publishing that number
 in place of the Premier League one would move every figure on the site for no
 new evidence. So the pooled rating is written to its own file, on its own
 stated scale, and the five domestic forecasts are built exactly as before.
@@ -72,6 +73,10 @@ MAX_STALE_DAYS = 900
 #: does not forecast the Belgian Pro League, which it plainly does.
 #: `tests/test_leagues.py` now fails if a forecast competition appears in the
 #: pooled corpus without a mapping, so the next one cannot rot the same way.
+#: `premier-league-2` is a belt-and-braces entry rather than a live one: England's
+#: second tier is the Championship, which the corpus loads under its own slug, so
+#: that group id is never produced. It stays because the day something stops
+#: deduplicating them, the ranking should still say Championship.
 GROUP_SLUG = {"dom-ned": "eredivisie", "dom-por": "primeira-liga",
               "dom-bel": "pro-league", "premier-league-2": "championship"}
 
@@ -81,10 +86,16 @@ def _league_names() -> dict[str, dict]:
     out: dict[str, dict] = {}
     for lg in leagues.LEAGUES:
         out[lg.slug] = {"name": lg.name, "country": lg.country, "slug": lg.slug}
-        out[f"{lg.slug}-2"] = {"name": f"{lg.country}, second tier",
+        # The division below *this* competition, which is not always the
+        # second tier: the Championship is itself England's second, so its
+        # `-2` is League One. Labelling both "England, second tier" put
+        # AFC Wimbledon and Port Vale there.
+        below = "third" if lg.kind == "promotion" else "second"
+        out[f"{lg.slug}-2"] = {"name": f"{lg.country}, {below} tier",
                                "country": lg.country, "slug": None}
     for src in europe.DOMESTIC:
-        out[src.group] = {"name": src.name, "country": src.assoc, "slug": None}
+        out[src.group] = {"name": src.name,
+                          "country": src.country or src.assoc, "slug": None}
     for grp, slug in GROUP_SLUG.items():
         lg = leagues.BY_SLUG.get(slug)
         if lg:
@@ -223,8 +234,7 @@ def trajectory(corpus: europe.Corpus, ref_date: dt.date | None = None,
 
 
 def build(corpus: europe.Corpus, ref_date: dt.date | None = None, *,
-          featured: set[str] | None = None,
-          quiet: bool = True) -> dict:
+          featured: set[str] | None = None) -> dict:
     """Fit the pooled model and turn it into the global ranking payload."""
     ref = ref_date or max(dt.date.today(), dt.date(2026, 8, 1))
     hist = corpus.before(ref)
@@ -258,7 +268,7 @@ def build(corpus: europe.Corpus, ref_date: dt.date | None = None, *,
 
     # The top quarter of every competition in every season, for the big-game
     # measure, and the raw profile of each club.
-    prof = {t: _profile(ms, t, fit) for t, ms in recent.items()}
+    prof = {t: _profile(ms, t) for t, ms in recent.items()}
     # Each of these three is quoted against the club's *own* competition, not
     # against Europe as a whole -- unlike attack and defence, which are on the
     # big-five scale because goals are goals wherever they are scored.
@@ -341,7 +351,7 @@ def build(corpus: europe.Corpus, ref_date: dt.date | None = None, *,
         # only for the ones this site forecasts.
         p = prof.get(t) or {}
         for field, dim, key in (("consistency_r", "consistency", "gd_sd"),):
-            got = scale.dimension(dim, p.get(key), prefs.get(key), europe=True)
+            got = scale.dimension(dim, p.get(key), prefs.get(key))
             if got is not None:
                 rows[-1][field] = got
     rows.sort(key=lambda r: -r["spi"])
@@ -386,13 +396,13 @@ FORM_MATCHES = 20
 PROFILE_MATCHES = 90
 
 
-def _profile(matches: list, club: str, fit) -> dict:
+def _profile(matches: list, club: str) -> dict:
     """Consistency, for one club, from the pooled corpus.
 
     Computed here rather than on a league forecast so that every club in the
-    ranking has it and not only the 174 this site forecasts. A comparison page
-    that offers 836 clubs and can rate 174 of them is offering something it
-    mostly cannot do.
+    ranking has it and not only the ones this site forecasts. A comparison page
+    that offers every club in the corpus and can rate a fifth of them is
+    offering something it mostly cannot do.
 
     This used to return three measures. Two of them are gone, and the reason is
     worth keeping: `tools/measure_scale.py` splits the spread of each measure

@@ -466,6 +466,19 @@ export function initChrome(page) {
       esc(l.name)}${l.ready ? '' : ' (not live yet)'}</option>`;
   }).join('');
 
+  /* The picker offered the nine competitions this site forecasts while the
+     ranking held sixty leagues, and the only way to any of the other fifty-one
+     was a filter on one page. They have no table and no fixture list, so they
+     cannot be forecast pages; what they do have is a rating, so these entries
+     go to the ranking filtered to that league. The value is prefixed, because a
+     league name is not a slug and the change handler has to tell them apart. */
+  const rated = (MANIFEST.rated || []);
+  const ratedOpts = rated.length ? `<optgroup label="Rated, not forecast">${
+    rated.map((l) => `<option value="rated:${esc(l.name)}">${esc(l.name)} (${l.n})</option>`)
+      .join('')}</optgroup>` : '';
+  const group = ratedOpts
+    ? `<optgroup label="Forecast here">${opts}</optgroup>${ratedOpts}` : opts;
+
   document.body.insertAdjacentHTML('afterbegin', `
     <a class="skip" href="#main">Skip to content</a>
     <header class="masthead"><div class="wrap">
@@ -475,7 +488,7 @@ export function initChrome(page) {
       </a>
       <label class="lgswitch">
         <span class="vh">League</span>
-        <select id="lgsel" aria-label="Choose a league">${opts}</select>
+        <select id="lgsel" aria-label="Choose a league">${group}</select>
       </label>
       <nav class="top" aria-label="Sections">
         ${PAGES.filter((p) => p.primary).map((p) => `
@@ -530,9 +543,17 @@ export function initChrome(page) {
      ride along; a club or match that does not exist over there degrades to that
      page's own default rather than an error. */
   document.getElementById('lgsel').addEventListener('change', (e) => {
+    const v = e.target.value;
+    if (v.startsWith('rated:')) {
+      /* No forecast to switch to, so this is a jump rather than a switch: the
+         ranking, filtered to that league, which is the only page that has
+         anything to say about it. */
+      location.href = url('rankings.html') + `?league=${encodeURIComponent(v.slice(6))}`;
+      return;
+    }
     const u = new URL(location.href);
-    if (e.target.value === DEFAULT_LEAGUE) u.searchParams.delete('lg');
-    else u.searchParams.set('lg', e.target.value);
+    if (v === DEFAULT_LEAGUE) u.searchParams.delete('lg');
+    else u.searchParams.set('lg', v);
     location.href = u.toString();
   });
 

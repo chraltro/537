@@ -11,7 +11,6 @@ from __future__ import annotations
 import collections
 import datetime as dt
 import glob
-import inspect
 import json
 import os
 import re
@@ -859,6 +858,70 @@ def test_a_second_tier_is_never_loaded_twice():
     assert "premier-league-2" not in comps, (
         "England's second tier is the Championship and is loaded under its own "
         "slug by the ranking build")
+
+
+def test_the_measurement_tool_measures_what_the_site_publishes():
+    """`tools/measure_scale.py` is where every constant in `scale.py` came from,
+    and it is the first thing to rot when a dimension changes: it went on
+    calling `_profile` with an argument that had been removed and measuring two
+    dimensions that no longer existed, so the one script that could tell anyone
+    the constants had drifted would have crashed instead."""
+    from tools import measure_scale as ms
+    from model import scale
+    measured = {n for n, _k, _l in ms.FROM_RESULTS + ms.FROM_SHOTS}
+    assert measured == set(scale.DIMENSIONS), (
+        f"the tool measures {sorted(measured)} and the site publishes "
+        f"{sorted(scale.DIMENSIONS)}")
+
+
+def test_every_league_names_its_country_in_words():
+    """The ranking prints a country column. It read "England", "Spain",
+    "Germany" for eight leagues and "POL", "TUR", "SUI" for forty-three: half a
+    table in words and half in UEFA codes, in one column."""
+    from model import europe
+    for src in europe.DOMESTIC:
+        assert src.country, f"{src.assoc} ({src.name}) has no country name"
+        assert not (len(src.country) == 3 and src.country.isupper()), (
+            f"{src.assoc} still carries a code, not a name: {src.country!r}")
+        assert src.country[0].isupper(), src.country
+
+
+def test_the_division_below_is_named_by_its_real_depth():
+    """A competition's `-2` group is the division below *it*, which is not
+    always the second tier. The Championship is itself England's second, so its
+    `-2` is League One, and both were labelled "England, second tier": AFC
+    Wimbledon and Port Vale sat in the global ranking under it."""
+    from model import rankings
+    names = rankings._league_names()
+    assert names["premier-league-2"]["name"] == "Championship", (
+        "England's second tier is a competition with its own page")
+    assert names["championship-2"]["name"] == "England, third tier"
+    assert names["bundesliga-2"]["name"] == "Germany, second tier"
+
+
+def test_every_rated_league_is_reachable_from_the_league_picker():
+    """The picker offered the nine competitions this site forecasts while the
+    ranking held sixty leagues, and the only door to the other fifty-one was a
+    filter on one page that did not survive being linked to.
+
+    The manifest carries them, because every page already fetches it and
+    fetching a megabyte of ranking to build a dropdown is not an option.
+    """
+    base = os.path.join(HERE, "site", "data")
+    if not os.path.exists(os.path.join(base, "global.json")):
+        pytest.skip("pipeline has not been run in this checkout")
+    man = json.load(open(os.path.join(base, "leagues.json"), encoding="utf-8"))
+    clubs = json.load(open(os.path.join(base, "global.json"), encoding="utf-8"))["clubs"]
+    unforecast = {c["league"] for c in clubs if not c.get("slug")}
+    listed = {r["name"] for r in man.get("rated", [])}
+    assert listed == unforecast, (
+        f"only in the ranking: {sorted(unforecast - listed)}; "
+        f"only in the picker: {sorted(listed - unforecast)}")
+    forecast = {lg["name"] for lg in man["leagues"]}
+    assert not (listed & forecast), (
+        "a competition with its own page must not also appear as rated-only: "
+        + str(sorted(listed & forecast)))
+    assert all(r["n"] > 0 for r in man.get("rated", []))
 
 
 def test_a_rating_is_only_published_when_the_matches_can_resolve_it():

@@ -75,8 +75,7 @@ def spi(fit: ratings.Fit, team: str, adj: float = 0.0) -> float:
     return float(pts / 6.0 * 100.0)
 
 
-def _rating_history(ds: Dataset, teams, shot_conv, adj: dict[str, float],
-                    kickoff: dt.date) -> dict[str, list]:
+def _rating_history(teams) -> dict[str, list]:
     """SPI at each July, so a club has a trajectory and not one number.
 
     Read straight off the pooled trajectory rather than fitted here. It used to
@@ -390,7 +389,7 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
 
     table = ds.season_table(ds.season)
     idx = {t: i for i, t in enumerate(teams)}
-    history = _rating_history(ds, teams, shot_conv, adj, kickoff)
+    history = _rating_history(teams)
     how = priors.arrivals(ds, teams, prev_season)
 
     pos = sim["position"]
@@ -617,7 +616,7 @@ def _recentre(fit: ratings.Fit, teams: list[str]) -> ratings.Fit:
 
     SPI means 'expected share of points against an average team', and in a
     pooled fit the average team is the average of nine hundred clubs across
-    fifty-two leagues -- which would put every Champions League participant
+    every league with a feed -- which would put every Champions League participant
     above 95 and say nothing. Shifting attack and defence onto the competition's
     own average, with the intercept absorbing the shift, leaves every match
     probability identical and makes the number mean what it says.
@@ -777,7 +776,13 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
             "releg": float(pos[i, direct + playoff:].sum()),
             "pos": [round(float(x), 5) for x in pos[i]],
             "played": 0, "w": 0, "d": 0, "l": 0, "gf": 0, "ga": 0, "cur_pts": 0,
-            "history": [], "promoted": False, "arrived": "stayed",
+            # A cup club's trajectory used to be empty, because the points
+            # were fitted from a league's own matches and a cup has none. They
+            # come from the pooled fit now, which every one of these clubs is
+            # in, so the Champions League club pages get the same chart as
+            # everyone else: 35 of the 36 have a line.
+            "history": _rating_history([t]).get(t, []),
+            "promoted": False, "arrived": "stayed",
         })
     rows.sort(key=lambda r: (-r["pts"], -r["gd"]))
 
@@ -1070,12 +1075,17 @@ def build_rankings(ready: set[str]) -> None:
               separators=(",", ":"))
     print(f"  → global.json ({payload['n_clubs']} clubs across "
           f"{payload['n_leagues']} leagues, from {payload['n_matches']:,} matches)")
-    # And the same lines as their own file, for the comparison page. It can
-    # offer 836 clubs and could draw a trajectory for the 174 with a forecast
-    # page, because that is where the points lived; the rest got a sentence
-    # explaining that this site does not build their competition, which is true
-    # and not what anybody wanted to read.
-    tr = global_trajectory()
+    # And the same lines as their own file, for the comparison page. It offers
+    # every club in the ranking and could draw a trajectory only for the ones
+    # with a forecast page, because that is where the points lived; the rest got
+    # a sentence explaining that this site does not build their competition,
+    # which was true and not what anybody wanted to read.
+    # Only the clubs the ranking holds. The trajectory has points for a hundred
+    # more -- sides that fell below the match floor or went quiet by the final
+    # July -- and the comparison page cannot offer any of them, so they are rows
+    # nothing can address in a file every visit to that page downloads.
+    rated = {c["id"] for c in payload["clubs"]}
+    tr = {k: v for k, v in global_trajectory().items() if k in rated}
     json.dump({"generated": payload["generated"],
                "note": ("SPI each July, on the pooled European scale. A line "
                         "starts when the corpus can first see that club's "
@@ -1456,8 +1466,7 @@ def build_ratings(ready: set[str]) -> None:
         for cid, r in sh.items():
             got = {}
             for field, dim, key, log in shot_fields:
-                v = scale.dimension(dim, r.get(key), refs.get(key),
-                                    log=log, europe=True)
+                v = scale.dimension(dim, r.get(key), refs.get(key), log=log)
                 if v is not None:
                     got[field] = v
             if got:
@@ -1531,6 +1540,28 @@ def check_size(ready: set[str]) -> None:
               "- see SIZE_BUDGET_MB in model/run.py")
 
 
+def _rated_only() -> list[dict]:
+    """Every league in the global ranking that has no forecast page, by size.
+
+    Read off `global.json` rather than from a registry, because the set is
+    whatever the corpus turned out to contain and a hand-kept copy of that would
+    be wrong by the next feed.
+    """
+    try:
+        with open(os.path.join(OUT, "global.json"), encoding="utf-8") as fh:
+            clubs = json.load(fh)["clubs"]
+    except (OSError, ValueError, KeyError):
+        return []
+    counts: dict[tuple[str, str], int] = {}
+    for c in clubs:
+        if c.get("slug"):
+            continue                       # a competition with its own page
+        key = (c["league"], c.get("country") or "")
+        counts[key] = counts.get(key, 0) + 1
+    return [{"name": name, "country": country, "n": n}
+            for (name, country), n in sorted(counts.items(), key=lambda kv: -kv[1])]
+
+
 def write_manifest(ready: set[str]) -> dict:
     """Regenerate site/data/leagues.json from the registry.
 
@@ -1545,6 +1576,14 @@ def write_manifest(ready: set[str]) -> dict:
                     for lg in leagues.LEAGUES + leagues.EUROPEAN],
         "note": "ready=false means no live forecast; the directory may still "
                 "hold replay staging data, stamped with a 'replay' key.",
+        # Leagues the pooled fit rates but this site does not forecast: the
+        # second tiers and the fifty-odd domestic divisions the corpus carries
+        # for the ratings. They have no table, no fixture list and no page of
+        # their own, and until now no way to reach them either -- the league
+        # picker offered nine competitions while the ranking held sixty, and the
+        # only door to the other fifty-one was a filter on one page that did not
+        # even survive being linked to. The picker sends these to that filter.
+        "rated": _rated_only(),
     }
     os.makedirs(OUT, exist_ok=True)
     json.dump(payload, open(os.path.join(OUT, "leagues.json"), "w"), indent=1)

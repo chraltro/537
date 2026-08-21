@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Global club rankings</title>
-<meta name="description" content="Every club in Europe on one rating scale, from one model fitted over fifteen seasons of continental football and fifty-two domestic leagues.">
+<meta name="description" content="Every club in Europe on one rating scale, from one model fitted over continental football back to 2011-12 and every domestic league with a feed.">
 <meta property="og:title" content="Global club rankings">
 <meta property="og:description" content="A single rating scale covering every club in Europe, so clubs from different leagues can be compared directly.">
 <meta property="og:type" content="website">
@@ -34,10 +34,11 @@
       <h2>The ranking</h2>
       <a class="morelink" href="compare.html">Compare two clubs →</a>
     </div>
-    <p class="sub">One Dixon–Coles fit over every match the pipeline can reach: fifteen
-      seasons of UEFA competition, the big five, and every non-big-five top flight with a
-      feed. The continental matches are the only edges that join one league to another, and
-      they are what put these clubs on a single scale. Click a column to sort.</p>
+    <p class="sub">One Dixon–Coles fit over every match the pipeline can reach: UEFA
+      competition back to 2011-12, the big five, every non-big-five top flight with a feed,
+      and the division below each competition this site forecasts. The continental matches
+      are the only edges that join one league to another, and they are what put these clubs
+      on a single scale. Click a column to sort.</p>
 
     <div class="rk-filters">
       <label class="vh" for="q">Search clubs</label>
@@ -108,9 +109,10 @@ const fmtStamp = (iso) => new Date(iso).toLocaleDateString('en-GB',
 document.getElementById('lede').innerHTML =
   `One rating for <b>${g.n_clubs}</b> clubs across <b>${g.n_leagues}</b> leagues, fitted in a `
   + `single model over <b>${g.n_matches.toLocaleString()}</b> matches. `
-  + `${esc(g.note)} The league forecasts keep their own scale and are not touched by this. `
-  + 'A rating quoted against eight hundred clubs would mean something different, and the '
-  + 'projected tables would move without a single new result behind them.';
+  + `${esc(g.note)} This is where every rating on the site comes from, SPI included, so a `
+  + 'number here is the number a club page prints. What it does <em>not</em> produce is the '
+  + 'forecasts: probabilities, projected points and title chances are still each '
+  + "competition's own fit on its own matches.";
 
 document.getElementById('stamp').innerHTML = `
   <span>Fitted to <b>${g.asof}</b></span>
@@ -120,9 +122,17 @@ document.getElementById('stamp').innerHTML = `
 /* league filter, ordered by how many ranked clubs each league has */
 const byLeague = new Map();
 rows.forEach((r) => byLeague.set(r.league, (byLeague.get(r.league) || 0) + 1));
+/* A league named in the URL wins, if the ranking actually holds it. Read here
+   and applied to the filter state below, because `league` is declared further
+   down and assigning it from up here would be a read in its dead zone. */
+const askedLeague = (() => {
+  const w = new URL(location.href).searchParams.get('league');
+  return w && byLeague.has(w) ? w : '';
+})();
 document.getElementById('lgf').insertAdjacentHTML('beforeend',
   [...byLeague.entries()].sort((a, b) => b[1] - a[1])
-    .map(([k, v]) => `<option value="${esc(k)}">${esc(k)} (${v})</option>`).join(''));
+    .map(([k, v]) => `<option value="${esc(k)}"${k === askedLeague ? ' selected' : ''}>${
+      esc(k)} (${v})</option>`).join(''));
 
 /* A club whose league has stopped publishing carries the season it is rated
    to, rather than a number of months. "15MO OLD" in warning amber reads as a
@@ -139,10 +149,9 @@ const maxSpi = Math.max(...rows.map((r) => r.spi));
 const body = document.getElementById('rkbody');
 const count = document.getElementById('count');
 
-/* Eight hundred and thirty-six clubs was rendered as "the top 400" and no way
-   to see the other 436 -- a cap presented as a total. It is a real cap, because
-   836 rows of eight cells is a slow paint on a phone, so it stays and gains a
-   button. */
+/* The whole ranking was rendered as "the top 400" and no way to see the rest --
+   a cap presented as a total. It is a real cap, because a thousand rows of eight
+   cells is a slow paint on a phone, so it stays and gains a button. */
 const PAGE = 400;
 let limit = PAGE;
 
@@ -185,7 +194,7 @@ function render(list) {
 
 /* Filters live outside the sort so that changing one never resets the other:
    `makeSortable` owns the order, this owns which rows survive it. */
-let query = '', league = '', ours = false, mine = false;
+let query = '', league = askedLeague, ours = false, mine = false;
 let follows = new Set(followed());
 const keep = (t) => (!league || t.league === league)
   && (!ours || t.featured)
@@ -228,6 +237,15 @@ document.getElementById('q').addEventListener('input', (e) => {
 });
 document.getElementById('lgf').addEventListener('change', (e) => {
   league = e.target.value;
+  /* The site's rule is that what you are looking at is what you can link to,
+     and this filter was the one control that broke it: the sort order rode in
+     the URL and the league did not, so a filtered ranking could not be sent to
+     anybody. It is also where the league picker lands for the fifty-one leagues
+     that have a rating and no forecast page. */
+  const u = new URL(location.href);
+  if (league) u.searchParams.set('league', league);
+  else u.searchParams.delete('league');
+  history.replaceState({}, '', u.pathname + u.search + u.hash);
   redraw();
 });
 const only = document.getElementById('onlyours');

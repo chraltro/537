@@ -3,7 +3,7 @@ feed them.
 
 Two jobs, both of them supply problems rather than modelling ones.
 
-*The bridge.* `openfootball/champions-league` carries fifteen seasons of UEFA
+*The bridge.* `openfootball/champions-league` carries every season of UEFA
 club competition, and those matches are the only edges in the graph that connect
 one domestic league to another. Every rating comparison across borders -- is
 Bodø/Glimt closer to Brentford or to Burnley -- rests on them, so they are loaded
@@ -114,6 +114,10 @@ class DomesticSource:
     name: str
     url_tpl: str                # formatted with {season}
     seasons: tuple[str, ...]
+    #: The country in words. The ranking page prints this in a column beside
+    #: England, Spain and Germany, and it read "POL", "TUR", "SUI" for
+    #: forty-three of the sixty leagues: half a table in words and half in codes.
+    country: str = ""
 
     @property
     def group(self) -> str:
@@ -124,12 +128,24 @@ class DomesticSource:
         return self.url_tpl.format(season=season)
 
 
+#: Where title-casing the repository's directory name does not give the country.
+#: One entry, which is why this is a dict and not a table of forty-six.
+_COUNTRY_SPELLING = {"bosnia-herzegovina": "Bosnia and Herzegovina"}
+
+
 def _europe_repo(assoc: str, name: str, directory: str, code: str,
                  seasons: tuple[str, ...]) -> DomesticSource:
-    """A country inside the 50-country `openfootball/europe` collection."""
+    """A country inside the 50-country `openfootball/europe` collection.
+
+    The country name comes from the directory, which is already the country in
+    lower case: `north-macedonia`, `faroe-islands`, `san-marino`. Deriving it
+    beats a second hand-kept list of forty-six names that could disagree with
+    the first.
+    """
+    country = _COUNTRY_SPELLING.get(directory, directory.replace("-", " ").title())
     return DomesticSource(assoc, name,
                           f"{OF}/europe/master/{directory}/{{season}}_{code}1.txt",
-                          seasons)
+                          seasons, country)
 
 
 _RECENT = ("2023-24", "2024-25")
@@ -152,11 +168,11 @@ DOMESTIC: tuple[DomesticSource, ...] = (
     DomesticSource("BEL", "Belgian Pro League",
                    f"{OF}/belgium/master/{{season}}/be1.txt",
                    ("2018-19", "2019-20", "2021-22", "2023-24", "2024-25",
-                    "2025-26", "2026-27")),
+                    "2025-26", "2026-27"), "Belgium"),
     DomesticSource("AUT", "Austrian Bundesliga",
                    f"{OF}/austria/master/{{season}}/1-bundesliga.txt",
                    ("2018-19", "2019-20", "2020-21", "2021-22", "2022-23",
-                    "2023-24", "2024-25", "2025-26")),
+                    "2023-24", "2024-25", "2025-26"), "Austria"),
     _europe_repo("SCO", "Scottish Premiership", "scotland", "sco",
                  ("2018-19", "2019-20", "2020-21", "2023-24", "2024-25", "2025-26")),
     _europe_repo("GRE", "Super League Greece", "greece", "gr",

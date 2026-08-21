@@ -553,7 +553,8 @@ function render() {
   const hist = t.history || [];
   document.getElementById('spark').innerHTML = hist.length > 1
     ? timeline(hist, { color: chipColor(t.primary) })
-    : '<p style="color:var(--muted);font-size:13px">Not enough top-flight history to plot.</p>';
+    : '<p style="color:var(--muted);font-size:13px">The pooled fit has too little of this '
+      + 'club\u2019s league to place it season by season.</p>';
   if (hist.length > 1) {
     const best = hist.reduce((x, y) => (y.spi > x.spi ? y : x));
     const worst = hist.reduce((x, y) => (y.spi < x.spi ? y : x));

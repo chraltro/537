@@ -64,10 +64,10 @@ SD_EUROPE = 0.55
 # --------------------------------------------------------------------------
 # The other six
 # --------------------------------------------------------------------------
-#: Every rating on this site is the same transform over a different measurable,
-#: and each spread below was measured across all nine competitions (five
-#: seasons, 2021-22 to 2025-26) and then frozen -- see the module docstring for
-#: why they are constants rather than recomputed.
+#: Every rating on this site is the same transform over a different measurable.
+#: The spreads live in `EUROPE_SD` below, measured across the pooled corpus
+#: rather than within any one competition, because the ratings are quoted
+#: against Europe and not against a division.
 #:
 #: True where a bigger measurement is a better club. Where it is False the
 #: z-score is negated before the logistic, so that every rating on the site
@@ -142,13 +142,13 @@ EUROPE_SD: dict[str, float] = {
 }
 
 
-def dimension(name: str, value: float, ref: float, *, log: bool = False,
-              europe: bool = True) -> int | None:
+def dimension(name: str, value: float, ref: float, *, log: bool = False) -> int | None:
     """One measurable against an average club, as a rating out of 100.
 
-    `europe` is kept as a parameter and ignored: it is always true now, and
-    every caller passes it, so removing it would be a diff across four files to
-    say the same thing. Nothing here can produce a league-relative rating.
+    There is one scale, so there is no parameter to choose it with. There used
+    to be a second, and briefly a `europe=True` flag that every caller passed
+    and this function ignored, which is a worse thing to leave lying about than
+    the two scales were.
 
     `log` for quantities that are ratios rather than differences -- a shot count
     or a conversion rate, where twice the average is as far above it as half is

@@ -320,9 +320,10 @@
 
     <h3>The cross-league rating</h3>
     <p>The <a href="rankings.html">global ranking</a> is a second, separate fit: one
-      Dixon–Coles model over fifteen seasons of UEFA competition, the big five, every
-      non-big-five top flight with a feed, and the Championship. That comes to about
-      sixty-six thousand matches and eight hundred clubs. The continental matches are the
+      Dixon–Coles model over UEFA competition back to 2011-12, the big five, every
+      non-big-five top flight with a feed, and the division below each competition this
+      site forecasts. That comes to <span id="poolsize">a hundred thousand matches and a
+      thousand clubs</span>. The continental matches are the
       only edges joining one league to another, and they are what identify each league's
       offset. It carries a home term per competition, and it shrinks each club toward its own
       league's mean rather than toward the global one. Without that, a pooled fit would drag
@@ -335,7 +336,7 @@
       good is this club", which is a question that has to cross a border to mean anything.</p>
 
     <h3>Competitions with only one feed</h3>
-    <p>Five of the eight competitions on this site come from the football-datasets mirror,
+    <p>Five of the nine competitions on this site come from the football-datasets mirror,
       which carries shots, cards and half-time scores. The mirror has exactly five league
       directories, so the Eredivisie, the Primeira Liga and the Championship are read from
       openfootball alone: goals and half-time scores, no shots, no cards, no referee, and no
@@ -984,6 +985,17 @@ const GLOSS = [
   ['Leverage', `How much a single fixture moves someone's season. Measured by
     simulating it both ways and taking the difference in what follows.`],
 ];
+/* The corpus grows every time a feed is added, and a hand-typed size in the
+   prose above goes stale the same day. Read it off the file instead: this said
+   "sixty-six thousand matches and eight hundred clubs" for a build that had a
+   hundred thousand and nine hundred and eighty-one. */
+try {
+  const gp = await siteData('global');
+  document.getElementById('poolsize').textContent =
+    `${gp.n_matches.toLocaleString()} matches and ${gp.n_clubs} clubs across `
+    + `${gp.n_leagues} competitions`;
+} catch { /* leave the prose estimate */ }
+
 document.getElementById('glossbody').innerHTML = GLOSS.map(
   ([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('');
 document.getElementById('glosscard').hidden = false;

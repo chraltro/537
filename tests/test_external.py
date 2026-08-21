@@ -360,7 +360,7 @@ def test_the_whole_path_works_on_real_club_names(assoc):
     championship round and Switzerland's triple round-robin put the same pair at
     the same ground twice, and every first meeting read as a disagreement.
     """
-    from model import europe, fetch
+    from model import europe
 
     reg = TeamRegistry()
     dom = europe.load_domestic(reg, assocs=[assoc], quiet=True)
