@@ -1,6 +1,6 @@
 {
- "generated": "2026-08-21T06:50:49+00:00",
- "note": "Shots and shots on target, five seasons per club. The results mirror carries them for the big five only; no other feed this build can reach has a shot in it.",
+ "generated": "2026-08-21T08:28:10+00:00",
+ "note": "Shots, shots on target and discipline, five seasons per club. The results mirror carries them for the big five only; no other feed this build can reach has a shot or a card in it.",
  "averages": {
   "premier-league": {
    "n": 3800,
@@ -54,6 +54,10 @@
    "accuracy": 0.341,
    "conversion": 0.379,
    "save_pct": 0.688,
+   "yellow_pm": 1.52,
+   "red_pm": 0.06,
+   "fouls_pm": 10.09,
+   "foul_index": 3.382,
    "league": "premier-league"
   },
   "aston-villa": {
@@ -71,6 +75,10 @@
    "accuracy": 0.356,
    "conversion": 0.348,
    "save_pct": 0.684,
+   "yellow_pm": 2.01,
+   "red_pm": 0.05,
+   "fouls_pm": 10.61,
+   "foul_index": 3.928,
    "league": "premier-league"
   },
   "bournemouth": {
@@ -88,6 +96,10 @@
    "accuracy": 0.349,
    "conversion": 0.297,
    "save_pct": 0.678,
+   "yellow_pm": 2.19,
+   "red_pm": 0.05,
+   "fouls_pm": 12.29,
+   "foul_index": 4.388,
    "league": "premier-league"
   },
   "brentford": {
@@ -105,6 +117,10 @@
    "accuracy": 0.38,
    "conversion": 0.346,
    "save_pct": 0.708,
+   "yellow_pm": 1.76,
+   "red_pm": 0.04,
+   "fouls_pm": 9.57,
+   "foul_index": 3.475,
    "league": "premier-league"
   },
   "brighton": {
@@ -122,6 +138,10 @@
    "accuracy": 0.356,
    "conversion": 0.3,
    "save_pct": 0.648,
+   "yellow_pm": 1.98,
+   "red_pm": 0.04,
+   "fouls_pm": 11.18,
+   "foul_index": 3.963,
    "league": "premier-league"
   },
   "chelsea": {
@@ -139,6 +159,10 @@
    "accuracy": 0.354,
    "conversion": 0.324,
    "save_pct": 0.698,
+   "yellow_pm": 2.27,
+   "red_pm": 0.08,
+   "fouls_pm": 11.12,
+   "foul_index": 4.363,
    "league": "premier-league"
   },
   "crystal-palace": {
@@ -156,6 +180,10 @@
    "accuracy": 0.346,
    "conversion": 0.307,
    "save_pct": 0.673,
+   "yellow_pm": 1.91,
+   "red_pm": 0.06,
+   "fouls_pm": 11.22,
+   "foul_index": 3.96,
    "league": "premier-league"
   },
   "everton": {
@@ -173,6 +201,10 @@
    "accuracy": 0.337,
    "conversion": 0.278,
    "save_pct": 0.698,
+   "yellow_pm": 2.04,
+   "red_pm": 0.08,
+   "fouls_pm": 10.82,
+   "foul_index": 4.083,
    "league": "premier-league"
   },
   "fulham": {
@@ -190,6 +222,10 @@
    "accuracy": 0.33,
    "conversion": 0.331,
    "save_pct": 0.69,
+   "yellow_pm": 2.05,
+   "red_pm": 0.05,
+   "fouls_pm": 10.8,
+   "foul_index": 4.0,
    "league": "premier-league"
   },
   "ipswich": {
@@ -207,6 +243,10 @@
    "accuracy": 0.338,
    "conversion": 0.283,
    "save_pct": 0.62,
+   "yellow_pm": 2.21,
+   "red_pm": 0.13,
+   "fouls_pm": 11.32,
+   "foul_index": 4.487,
    "league": "premier-league"
   },
   "leeds": {
@@ -224,6 +264,10 @@
    "accuracy": 0.315,
    "conversion": 0.309,
    "save_pct": 0.637,
+   "yellow_pm": 2.16,
+   "red_pm": 0.06,
+   "fouls_pm": 11.61,
+   "foul_index": 4.275,
    "league": "premier-league"
   },
   "liverpool": {
@@ -241,6 +285,10 @@
    "accuracy": 0.342,
    "conversion": 0.351,
    "save_pct": 0.708,
+   "yellow_pm": 1.54,
+   "red_pm": 0.06,
+   "fouls_pm": 10.75,
+   "foul_index": 3.512,
    "league": "premier-league"
   },
   "man-city": {
@@ -258,6 +306,10 @@
    "accuracy": 0.365,
    "conversion": 0.373,
    "save_pct": 0.69,
+   "yellow_pm": 1.37,
+   "red_pm": 0.03,
+   "fouls_pm": 8.46,
+   "foul_index": 2.87,
    "league": "premier-league"
   },
   "man-united": {
@@ -275,6 +327,10 @@
    "accuracy": 0.355,
    "conversion": 0.29,
    "save_pct": 0.685,
+   "yellow_pm": 1.99,
+   "red_pm": 0.05,
+   "fouls_pm": 10.63,
+   "foul_index": 3.912,
    "league": "premier-league"
   },
   "newcastle": {
@@ -292,6 +348,10 @@
    "accuracy": 0.351,
    "conversion": 0.35,
    "save_pct": 0.691,
+   "yellow_pm": 1.81,
+   "red_pm": 0.03,
+   "fouls_pm": 10.33,
+   "foul_index": 3.622,
    "league": "premier-league"
   },
   "nott-forest": {
@@ -309,6 +369,10 @@
    "accuracy": 0.334,
    "conversion": 0.328,
    "save_pct": 0.668,
+   "yellow_pm": 2.0,
+   "red_pm": 0.03,
+   "fouls_pm": 10.99,
+   "foul_index": 3.922,
    "league": "premier-league"
   },
   "sunderland": {
@@ -326,6 +390,10 @@
    "accuracy": 0.319,
    "conversion": 0.333,
    "save_pct": 0.713,
+   "yellow_pm": 2.11,
+   "red_pm": 0.08,
+   "fouls_pm": 10.71,
+   "foul_index": 4.135,
    "league": "premier-league"
   },
   "tottenham": {
@@ -343,6 +411,10 @@
    "accuracy": 0.375,
    "conversion": 0.343,
    "save_pct": 0.655,
+   "yellow_pm": 2.11,
+   "red_pm": 0.06,
+   "fouls_pm": 11.28,
+   "foul_index": 4.17,
    "league": "premier-league"
   },
   "alaves": {
@@ -360,6 +432,10 @@
    "accuracy": 0.323,
    "conversion": 0.269,
    "save_pct": 0.65,
+   "yellow_pm": 2.48,
+   "red_pm": 0.09,
+   "fouls_pm": 14.4,
+   "foul_index": 5.15,
    "league": "la-liga"
   },
   "athletic-bilbao": {
@@ -377,6 +453,10 @@
    "accuracy": 0.336,
    "conversion": 0.299,
    "save_pct": 0.697,
+   "yellow_pm": 2.08,
+   "red_pm": 0.12,
+   "fouls_pm": 13.21,
+   "foul_index": 4.642,
    "league": "la-liga"
   },
   "atletico-madrid": {
@@ -394,6 +474,10 @@
    "accuracy": 0.384,
    "conversion": 0.356,
    "save_pct": 0.699,
+   "yellow_pm": 2.32,
+   "red_pm": 0.15,
+   "fouls_pm": 11.49,
+   "foul_index": 4.685,
    "league": "la-liga"
   },
   "barcelona": {
@@ -411,6 +495,10 @@
    "accuracy": 0.368,
    "conversion": 0.368,
    "save_pct": 0.715,
+   "yellow_pm": 2.05,
+   "red_pm": 0.09,
+   "fouls_pm": 10.91,
+   "foul_index": 4.138,
    "league": "la-liga"
   },
   "betis": {
@@ -428,6 +516,10 @@
    "accuracy": 0.35,
    "conversion": 0.313,
    "save_pct": 0.706,
+   "yellow_pm": 2.12,
+   "red_pm": 0.16,
+   "fouls_pm": 11.37,
+   "foul_index": 4.495,
    "league": "la-liga"
   },
   "celta": {
@@ -445,6 +537,10 @@
    "accuracy": 0.364,
    "conversion": 0.307,
    "save_pct": 0.656,
+   "yellow_pm": 2.08,
+   "red_pm": 0.1,
+   "fouls_pm": 12.33,
+   "foul_index": 4.435,
    "league": "la-liga"
   },
   "elche": {
@@ -462,6 +558,10 @@
    "accuracy": 0.332,
    "conversion": 0.311,
    "save_pct": 0.696,
+   "yellow_pm": 2.49,
+   "red_pm": 0.19,
+   "fouls_pm": 13.58,
+   "foul_index": 5.323,
    "league": "la-liga"
   },
   "espanyol": {
@@ -479,6 +579,10 @@
    "accuracy": 0.333,
    "conversion": 0.315,
    "save_pct": 0.695,
+   "yellow_pm": 2.46,
+   "red_pm": 0.14,
+   "fouls_pm": 12.62,
+   "foul_index": 4.983,
    "league": "la-liga"
   },
   "getafe": {
@@ -496,6 +600,10 @@
    "accuracy": 0.316,
    "conversion": 0.274,
    "save_pct": 0.714,
+   "yellow_pm": 3.16,
+   "red_pm": 0.21,
+   "fouls_pm": 15.71,
+   "foul_index": 6.408,
    "league": "la-liga"
   },
   "levante": {
@@ -513,6 +621,10 @@
    "accuracy": 0.335,
    "conversion": 0.318,
    "save_pct": 0.658,
+   "yellow_pm": 2.53,
+   "red_pm": 0.13,
+   "fouls_pm": 13.37,
+   "foul_index": 5.148,
    "league": "la-liga"
   },
   "osasuna": {
@@ -530,6 +642,10 @@
    "accuracy": 0.31,
    "conversion": 0.313,
    "save_pct": 0.692,
+   "yellow_pm": 2.27,
+   "red_pm": 0.11,
+   "fouls_pm": 13.57,
+   "foul_index": 4.862,
    "league": "la-liga"
   },
   "rayo-vallecano": {
@@ -547,6 +663,10 @@
    "accuracy": 0.318,
    "conversion": 0.24,
    "save_pct": 0.694,
+   "yellow_pm": 2.59,
+   "red_pm": 0.14,
+   "fouls_pm": 14.02,
+   "foul_index": 5.347,
    "league": "la-liga"
   },
   "real-madrid": {
@@ -564,6 +684,10 @@
    "accuracy": 0.387,
    "conversion": 0.321,
    "save_pct": 0.741,
+   "yellow_pm": 1.81,
+   "red_pm": 0.09,
+   "fouls_pm": 9.69,
+   "foul_index": 3.695,
    "league": "la-liga"
   },
   "real-sociedad": {
@@ -581,6 +705,10 @@
    "accuracy": 0.359,
    "conversion": 0.295,
    "save_pct": 0.695,
+   "yellow_pm": 2.31,
+   "red_pm": 0.08,
+   "fouls_pm": 14.53,
+   "foul_index": 4.972,
    "league": "la-liga"
   },
   "sevilla": {
@@ -598,6 +726,10 @@
    "accuracy": 0.328,
    "conversion": 0.313,
    "save_pct": 0.675,
+   "yellow_pm": 2.78,
+   "red_pm": 0.18,
+   "fouls_pm": 12.96,
+   "foul_index": 5.48,
    "league": "la-liga"
   },
   "valencia": {
@@ -615,6 +747,10 @@
    "accuracy": 0.32,
    "conversion": 0.327,
    "save_pct": 0.68,
+   "yellow_pm": 2.33,
+   "red_pm": 0.13,
+   "fouls_pm": 13.29,
+   "foul_index": 4.935,
    "league": "la-liga"
   },
   "villarreal": {
@@ -632,6 +768,10 @@
    "accuracy": 0.369,
    "conversion": 0.371,
    "save_pct": 0.709,
+   "yellow_pm": 2.41,
+   "red_pm": 0.1,
+   "fouls_pm": 12.13,
+   "foul_index": 4.732,
    "league": "la-liga"
   },
   "atalanta": {
@@ -649,6 +789,10 @@
    "accuracy": 0.336,
    "conversion": 0.358,
    "save_pct": 0.718,
+   "yellow_pm": 1.95,
+   "red_pm": 0.05,
+   "fouls_pm": 12.38,
+   "foul_index": 4.163,
    "league": "serie-a"
   },
   "bologna": {
@@ -666,6 +810,10 @@
    "accuracy": 0.328,
    "conversion": 0.326,
    "save_pct": 0.685,
+   "yellow_pm": 2.05,
+   "red_pm": 0.12,
+   "fouls_pm": 12.67,
+   "foul_index": 4.522,
    "league": "serie-a"
   },
   "cagliari": {
@@ -683,6 +831,10 @@
    "accuracy": 0.303,
    "conversion": 0.302,
    "save_pct": 0.637,
+   "yellow_pm": 2.12,
+   "red_pm": 0.09,
+   "fouls_pm": 13.38,
+   "foul_index": 4.62,
    "league": "serie-a"
   },
   "como": {
@@ -700,6 +852,10 @@
    "accuracy": 0.351,
    "conversion": 0.304,
    "save_pct": 0.7,
+   "yellow_pm": 2.2,
+   "red_pm": 0.13,
+   "fouls_pm": 13.24,
+   "foul_index": 4.797,
    "league": "serie-a"
   },
   "fiorentina": {
@@ -717,6 +873,10 @@
    "accuracy": 0.334,
    "conversion": 0.322,
    "save_pct": 0.68,
+   "yellow_pm": 2.24,
+   "red_pm": 0.09,
+   "fouls_pm": 12.21,
+   "foul_index": 4.545,
    "league": "serie-a"
   },
   "frosinone": {
@@ -734,6 +894,10 @@
    "accuracy": 0.341,
    "conversion": 0.273,
    "save_pct": 0.621,
+   "yellow_pm": 1.79,
+   "red_pm": 0.03,
+   "fouls_pm": 10.24,
+   "foul_index": 3.587,
    "league": "serie-a"
   },
   "genoa": {
@@ -751,6 +915,10 @@
    "accuracy": 0.314,
    "conversion": 0.294,
    "save_pct": 0.685,
+   "yellow_pm": 2.01,
+   "red_pm": 0.07,
+   "fouls_pm": 13.0,
+   "foul_index": 4.387,
    "league": "serie-a"
   },
   "inter": {
@@ -768,6 +936,10 @@
    "accuracy": 0.35,
    "conversion": 0.378,
    "save_pct": 0.735,
+   "yellow_pm": 1.59,
+   "red_pm": 0.03,
+   "fouls_pm": 11.72,
+   "foul_index": 3.633,
    "league": "serie-a"
   },
   "juventus": {
@@ -785,6 +957,10 @@
    "accuracy": 0.337,
    "conversion": 0.309,
    "save_pct": 0.72,
+   "yellow_pm": 1.87,
+   "red_pm": 0.07,
+   "fouls_pm": 12.49,
+   "foul_index": 4.162,
    "league": "serie-a"
   },
   "lazio": {
@@ -802,6 +978,10 @@
    "accuracy": 0.377,
    "conversion": 0.334,
    "save_pct": 0.697,
+   "yellow_pm": 2.34,
+   "red_pm": 0.15,
+   "fouls_pm": 11.24,
+   "foul_index": 4.663,
    "league": "serie-a"
   },
   "lecce": {
@@ -819,6 +999,10 @@
    "accuracy": 0.278,
    "conversion": 0.246,
    "save_pct": 0.695,
+   "yellow_pm": 2.01,
+   "red_pm": 0.1,
+   "fouls_pm": 13.04,
+   "foul_index": 4.483,
    "league": "serie-a"
   },
   "milan": {
@@ -836,6 +1020,10 @@
    "accuracy": 0.344,
    "conversion": 0.338,
    "save_pct": 0.714,
+   "yellow_pm": 2.0,
+   "red_pm": 0.12,
+   "fouls_pm": 11.26,
+   "foul_index": 4.237,
    "league": "serie-a"
   },
   "monza": {
@@ -853,6 +1041,10 @@
    "accuracy": 0.314,
    "conversion": 0.305,
    "save_pct": 0.687,
+   "yellow_pm": 2.35,
+   "red_pm": 0.09,
+   "fouls_pm": 12.79,
+   "foul_index": 4.752,
    "league": "serie-a"
   },
   "napoli": {
@@ -870,6 +1062,10 @@
    "accuracy": 0.341,
    "conversion": 0.333,
    "save_pct": 0.71,
+   "yellow_pm": 1.49,
+   "red_pm": 0.05,
+   "fouls_pm": 10.86,
+   "foul_index": 3.45,
    "league": "serie-a"
   },
   "parma": {
@@ -887,6 +1083,10 @@
    "accuracy": 0.304,
    "conversion": 0.286,
    "save_pct": 0.685,
+   "yellow_pm": 1.82,
+   "red_pm": 0.13,
+   "fouls_pm": 10.76,
+   "foul_index": 4.003,
    "league": "serie-a"
   },
   "roma": {
@@ -904,6 +1104,10 @@
    "accuracy": 0.34,
    "conversion": 0.33,
    "save_pct": 0.728,
+   "yellow_pm": 2.22,
+   "red_pm": 0.09,
+   "fouls_pm": 12.25,
+   "foul_index": 4.532,
    "league": "serie-a"
   },
   "sassuolo": {
@@ -921,6 +1125,10 @@
    "accuracy": 0.352,
    "conversion": 0.295,
    "save_pct": 0.637,
+   "yellow_pm": 2.22,
+   "red_pm": 0.11,
+   "fouls_pm": 11.22,
+   "foul_index": 4.42,
    "league": "serie-a"
   },
   "torino": {
@@ -938,6 +1146,10 @@
    "accuracy": 0.322,
    "conversion": 0.294,
    "save_pct": 0.703,
+   "yellow_pm": 2.08,
+   "red_pm": 0.05,
+   "fouls_pm": 13.79,
+   "foul_index": 4.528,
    "league": "serie-a"
   },
   "udinese": {
@@ -955,6 +1167,10 @@
    "accuracy": 0.328,
    "conversion": 0.3,
    "save_pct": 0.662,
+   "yellow_pm": 2.27,
+   "red_pm": 0.12,
+   "fouls_pm": 13.63,
+   "foul_index": 4.902,
    "league": "serie-a"
   },
   "venezia": {
@@ -972,6 +1188,10 @@
    "accuracy": 0.342,
    "conversion": 0.264,
    "save_pct": 0.704,
+   "yellow_pm": 2.45,
+   "red_pm": 0.14,
+   "fouls_pm": 13.49,
+   "foul_index": 5.118,
    "league": "serie-a"
   },
   "augsburg": {
@@ -989,6 +1209,10 @@
    "accuracy": 0.33,
    "conversion": 0.317,
    "save_pct": 0.675,
+   "yellow_pm": 2.35,
+   "red_pm": 0.08,
+   "fouls_pm": 12.15,
+   "foul_index": 4.615,
    "league": "bundesliga"
   },
   "bayern": {
@@ -1006,6 +1230,10 @@
    "accuracy": 0.416,
    "conversion": 0.376,
    "save_pct": 0.658,
+   "yellow_pm": 1.4,
+   "red_pm": 0.06,
+   "fouls_pm": 8.87,
+   "foul_index": 3.058,
    "league": "bundesliga"
   },
   "dortmund": {
@@ -1023,6 +1251,10 @@
    "accuracy": 0.383,
    "conversion": 0.405,
    "save_pct": 0.69,
+   "yellow_pm": 1.86,
+   "red_pm": 0.08,
+   "fouls_pm": 10.18,
+   "foul_index": 3.797,
    "league": "bundesliga"
   },
   "eintracht-frankfurt": {
@@ -1040,6 +1272,10 @@
    "accuracy": 0.364,
    "conversion": 0.364,
    "save_pct": 0.675,
+   "yellow_pm": 1.88,
+   "red_pm": 0.07,
+   "fouls_pm": 11.14,
+   "foul_index": 3.947,
    "league": "bundesliga"
   },
   "freiburg": {
@@ -1057,6 +1293,10 @@
    "accuracy": 0.372,
    "conversion": 0.327,
    "save_pct": 0.679,
+   "yellow_pm": 1.58,
+   "red_pm": 0.06,
+   "fouls_pm": 10.55,
+   "foul_index": 3.518,
    "league": "bundesliga"
   },
   "hamburg": {
@@ -1074,6 +1314,10 @@
    "accuracy": 0.371,
    "conversion": 0.258,
    "save_pct": 0.688,
+   "yellow_pm": 2.26,
+   "red_pm": 0.24,
+   "fouls_pm": 11.82,
+   "foul_index": 4.95,
    "league": "bundesliga"
   },
   "hoffenheim": {
@@ -1091,6 +1335,10 @@
    "accuracy": 0.362,
    "conversion": 0.349,
    "save_pct": 0.655,
+   "yellow_pm": 2.24,
+   "red_pm": 0.09,
+   "fouls_pm": 12.35,
+   "foul_index": 4.568,
    "league": "bundesliga"
   },
   "koln": {
@@ -1108,6 +1356,10 @@
    "accuracy": 0.355,
    "conversion": 0.286,
    "save_pct": 0.641,
+   "yellow_pm": 2.04,
+   "red_pm": 0.08,
+   "fouls_pm": 11.18,
+   "foul_index": 4.143,
    "league": "bundesliga"
   },
   "leverkusen": {
@@ -1125,6 +1377,10 @@
    "accuracy": 0.389,
    "conversion": 0.374,
    "save_pct": 0.717,
+   "yellow_pm": 1.95,
+   "red_pm": 0.07,
+   "fouls_pm": 9.81,
+   "foul_index": 3.795,
    "league": "bundesliga"
   },
   "mainz": {
@@ -1142,6 +1398,10 @@
    "accuracy": 0.349,
    "conversion": 0.318,
    "save_pct": 0.685,
+   "yellow_pm": 2.2,
+   "red_pm": 0.11,
+   "fouls_pm": 13.08,
+   "foul_index": 4.71,
    "league": "bundesliga"
   },
   "monchengladbach": {
@@ -1159,6 +1419,10 @@
    "accuracy": 0.387,
    "conversion": 0.312,
    "save_pct": 0.703,
+   "yellow_pm": 1.81,
+   "red_pm": 0.07,
+   "fouls_pm": 10.23,
+   "foul_index": 3.725,
    "league": "bundesliga"
   },
   "rb-leipzig": {
@@ -1176,6 +1440,10 @@
    "accuracy": 0.399,
    "conversion": 0.344,
    "save_pct": 0.675,
+   "yellow_pm": 1.75,
+   "red_pm": 0.05,
+   "fouls_pm": 10.58,
+   "foul_index": 3.663,
    "league": "bundesliga"
   },
   "schalke": {
@@ -1193,6 +1461,10 @@
    "accuracy": 0.321,
    "conversion": 0.265,
    "save_pct": 0.645,
+   "yellow_pm": 2.0,
+   "red_pm": 0.03,
+   "fouls_pm": 12.59,
+   "foul_index": 4.188,
    "league": "bundesliga"
   },
   "stuttgart": {
@@ -1210,6 +1482,10 @@
    "accuracy": 0.384,
    "conversion": 0.323,
    "save_pct": 0.658,
+   "yellow_pm": 1.92,
+   "red_pm": 0.08,
+   "fouls_pm": 10.15,
+   "foul_index": 3.852,
    "league": "bundesliga"
   },
   "union-berlin": {
@@ -1227,6 +1503,10 @@
    "accuracy": 0.341,
    "conversion": 0.311,
    "save_pct": 0.666,
+   "yellow_pm": 1.99,
+   "red_pm": 0.08,
+   "fouls_pm": 12.4,
+   "foul_index": 4.297,
    "league": "bundesliga"
   },
   "werder": {
@@ -1244,6 +1524,10 @@
    "accuracy": 0.351,
    "conversion": 0.335,
    "save_pct": 0.659,
+   "yellow_pm": 2.21,
+   "red_pm": 0.1,
+   "fouls_pm": 10.96,
+   "foul_index": 4.337,
    "league": "bundesliga"
   },
   "angers": {
@@ -1261,6 +1545,10 @@
    "accuracy": 0.34,
    "conversion": 0.292,
    "save_pct": 0.678,
+   "yellow_pm": 1.67,
+   "red_pm": 0.09,
+   "fouls_pm": 11.89,
+   "foul_index": 3.922,
    "league": "ligue-1"
   },
   "auxerre": {
@@ -1278,6 +1566,10 @@
    "accuracy": 0.341,
    "conversion": 0.294,
    "save_pct": 0.697,
+   "yellow_pm": 1.8,
+   "red_pm": 0.16,
+   "fouls_pm": 12.57,
+   "foul_index": 4.375,
    "league": "ligue-1"
   },
   "brest": {
@@ -1295,6 +1587,10 @@
    "accuracy": 0.352,
    "conversion": 0.326,
    "save_pct": 0.676,
+   "yellow_pm": 1.85,
+   "red_pm": 0.1,
+   "fouls_pm": 12.34,
+   "foul_index": 4.207,
    "league": "ligue-1"
   },
   "le-havre": {
@@ -1312,6 +1608,10 @@
    "accuracy": 0.323,
    "conversion": 0.294,
    "save_pct": 0.668,
+   "yellow_pm": 1.83,
+   "red_pm": 0.14,
+   "fouls_pm": 12.5,
+   "foul_index": 4.333,
    "league": "ligue-1"
   },
   "lens": {
@@ -1329,6 +1629,10 @@
    "accuracy": 0.35,
    "conversion": 0.312,
    "save_pct": 0.726,
+   "yellow_pm": 2.07,
+   "red_pm": 0.15,
+   "fouls_pm": 12.84,
+   "foul_index": 4.66,
    "league": "ligue-1"
   },
   "lille": {
@@ -1346,6 +1650,10 @@
    "accuracy": 0.367,
    "conversion": 0.31,
    "save_pct": 0.694,
+   "yellow_pm": 2.24,
+   "red_pm": 0.1,
+   "fouls_pm": 11.76,
+   "foul_index": 4.5,
    "league": "ligue-1"
   },
   "lorient": {
@@ -1363,6 +1671,10 @@
    "accuracy": 0.361,
    "conversion": 0.307,
    "save_pct": 0.659,
+   "yellow_pm": 1.65,
+   "red_pm": 0.07,
+   "fouls_pm": 11.12,
+   "foul_index": 3.713,
    "league": "ligue-1"
   },
   "lyon": {
@@ -1380,6 +1692,10 @@
    "accuracy": 0.392,
    "conversion": 0.32,
    "save_pct": 0.706,
+   "yellow_pm": 1.69,
+   "red_pm": 0.12,
+   "fouls_pm": 12.34,
+   "foul_index": 4.107,
    "league": "ligue-1"
   },
   "marseille": {
@@ -1397,6 +1713,10 @@
    "accuracy": 0.361,
    "conversion": 0.35,
    "save_pct": 0.682,
+   "yellow_pm": 1.85,
+   "red_pm": 0.12,
+   "fouls_pm": 11.65,
+   "foul_index": 4.152,
    "league": "ligue-1"
   },
   "monaco": {
@@ -1414,6 +1734,10 @@
    "accuracy": 0.392,
    "conversion": 0.352,
    "save_pct": 0.698,
+   "yellow_pm": 2.0,
+   "red_pm": 0.15,
+   "fouls_pm": 13.29,
+   "foul_index": 4.665,
    "league": "ligue-1"
   },
   "nice": {
@@ -1431,6 +1755,10 @@
    "accuracy": 0.365,
    "conversion": 0.29,
    "save_pct": 0.729,
+   "yellow_pm": 1.78,
+   "red_pm": 0.11,
+   "fouls_pm": 11.51,
+   "foul_index": 4.028,
    "league": "ligue-1"
   },
   "paris-fc": {
@@ -1448,6 +1776,10 @@
    "accuracy": 0.34,
    "conversion": 0.348,
    "save_pct": 0.632,
+   "yellow_pm": 2.09,
+   "red_pm": 0.15,
+   "fouls_pm": 10.68,
+   "foul_index": 4.32,
    "league": "ligue-1"
   },
   "psg": {
@@ -1465,6 +1797,10 @@
    "accuracy": 0.411,
    "conversion": 0.361,
    "save_pct": 0.741,
+   "yellow_pm": 1.47,
+   "red_pm": 0.08,
+   "fouls_pm": 9.52,
+   "foul_index": 3.297,
    "league": "ligue-1"
   },
   "rennes": {
@@ -1482,6 +1818,10 @@
    "accuracy": 0.362,
    "conversion": 0.35,
    "save_pct": 0.665,
+   "yellow_pm": 1.73,
+   "red_pm": 0.1,
+   "fouls_pm": 12.21,
+   "foul_index": 4.065,
    "league": "ligue-1"
   },
   "strasbourg": {
@@ -1499,6 +1839,10 @@
    "accuracy": 0.367,
    "conversion": 0.352,
    "save_pct": 0.682,
+   "yellow_pm": 1.88,
+   "red_pm": 0.11,
+   "fouls_pm": 12.67,
+   "foul_index": 4.322,
    "league": "ligue-1"
   },
   "toulouse": {
@@ -1516,6 +1860,10 @@
    "accuracy": 0.368,
    "conversion": 0.296,
    "save_pct": 0.665,
+   "yellow_pm": 1.93,
+   "red_pm": 0.09,
+   "fouls_pm": 13.51,
+   "foul_index": 4.452,
    "league": "ligue-1"
   },
   "troyes": {
@@ -1533,6 +1881,10 @@
    "accuracy": 0.346,
    "conversion": 0.301,
    "save_pct": 0.659,
+   "yellow_pm": 1.72,
+   "red_pm": 0.14,
+   "fouls_pm": 11.08,
+   "foul_index": 3.987,
    "league": "ligue-1"
   }
  }

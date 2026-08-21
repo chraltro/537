@@ -147,7 +147,7 @@
 </main>
 
 <script type="module">
-import { data, pct, signed, esc, ord, initChrome, tip, tipRows, rampColor,
+import { data, siteData, pct, signed, esc, ord, initChrome, tip, tipRows, rampColor,
          makeSortable, chipColor, initPalette, matchModal, roundLabel,
          lg, url, setMeta, cardUrl, initTabs } from './assets/app.js';
 initChrome('table');
@@ -228,7 +228,13 @@ fc.teams.forEach((t) => {
 });
 
 const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
-const rows = fc.teams.map((t, i) => ({ ...t, rank: i + 1 }));
+/* Ratings live in one file, on one scale, and nowhere else. The forecast used
+   to carry its own copies measured against this division's average, and this
+   table read those while the club page read the pooled ones, so Arsenal's
+   defence was 89 here and 81 there. Neither page said which it was showing. */
+let RATINGS = {};
+try { RATINGS = (await siteData('ratings')).clubs || {}; } catch { /* older build */ }
+const rows = fc.teams.map((t, i) => ({ ...t, ...(RATINGS[t.id] || {}), rank: i + 1 }));
 const byTitle = [...rows].sort((a, b) => b.title - a.title);
 const byReleg = [...rows].sort((a, b) => b.down - a.down);
 
@@ -364,17 +370,19 @@ const bestAtt = [...rows].sort((a, b) => (b.att_r ?? 0) - (a.att_r ?? 0))[0];
 const bestDef = [...rows].sort((a, b) => (b.def_r ?? 0) - (a.def_r ?? 0))[0];
 document.getElementById('ratingsub').innerHTML =
   `Attack and defence are out of 100. Higher is better both times, including defence, `
-  + `where it is the <em>conceding</em> that is low. 65 is an average ${esc(W.name)} club. `
-  + `The scale is this competition's own, so a 70 here and a 70 elsewhere are not the same `
-  + `club. Click a column to sort.`;
+  + `where it is the <em>conceding</em> that is low. The scale is European, not `
+  + `${esc(W.name)}'s: 65 is an average club of the big five, so a 70 here is the same `
+  + `club as a 70 on any other page of this site. Most of Europe sits below 50. `
+  + `Click a column to sort.`;
 document.getElementById('ratingfoot').innerHTML =
   `<b>${esc(bestAtt.name)}</b> have the best attack at ${bestAtt.att_r}, worth `
   + `${bestAtt.off.toFixed(2)} goals a match against an average opponent; `
   + `<b>${esc(bestDef.name)}</b> the best defence at ${bestDef.def_r}, conceding `
   + `${bestDef.def.toFixed(2)}. The two goal columns are this competition's own: what a `
-  + `club is expected to score and concede against an average opponent here, and what `
-  + `every probability on this site is computed from. The ratings beside them are the `
-  + `pooled European fit, which is why they can be compared with any other competition's.`;
+  + `club is expected to score and concede against an average opponent <em>here</em>, and `
+  + `what every probability on this site is computed from. The ratings beside them are `
+  + `not, which is why the order of the two pairs can differ: a good attack in a hard `
+  + `division outscores a better one in an easy division.`;
 
 /* ---- distribution view ---- */
 /* One column per finishing position, however many the league has. The two

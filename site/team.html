@@ -308,10 +308,12 @@ function renderScenarios(t) {
   draw();
 }
 
-/* ---- the eight ratings, as a shape ----
-   Every one is the same transform over a different measurable: distance from
-   this competition's own average, through a logistic, so 65 is average and
-   higher is better on all eight. Three of them need a shot and so exist for the
+/* ---- the ratings, as a shape ----
+   Every one is the same transform over a different measurable: distance from an
+   average big-five club, through a logistic, so 65 is that club and higher is
+   better on every one. Against Europe and not against this division, which is
+   the whole point: a rating that is only meaningful next to its own neighbours
+   is a rank with extra steps. Three of them need a shot and so exist for the
    big five alone; the radar drops an axis nobody has rather than pinning it at
    the middle, which would read as "average" and be a claim. */
 function renderRadar(t) {
@@ -338,12 +340,11 @@ function renderRadar(t) {
     `The ${WORD[have.length] || have.length} ratings`;
   document.getElementById('radarsub').innerHTML =
     `Out of 100, and higher is better every time, defence and discipline included. For `
-    + `those it is the <em>conceding</em> and the <em>booking</em> that is low. `
-    + `<b>Attack</b> and <b>defence</b> come from the pooled European fit and are measured `
-    + `against an average big-five club, so they can be read against any other club on the `
-    + `site. The rest are measured against ${esc(W.the)}, because "how you do against the `
-    + `best in your division" only means something inside one. The dashed ring is 65, `
-    + `average for this competition.`;
+    + `those it is the <em>conceding</em> and the <em>booking</em> that is low. All eight `
+    + `come from the pooled European fit and are measured against an average big-five club, `
+    + `so any of them can be read against any other club on the site rather than only `
+    + `against the rest of ${esc(W.the)}. The dashed ring is 65: that average club, on every `
+    + `spoke. Most of Europe sits inside it.`;
   const note = document.getElementById('radarnote');
   if (!shape) {
     note.textContent =
@@ -460,18 +461,14 @@ function renderState(t) {
 let REGISTER = {};
 try { REGISTER = (await siteData('clubs')).clubs || {}; } catch { /* older build */ }
 
-/* Attack and defence from the pooled European fit, so this club's 70 means the
-   same as any other club's 70 anywhere on the site. The league fit's own
-   versions remain as the fallback. */
-try {
-  const R = (await siteData('ratings')).clubs || {};
-  fc.teams.forEach((t) => {
-    const r = R[t.id];
-    if (!r) return;
-    if (r.att_r != null) t.att_r = r.att_r;
-    if (r.def_r != null) t.def_r = r.def_r;
-  });
-} catch { /* older build */ }
+/* Every rating comes from `ratings.json`, which is the only place any of them
+   exists: the forecast carries none. All eight are measured against one
+   reference, so this club's 70 means the same as any other club's 70 anywhere
+   on the site, and on any other club's page. A club the pooled fit could not
+   rate shows nothing rather than a number on a different scale. */
+let RATINGS = {};
+try { RATINGS = (await siteData('ratings')).clubs || {}; } catch { /* older build */ }
+fc.teams.forEach((t) => Object.assign(t, RATINGS[t.id] || {}));
 
 const ARRIVED_FROM = {
   up: '<span><b>Promoted</b> from the division below</span>',

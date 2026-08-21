@@ -11,6 +11,7 @@ from __future__ import annotations
 import collections
 import datetime as dt
 import glob
+import inspect
 import json
 import os
 import re
@@ -679,16 +680,140 @@ def test_the_global_ranking_rates_far_more_than_the_clubs_we_forecast():
         pytest.skip("pipeline has not been run in this checkout")
     with open(path, encoding="utf-8") as fh:
         clubs = json.load(fh)["clubs"]
-    for key in ("att_r", "def_r", "home_r", "big_r", "consistency_r"):
+    for key in ("att_r", "def_r", "consistency_r"):
         got = sum(1 for c in clubs if c.get(key) is not None)
         assert got > len(clubs) * 0.9, (
             f"{key} is on {got} of {len(clubs)} ranked clubs; it should be on "
             "nearly all of them, not only the ones with a forecast page")
     featured = [c for c in clubs if c.get("featured")]
     assert featured, "no featured clubs in the ranking"
-    # And the three that genuinely need a shot feed stay off it: those live on
-    # the league forecast, because the pooled corpus has no shots.
+    # And the three that genuinely need a shot feed stay off the pooled ranking:
+    # the corpus has no shots in it, so they are added in `build_ratings`.
     assert not any("finishing_r" in c for c in clubs)
+
+
+# ------------------------------------------------- one scale, one source
+def test_a_forecast_carries_no_ratings_at_all():
+    """The structural half of the fix, and the reason it cannot come apart again.
+
+    Ratings used to exist twice: once on every forecast row, measured against
+    that competition's own average, and once in `ratings.json`, measured against
+    Europe. Both were correct and neither said which it was, so the league table
+    showed Arsenal's defence as 89 while the club page showed 81. Labelling them
+    would have left the trap; there is now exactly one of each rating in exactly
+    one file, and a page cannot read the wrong one because the wrong one is not
+    written.
+
+    `off` and `def` stay on the forecast. Those are goals, they are what every
+    probability is computed from, and they are honestly this competition's own.
+    """
+    base = os.path.join(HERE, "site", "data")
+    if not os.path.exists(os.path.join(base, "premier-league", "forecast.json")):
+        pytest.skip("pipeline has not been run in this checkout")
+    for path in sorted(glob.glob(os.path.join(base, "*", "forecast.json"))):
+        fc = json.load(open(path, encoding="utf-8"))
+        for t in fc.get("teams", []):
+            rated = sorted(k for k in t if k.endswith("_r"))
+            assert not rated, (
+                f"{os.path.basename(os.path.dirname(path))}/{t['id']} carries "
+                f"{rated} on its forecast row; ratings belong in ratings.json "
+                "and nowhere else")
+            assert "off" in t and "def" in t, "the goal rates must survive"
+
+
+def test_every_rating_the_site_publishes_is_on_the_european_scale():
+    """`ratings.json` says which of its fields are global. All of them are.
+
+    The file declares its own scales so the method page can describe them
+    without a second hand-kept list. If a dimension is ever moved back to a
+    league reference, this fails and the prose gets fixed with the code.
+    """
+    path = os.path.join(HERE, "site", "data", "ratings.json")
+    if not os.path.exists(path):
+        pytest.skip("pipeline has not been run in this checkout")
+    doc = json.load(open(path, encoding="utf-8"))
+    assert doc["scale"]["league"] == [], (
+        "a league-relative rating is back: " + str(doc["scale"]["league"]))
+    declared = set(doc["scale"]["global"])
+    assert declared == {"att_r", "def_r", "consistency_r",
+                        "creation_r", "finishing_r", "discipline_r"}
+
+    seen = {k for row in doc["clubs"].values() for k in row}
+    assert seen <= declared, f"undeclared rating fields: {sorted(seen - declared)}"
+    assert not (seen & {"home_r", "big_r"}), (
+        "home advantage and big games measured 7% and 4% real; they are not "
+        "published, on this scale or any other")
+
+
+def test_no_page_reads_a_rating_from_a_league_forecast():
+    """The other half: a page could still fetch a competition's forecast and
+    look for a rating on it. Nothing writes one any more, so such a read would
+    silently produce blanks rather than an error, which is the failure mode this
+    whole exercise is about.
+    """
+    for path in sorted(glob.glob(os.path.join(HERE, "site", "*.html"))):
+        src = open(path, encoding="utf-8").read()
+        for block in re.findall(r"forecast\.json[\s\S]{0,900}", src):
+            hits = sorted(set(re.findall(r"\b(\w+_r)\b", block)))
+            assert not hits, (
+                f"{os.path.basename(path)} reads {hits} near a forecast.json "
+                "fetch; ratings come from ratings.json")
+
+
+def test_the_pages_that_show_a_rating_all_read_the_same_file():
+    """Three pages show ratings. All three must take them from `ratings.json`,
+    because a page that quietly falls back to its own arithmetic is how the two
+    scales got published side by side in the first place."""
+    for name in ("index.html", "team.html", "compare.html"):
+        src = open(os.path.join(HERE, "site", name), encoding="utf-8").read()
+        assert "siteData('ratings')" in src, (
+            f"{name} shows ratings but never fetches ratings.json")
+
+
+def test_a_rating_is_only_published_when_the_matches_can_resolve_it():
+    """Every published dimension names its own reliability, and it is not small.
+
+    The observed spread of a measure across clubs is the spread clubs genuinely
+    have plus the spread one club's luck produces over the matches we saw. Home
+    advantage looked like a real 0.32 points per game and was 7% real; big games
+    looked like 0.25 and was 4%. Both were drawn as axes of a radar out of 100,
+    which is the most confident way there is to publish a random number.
+
+    So a dimension exists here only with a reliability beside it, the rating is
+    shrunk by that reliability, and a floor keeps the next one honest.
+    """
+    from model import scale
+    assert set(scale.DIMENSIONS) == set(scale.RELIABILITY) == set(scale.EUROPE_SD), (
+        "a dimension without a measured spread and reliability is a dimension "
+        "nobody checked")
+    for name, r in scale.RELIABILITY.items():
+        assert 0.5 <= r <= 1.0, (
+            f"{name} resolves {r:.0%} of what it measures; below half the rating "
+            "says more than the matches behind it support")
+    assert not {"home", "big"} & set(scale.DIMENSIONS)
+
+
+def test_shrinking_pulls_a_rating_toward_the_middle():
+    """Kelley's estimate, and the direction that matters: a measure that resolves
+    less of what it sees produces a rating closer to average for the same
+    measurement. Without this the four survivors would each claim the precision
+    of the best of them."""
+    from model import scale
+    import math
+
+    def at(dim: str, spreads: float) -> int:
+        return scale.dimension(dim, math.exp(spreads * scale.EUROPE_SD[dim]),
+                               1.0, log=True)
+
+    strong = at("creation", 3)
+    assert strong > 65, "a club three spreads above average rates above average"
+    assert strong < scale.rating(3.0), (
+        f"creation resolves {scale.RELIABILITY['creation']:.0%}, so three "
+        f"spreads out must publish below the unshrunk {scale.rating(3.0)}")
+    # And the thinner measure is pulled further, for the same distance out.
+    assert at("finishing", 3) < strong, (
+        "finishing resolves less than creation and must be shrunk harder")
+    assert at("consistency", 3) is not None
 
 
 # ------------------------------------------------- arriving from above

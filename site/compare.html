@@ -229,40 +229,25 @@ function row(label, a, b, better) {
    announced as playing in a competition this site does not forecast, which for
    Liverpool is a plainly false statement, and the sort of error message that
    sends a reader looking for a problem that is not there. */
-/* Which ratings a club can have here, and from where.
+const RATINGS = siteData('ratings').then((d) => d.clubs || {}).catch(() => ({}));
 
-   Five of the eight ride on the club's own row in the global ranking, so every
-   club in Europe has them rather than only the 174 this site forecasts -- a
-   comparison page that offers 836 clubs and can rate 174 was offering something
-   it mostly could not do.
+/* Every rating comes from one file, on one scale.
 
-   The other three need a shot, which only the results mirror publishes and only
-   for the big five, and those live on the club's league forecast. Absent for
-   everybody else, and absent rather than zero. */
-const GLOBAL_DIMS = ['att_r', 'def_r', 'home_r', 'big_r', 'consistency_r'];
-/* A club with a forecast page has these measured on its own competition's five
-   seasons, which is a longer and cleaner window than the pooled corpus can give
-   it. Preferring them keeps a club's numbers identical on every page it appears
-   on; the pooled versions stand in for the 662 clubs with no forecast page. */
-const LEAGUE_DIMS = ['finishing_r', 'creation_r', 'discipline_r',
-                     'home_r', 'big_r', 'consistency_r'];
+   It used to come from two, and that was the bug this page existed to have:
+   attack and defence off the global ranking, the other six off the club's own
+   league forecast, and a radar drawn from both as though the axes were
+   the same axis over and over. They were not. A creation rating measured against
+   the Bundesliga's average and one measured against Serie A's cannot be
+   compared, which is the only thing anybody does with a radar.
 
+   `ratings.json` is now the single source, and `forecast.json` carries no
+   ratings at all, so this cannot come apart again. A club missing from it shows
+   no rating rather than one on some other scale. */
 async function ratings(c) {
-  const out = Object.fromEntries(DIMS.map((d) => [d.key, null]));
-  GLOBAL_DIMS.forEach((k) => { out[k] = c[k] ?? null; });
-  if (c.slug) {
-    try {
-      const r = await fetch(`data/${c.slug}/forecast.json`, { cache: 'no-cache' });
-      if (r.ok) {
-        const fc = await r.json();
-        const t = (fc.teams || []).find((x) => x.id === c.id);
-        /* Attack and defence are never taken from here: the league fit measures
-           them against that league's own average, and this page exists to
-           compare across leagues. */
-        if (t) LEAGUE_DIMS.forEach((k) => { if (t[k] != null) out[k] = t[k]; });
-      }
-    } catch { /* the five from the ranking still stand */ }
-  }
+  const R = await RATINGS;
+  const r = R[c.id];
+  if (!r) return null;
+  const out = Object.fromEntries(DIMS.map((d) => [d.key, r[d.key] ?? null]));
   return Object.values(out).some((v) => v != null) ? out : null;
 }
 
@@ -357,7 +342,7 @@ async function render() {
   }
   card.hidden = false;
 
-  /* ---- the eight ratings, overlaid ----
+  /* ---- the ratings, overlaid ----
      Both clubs' league forecasts carry them, which is where the numbers come
      from -- the pooled European fit has no shot feed and no league table to
      define a big game, so it cannot produce these. A club in a competition this
@@ -384,11 +369,12 @@ async function render() {
       'Every one is the same transform over a different measurable, and higher is better on '
       + 'all of them, including defence and discipline, where it is the <em>conceding</em> '
       + 'and the <em>booking</em> that is low. '
-      + '<b>Attack</b> and <b>defence</b> are measured against an average big-five club, the '
-      + 'same reference SPI uses here, so they compare across borders and most of Europe '
-      + 'sits below 50. The rest are measured against each club\u2019s own division. '
-      + '\u201cHow you do against the best in your league\u201d has no cross-border meaning, '
-      + 'because a club that dominates a weak division beats a weak top quarter.';
+      + 'Every one is measured against the same reference, an average big-five club, so a '
+      + '70 on one club\u2019s page is a 70 on another\u2019s and most of Europe sits below 50. '
+      + 'Each is also shrunk toward the middle by how much of it a club\u2019s matches can '
+      + 'actually resolve, so an axis states no more than the evidence behind it. Two others '
+      + 'used to be drawn here, home advantage and big games, and they are gone: 7% and 4% '
+      + 'of what looked like clubs differing turned out to be real.';
     document.getElementById('radarbody').innerHTML =
       `<div>${radar(both, { size: 320 })}
         <div class="tl-key">${both.map((c) => `

@@ -1503,21 +1503,25 @@ export function distinctPair(a, b) {
     : ['var(--away)', 'var(--accent)'];
 }
 
-/* The eight ratings, in the order they are drawn round a radar and listed in a
-   table. Order matters: attack and creation sit next to each other because they
-   are the pair a reader should compare, and defence next to discipline for the
-   same reason. */
+/* The ratings a club can carry, in the order they are drawn round a radar and
+   listed in a table. Order matters: attack and creation sit next to each other
+   because they are the pair a reader should compare, and defence next to
+   discipline for the same reason.
+
+   There were eight. Home advantage and big games are gone, and not because
+   they were hard to put on one scale: `tools/measure_scale.py` splits each
+   measure's spread across clubs into the part clubs genuinely differ by and the
+   part that is one club's luck over the matches we saw, and those two came back
+   7% and 4% real. Both looked convincing on the page. Both were noise with a
+   number on it. What survives is shrunk by the same measurement, so an axis
+   states no more than its matches support. */
 export const DIMS = [
   { key: 'att_r', label: 'Attack',
     hint: 'Goals against an average opponent' },
   { key: 'creation_r', label: 'Creation',
     hint: 'Shots on target per match. Big five only, since no other feed has a shot in it' },
   { key: 'finishing_r', label: 'Finishing',
-    hint: 'Goals per shot on target. Big five only' },
-  { key: 'big_r', label: 'Big games',
-    hint: 'Points per game against the top quarter of the division' },
-  { key: 'home_r', label: 'Home',
-    hint: 'Points per game at home minus points per game away' },
+    hint: 'Goals per shot on target. Big five only, and the thinnest of these: a conversion rate is mostly luck even over five seasons' },
   { key: 'consistency_r', label: 'Consistency',
     hint: 'How little the goal difference moves from match to match. Predictable, which is not the same as strong' },
   { key: 'discipline_r', label: 'Discipline',
@@ -1528,11 +1532,16 @@ export const DIMS = [
 
 /* A radar of the ratings, for one club or two.
 
-   Drawn on 35-95, the band the ratings themselves live on, with a ring at the
-   competition average so a shape can be read against something rather than
-   admired in the abstract. An axis is dropped entirely when neither club has
-   it -- four of the nine competitions have no shot feed, and an axis pinned at
-   the middle for want of data reads as "average", which is a claim. */
+   Drawn on 35-95, the band the ratings themselves live on, with a ring at 65 so
+   a shape can be read against something rather than admired in the abstract.
+   That ring is an average big-five club, on every axis and for every club:
+   these are ratings on one scale, which is what makes two clubs from
+   different leagues worth drawing on the same eight spokes. It also means most
+   of Europe sits inside the ring, which is the honest picture.
+
+   An axis is dropped entirely when neither club has it -- four of the nine
+   competitions have no shot feed, and an axis pinned at the middle for want of
+   data reads as "average", which is a claim. */
 export function radar(clubs, { size = 300, mid = 65 } = {}) {
   const have = DIMS.filter((d) => clubs.some((c) => c.values[d.key] != null));
   if (have.length < 3) return '';

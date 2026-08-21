@@ -33,6 +33,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import math
 import os
 import time
 
@@ -430,15 +431,13 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
         })
     rows.sort(key=lambda r: (-r["pts"], -r["gd"]))
 
-    # Attack and defence, again, as a rating out of 100 -- higher better both
-    # times. Centred on this competition's own average, so 65 is an average club
-    # here; see `model/scale` for why the spread is a fixed constant and not the
-    # spread of whoever happens to be in the division this year.
-    ref_off, ref_def = scale.league_reference([r["off"] for r in rows],
-                                              [r["def"] for r in rows])
-    for r in rows:
-        r["att_r"] = scale.attack(r["off"], ref_off, scale.SD_ATT)
-        r["def_r"] = scale.defence(r["def"], ref_def, scale.SD_DEF)
+    # No ratings on a forecast row. They used to be written here, centred on this
+    # competition's own average, and `ratings.json` wrote a second set centred on
+    # Europe -- so the league table showed Arsenal's defence as 89 and the club
+    # page showed 81, both correct, neither labelled. Every rating the site
+    # publishes now comes from `build_ratings` and there is exactly one of each.
+    # `off` and `def` stay: those are goals, they are what every probability is
+    # computed from, and they are honestly this competition's own.
 
     print("Writing match forecasts…")
     lev_by_match = {}
@@ -540,7 +539,6 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
     gs = gamestate.build(ds.top, teams, ref)
     json.dump(gs, open(os.path.join(out, "gamestate.json"), "w"),
               separators=(",", ":"))
-    _rate_dimensions(rows, gs)
     print(f"  → gamestate.json ({len(gs['referees'])} referees, "
           f"{gs['average']['n']} matches of discipline)")
 
@@ -1315,76 +1313,36 @@ def build_shooting(ready: set[str]) -> None:
         if not shot:
             continue
         leagues_with[lg.slug] = gs.get("shooting_average") or {}
+        # Discipline rides along, because it comes from the same five feeds and
+        # is wanted for the same reason: one file the comparison page can read
+        # to rate a club on the same scale as every other club that has a shot
+        # feed. Assembled here rather than stored six ways -- a yellow, three
+        # for a red, and a sixth of a foul, which puts the three on a comparable
+        # footing without pretending a foul is a booking.
+        disc = gs.get("discipline") or {}
         for cid, row in shot.items():
-            clubs[cid] = {**row, "league": lg.slug}
+            d = disc.get(cid) or {}
+            extra = {}
+            if d.get("n"):
+                extra = {"yellow_pm": d.get("yellow_pm"), "red_pm": d.get("red_pm"),
+                         "fouls_pm": d.get("fouls_pm"),
+                         "foul_index": round(d["yellow_pm"] + 3 * d["red_pm"]
+                                             + d["fouls_pm"] / 6, 3)}
+            clubs[cid] = {**row, **extra, "league": lg.slug}
     json.dump({"generated": dt.datetime.now(dt.timezone.utc)
                .isoformat(timespec="seconds"),
-               "note": ("Shots and shots on target, five seasons per club. The "
-                        "results mirror carries them for the big five only; no "
-                        "other feed this build can reach has a shot in it."),
+               "note": ("Shots, shots on target and discipline, five seasons "
+                        "per club. The results mirror carries them for the big "
+                        "five only; no other feed this build can reach has a "
+                        "shot or a card in it."),
                "averages": leagues_with, "clubs": clubs},
               open(os.path.join(OUT, "shooting.json"), "w"), indent=1)
     print(f"  → shooting.json ({len(clubs)} clubs from "
           f"{len(leagues_with)} competition(s) with a shot feed)")
 
 
-#: Every rating a club carries, in the order they are drawn: the name of the
-#: field on a forecast row, the label, and where the measure comes from. Attack
-#: and defence are computed earlier, from the fit itself; the other six come out
-#: of the results feed and are attached here.
-#:
-#: `(field, scale-dimension, source-block, source-key, log)`
-DIMENSION_FIELDS = (
-    ("home_r", "home", "profile", "home_edge", False),
-    ("big_r", "big", "profile", "top_ppg", False),
-    ("consistency_r", "consistency", "profile", "gd_sd", False),
-    ("finishing_r", "finishing", "shooting", "conversion", True),
-    ("creation_r", "creation", "shooting", "sot_pm", True),
-    ("discipline_r", "discipline", "profile", "foul_index", False),
-)
-
-
-def _rate_dimensions(rows: list[dict], gs: dict) -> None:
-    """Attach the six results-derived ratings to each club's forecast row.
-
-    Each is the same transform as attack and defence -- distance from this
-    competition's own average, through a logistic -- over a different
-    measurable. Three come from goals and dates and exist everywhere; three need
-    a shot and so exist for the big five alone, and are absent rather than zero
-    for the other four.
-    """
-    prof = gs.get("profile") or {}
-    shot = gs.get("shooting") or {}
-    # Discipline is not in either block as one number, so it is assembled here:
-    # a yellow, three for a red, and a sixth of a foul, which puts the three on
-    # a comparable footing without pretending a foul is a booking.
-    disc = gs.get("discipline") or {}
-    for cid, d in disc.items():
-        if d.get("n"):
-            prof.setdefault(cid, {})["foul_index"] = round(
-                d["yellow_pm"] + 3 * d["red_pm"] + d["fouls_pm"] / 6, 3)
-
-    blocks = {"profile": prof, "shooting": shot}
-    # The reference for each is this competition's own average, computed over
-    # exactly the clubs that have the measure.
-    refs: dict[str, float] = {}
-    for _f, _dim, block, key, _log in DIMENSION_FIELDS:
-        vals = [r[key] for r in blocks[block].values()
-                if isinstance(r, dict) and r.get(key) is not None]
-        if vals:
-            refs[f"{block}.{key}"] = sum(vals) / len(vals)
-
-    for row in rows:
-        for field, dim, block, key, log in DIMENSION_FIELDS:
-            src = blocks[block].get(row["id"]) or {}
-            ref = refs.get(f"{block}.{key}")
-            got = scale.dimension(dim, src.get(key), ref, log=log)
-            if got is not None:
-                row[field] = got
-
-
 def build_ratings(ready: set[str]) -> None:
-    """One small file of ratings on the pooled scale, keyed by club.
+    """Every club rating, on one scale, in one file. The only source of them.
 
     Attack and defence on a competition page used to be measured against that
     competition's own average, which made them useless for the comparison people
@@ -1393,15 +1351,27 @@ def build_ratings(ready: set[str]) -> None:
     other. A rating that is only meaningful next to its own neighbours is a rank
     with extra steps.
 
-    So the two that *can* be global are global everywhere. The pooled European
-    fit puts every club on one scale, and this copies its attack and defence out
-    to a file every page can afford to fetch -- global.json itself is well over
-    a megabyte, which is fine for the ranking page and not for a club page.
+    Fixing those two and leaving the other six alone half-solved it, and the
+    half that was left was worse than obvious: the comparison page drew one
+    radar shape out of two axes on a shared scale and five that were each
+    relative to a different division. So all eight are global now, and this file
+    is the only place any of them exists. `forecast.json` carries none, which is
+    what stops a page picking up a league-scale rating by accident -- the way the
+    league table did for months while the club page had it right.
 
-    The other three stay relative to a club's own division, because they cannot
-    be anything else: "points against the top quarter" is a fact about a
-    division, and scoring it across Europe rates whoever dominates the weakest
-    league the best big-game side on the continent.
+    Three come from the pooled fit by way of `global.json`. Three need a shot or
+    a card and so exist only for the big five, and are measured against the mean
+    of that whole population rather than against each of its five leagues.
+
+    There were eight for about an hour. Two of them, home advantage and big
+    games, turned out to be 7% and 4% signal: see `model/scale.py`, which is
+    where the reliability of each of these is written down and where the four
+    that survive are shrunk by it.
+
+    A club with no entry here gets no rating rather than a rating on some other
+    scale. That is sixteen of the two hundred and ten clubs with a forecast page:
+    sides projected up from a division the pooled corpus does not carry, whose
+    only top-flight record is too old to rate from. Blank is the honest answer.
     """
     try:
         with open(os.path.join(OUT, "global.json"), encoding="utf-8") as fh:
@@ -1409,22 +1379,62 @@ def build_ratings(ready: set[str]) -> None:
     except (OSError, ValueError):
         print("  · global.json unreadable, skipping ratings.json")
         return
-    keep = ("att_r", "def_r", "home_r", "big_r", "consistency_r")
-    clubs = {}
+    keep = ("att_r", "def_r", "consistency_r")
+    clubs: dict[str, dict] = {}
     for c in g.get("clubs", []):
         row = {k: c[k] for k in keep if c.get(k) is not None}
         if row:
             clubs[c["id"]] = row
+
+    # The three that need a shot feed. One reference for all five leagues, which
+    # is what makes a Serie A creation rating and a Bundesliga one the same
+    # number; the population that has the data is the big five entire.
+    shot_fields = (("creation_r", "creation", "sot_pm", True),
+                   ("finishing_r", "finishing", "conversion", True),
+                   ("discipline_r", "discipline", "foul_index", False))
+    n_shot = 0
+    try:
+        with open(os.path.join(OUT, "shooting.json"), encoding="utf-8") as fh:
+            sh = (json.load(fh).get("clubs") or {})
+    except (OSError, ValueError):
+        sh = {}
+    if sh:
+        refs = {}
+        for _f, dim, key, log in shot_fields:
+            vals = [r[key] for r in sh.values()
+                    if isinstance(r, dict) and r.get(key) is not None]
+            if vals:
+                refs[key] = (math.exp(sum(math.log(v) for v in vals if v > 0)
+                                      / len([v for v in vals if v > 0]))
+                             if log else sum(vals) / len(vals))
+        for cid, r in sh.items():
+            got = {}
+            for field, dim, key, log in shot_fields:
+                v = scale.dimension(dim, r.get(key), refs.get(key),
+                                    log=log, europe=True)
+                if v is not None:
+                    got[field] = v
+            if got:
+                clubs.setdefault(cid, {}).update(got)
+                n_shot += 1
+
     json.dump({"generated": g.get("generated"),
-               "scale": {"global": ["att_r", "def_r"],
-                         "league": ["home_r", "big_r", "consistency_r"]},
-               "note": ("Attack and defence are measured against an average "
-                        "big-five club, so they compare across borders. The "
-                        "other three are measured against each club's own "
-                        "division."),
+               "scale": {"global": ["att_r", "def_r", "consistency_r",
+                                    "creation_r", "finishing_r",
+                                    "discipline_r"],
+                         "league": []},
+               "note": ("Every rating here is measured against one reference, "
+                        "so a 70 means the same thing in any league. Attack, "
+                        "defence and consistency come from the pooled European "
+                        "fit; creation, finishing and discipline need a shot or "
+                        "a card and exist for the big five only, measured "
+                        "against the mean of all five together. Each is shrunk "
+                        "toward the middle by how much of it a club's matches "
+                        "can actually resolve."),
                "clubs": clubs},
               open(os.path.join(OUT, "ratings.json"), "w"), separators=(",", ":"))
-    print(f"  → ratings.json ({len(clubs)} clubs on the pooled scale)")
+    print(f"  → ratings.json ({len(clubs)} clubs, {n_shot} with a shot feed, "
+          "six ratings on one scale)")
 
 
 def build_seo(ready: set[str]) -> None:

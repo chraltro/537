@@ -35,13 +35,16 @@ are spread out -- which is not a flaw, it is the most interesting thing on the
 page: the Championship's attacks really are closer together than the
 Bundesliga's.
 
-Two scales exist, for the same reason SPI has two.
+One scale, and only one. 65 is an average big-five club, the same reference the
+global ranking quotes SPI against, so a rating means the same thing whichever
+league its club plays in and most of Europe sits below 50.
 
-`LEAGUE` centres each competition on its own average, so 65 is an average club
-*in this competition*. `EUROPE` centres on an average big-five club, the same
-reference the global ranking quotes SPI against, so a rating there is comparable
-across borders and most of Europe sits below 50. Neither is convertible into the
-other, and the glossary says so.
+There were two for a while, one centred on each competition and one on Europe,
+and the site published both without saying which was which: the league table
+gave Arsenal's defence as 89 and the club page gave 81. Worse, the comparison
+page drew a single radar out of two axes on one scale and five on the other. A
+rating that is only meaningful next to its own neighbours is a rank with extra
+steps, so the league scale is gone rather than labelled.
 """
 from __future__ import annotations
 
@@ -52,14 +55,10 @@ import math
 #: deviations above it at 90, and three below at 40.
 LO, HI, SLOPE = 35.0, 95.0, 1.3
 
-#: Spread of log attack and log defence within a competition, averaged over the
-#: nine this site forecasts (2026-27 preseason). Attack is the wider of the two:
-#: clubs differ more in what they score than in what they concede.
-SD_ATT = 0.214
-SD_DEF = 0.168
-
-#: Spread of the same two across the pooled European corpus, which runs from
-#: Bayern to the Luxembourg National Division and is therefore far wider.
+#: Spread of log attack and log defence across the pooled European corpus, which
+#: runs from Bayern to the Luxembourg National Division and is therefore far
+#: wider than any one division. Measured once and frozen; `tools/measure_scale.py`
+#: reports the drift.
 SD_EUROPE = 0.55
 
 # --------------------------------------------------------------------------
@@ -70,57 +69,108 @@ SD_EUROPE = 0.55
 #: seasons, 2021-22 to 2025-26) and then frozen -- see the module docstring for
 #: why they are constants rather than recomputed.
 #:
-#: Each entry is (spread, higher-is-better). Where the flag is False the z-score
-#: is negated before the logistic, so that every rating on the site reads the
-#: same way round: bigger is better, always, without exception.
-DIMENSIONS: dict[str, tuple[float, bool]] = {
+#: True where a bigger measurement is a better club. Where it is False the
+#: z-score is negated before the logistic, so that every rating on the site
+#: reads the same way round: bigger is better, always, without exception.
+DIMENSIONS: dict[str, bool] = {
     # Universal -- goals and dates only, so every competition has them.
     #
-    # How much the ground is worth to this club: points per game at home minus
-    # points per game away. The league's own home advantage is already in the
-    # model; this is the part that belongs to the club.
-    "home": (0.20, True),
-    # Points per game against the top quarter of that season's table. A club
-    # cannot be in its own top quarter for this purpose -- otherwise the best
-    # side in the division would be scored on the matches it did not play.
-    "big": (0.23, True),
     # Standard deviation of goal difference, match to match, inverted. High
     # means predictable, and predictable is not the same as good: a side that
     # loses narrowly every week scores well here. It is a description, not a
     # compliment, and the page says so.
-    "consistency": (0.14, False),
-    # Big five only -- these need a shot, and only the results mirror has one.
+    "consistency": False,
+    # Big five only -- these need a shot or a card, and only the results mirror
+    # has one.
     #
+    # Shots on target per match, logged. Deliberately separate from attack: a
+    # club that creates plenty and finishes badly is the interesting case, and
+    # one number cannot show it.
+    "creation": True,
     # Goals per shot on target, logged.
-    "finishing": (0.098, True),
-    # Shots on target per match, logged. Deliberately separate from attack:
-    # a club that creates plenty and finishes badly is the interesting case,
-    # and one number cannot show it.
-    "creation": (0.176, True),
+    "finishing": True,
     # Yellow + three per red + a sixth of a foul, per match, inverted -- so a
     # high rating is a clean side.
-    "discipline": (0.48, False),
+    "discipline": False,
+}
+
+#: What fraction of each measure's spread across clubs is real, as opposed to
+#: the luck of the matches we happened to see.
+#:
+#: For a mean over n matches the observed variance between clubs is the true
+#: variance plus the sampling variance, and the second is estimable from the
+#: matches themselves. `tools/measure_scale.py` prints the split.
+#:
+#: This is why two dimensions this site used to publish no longer exist.
+#: *Home advantage* came out at 0.07 and *big games* at 0.04: ninety-three and
+#: ninety-six per cent of what looked like clubs differing was one club's luck
+#: over seventy matches, or over the eighteen hard ones. Both are well-known
+#: results -- club-specific home advantage is tiny, and beating expectation
+#: against strong sides does not persist -- and neither was survivable as a
+#: number out of 100 next to five that mean something.
+#:
+#: The four that remain are shrunk toward 65 by their own reliability, which is
+#: Kelley's estimate of a true score: a measurement two standard deviations out
+#: on a measure that resolves 60% of what it sees is best read as 1.2 out.
+RELIABILITY: dict[str, float] = {
+    "consistency": 0.65,      # 90 matches of goal difference
+    "creation": 0.94,         # ~1,000 shots on target per club
+    "finishing": 0.59,        # a conversion rate is thin even over five seasons
+    "discipline": 0.92,
 }
 
 
-def dimension(name: str, value: float, ref: float, *, log: bool = False) -> int | None:
-    """One measurable against its competition's average, as a rating out of 100.
+#: The spread of each, across every club that has it: 879 for the one that needs
+#: only goals and dates, 88 for the three that need a shot or a card, whose whole
+#: population is the big five.
+#:
+#: The within-league spreads these replaced are quoted beside each, because the
+#: difference is the interesting part. Consistency widens a long way -- a corpus
+#: running from Bayern to Luxembourg spreads out more than any single division
+#: does -- while the three shot-based ones barely move, since their population
+#: was always the big five and the only change is using one average for all five
+#: rather than five averages.
+#:
+#: Measured once, at the 2026-27 preseason build, and frozen -- see the module
+#: docstring for why these are constants. `tools/measure_scale.py` regenerates
+#: them and prints what changed.
+EUROPE_SD: dict[str, float] = {
+    "consistency": 0.2681,    # within a league: 0.14
+    "creation": 0.1841,       # within a league: 0.176
+    "finishing": 0.1017,      # within a league: 0.098
+    "discipline": 0.5634,     # within a league: 0.48
+}
+
+
+def dimension(name: str, value: float, ref: float, *, log: bool = False,
+              europe: bool = True) -> int | None:
+    """One measurable against an average club, as a rating out of 100.
+
+    `europe` is kept as a parameter and ignored: it is always true now, and
+    every caller passes it, so removing it would be a diff across four files to
+    say the same thing. Nothing here can produce a league-relative rating.
 
     `log` for quantities that are ratios rather than differences -- a shot count
     or a conversion rate, where twice the average is as far above it as half is
     below. Points-per-game differences are already differences and are not
     logged.
     """
-    spread = DIMENSIONS.get(name)
-    if spread is None or value is None or ref is None:
+    higher = DIMENSIONS.get(name)
+    if higher is None or value is None or ref is None:
         return None
-    sd, higher = spread
+    sd = EUROPE_SD.get(name)
+    if sd is None:
+        return None
     if log:
         if value <= 0 or ref <= 0:
             return None
         z = (math.log(value) - math.log(ref)) / sd
     else:
         z = (value - ref) / sd
+    # Shrunk toward the middle by how much of this measure is real. Without it
+    # a rating states more than the matches behind it support, which is the
+    # failure that cost this site its home-advantage and big-game axes.
+    z *= RELIABILITY.get(name, 1.0)
     return rating(z if higher else -z)
 
 
@@ -147,17 +197,3 @@ def defence(dfn: float, ref: float, sd: float) -> int:
     if dfn <= 0 or ref <= 0:
         return round(LO + (HI - LO) / 2)
     return rating(-(math.log(dfn) - math.log(ref)) / sd)
-
-
-def league_reference(offs: list[float], dfns: list[float]) -> tuple[float, float]:
-    """The competition's own average attack and defence, in goals.
-
-    The geometric mean, because the scale is a ratio scale: the club halfway
-    between one that scores 1.0 and one that scores 4.0 scores 2.0, not 2.5.
-    """
-    def geo(xs: list[float]) -> float:
-        good = [x for x in xs if x > 0]
-        if not good:
-            return 1.0
-        return math.exp(sum(math.log(x) for x in good) / len(good))
-    return geo(offs), geo(dfns)

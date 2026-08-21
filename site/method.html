@@ -905,9 +905,10 @@ const GLOSS = [
     every page: a 70 in the Championship and a 70 in the Bundesliga are the same
     attack, which is the whole point of putting a number on it. Most of Europe
     therefore sits below 50, and a mid-table Eredivisie side rates below a
-    mid-table Premier League one, as it should. This is the one place the site
-    does <em>not</em> follow SPI, which stays relative to a club's own
-    competition.
+    mid-table Premier League one, as it should. Every rating on this site works
+    this way, and SPI on a competition page does <em>not</em>: it stays relative
+    to that competition, and the global rankings page is where SPI crosses a
+    border.
     <br>The model itself thinks in goals: 1.91 expected against an average
     opponent, 0.55 conceded. Those are still what every probability is
     computed from and what the tooltips show. The rating is a readable form of
@@ -917,22 +918,43 @@ const GLOSS = [
     constant, so a club's rating does not move when a rival's does. A competition
     whose clubs are close together therefore shows a narrower band of ratings than
     one where they are spread out, which is worth knowing rather than a flaw.`],
-  ['The other six ratings', `<b>Creation</b>, <b>Finishing</b>, <b>Big games</b>,
-    <b>Home</b>, <b>Consistency</b> and <b>Discipline</b>, on the same 35-to-95
-    scale and the same rule: 65 is average for the competition and higher is
-    better every time. Creation is shots on target per match and finishing is
-    goals per shot on target. They are kept apart because a club can create
-    plenty and finish badly, and one number cannot show both. Big games is points per game against the top quarter of that
-    season's table. Home is points per game at home minus points per game away:
-    the competition's own home advantage is already in the model, and this is
-    the part that belongs to the club. Consistency is how little the goal
-    difference moves from match to match. It describes a club rather than
-    praising one: a side that loses narrowly every week scores well on it.
-    Discipline is cards and fouls inverted, so a clean side rates high.
-    <br>Creation, finishing and discipline need shots, cards and fouls, which
-    only the results mirror publishes and only for the big five. The other four
-    competitions here are read from openfootball, which carries goals and
-    nothing else, so those three are absent rather than guessed at.`],
+  ['The other four ratings', `<b>Creation</b>, <b>Finishing</b>,
+    <b>Consistency</b> and <b>Discipline</b>, on the same 35-to-95 scale,
+    against the same reference and by the same rule: 65 is an average big-five
+    club and higher is better every time. They were relative to each club's own
+    division until August 2026, which made the comparison page draw one radar
+    shape out of axes that were not the same axis.
+    <br>Creation is shots on target per match and finishing is goals per shot on
+    target. They are kept apart because a club can create plenty and finish
+    badly, and one number cannot show both. Consistency is how little the goal
+    difference moves from match to match: it describes a club rather than
+    praising one, since a side that loses narrowly every week scores well on it.
+    Discipline is cards and fouls inverted, so a clean side rates high. Creation,
+    finishing and discipline need shots, cards and fouls, which only the results
+    mirror publishes and only for the big five, so they are absent rather than
+    guessed at for the other four competitions.
+    <br>Each is shrunk toward 65 by how much of it a club's matches can actually
+    resolve, which is measured rather than assumed and is 94% for creation, 92%
+    for discipline, 65% for consistency and 59% for finishing. A conversion rate
+    is thin evidence even over five seasons.`],
+  ['Two ratings that used to be here', `<b>Home</b> and <b>Big games</b> were
+    published for a while and are gone. Not because they were hard to put on one
+    scale: because they were not measuring anything.
+    <br>The spread of a measure across clubs is the spread clubs genuinely have
+    plus the spread one club's luck produces over the matches we happened to
+    see, and the second is estimable from the matches themselves. Home advantage
+    -- points per game at home minus points per game away -- varied across clubs
+    by 0.32 points a game, of which 7% was real. Big games varied by 0.25, of
+    which 4% was. Ninety matches is not enough to tell one club's home comfort
+    from another's, and the eighteen hard games inside them are nowhere near
+    enough to tell who rises to an occasion. Both are well-known results:
+    club-specific home advantage is tiny, and beating expectation against strong
+    opponents does not persist.
+    <br>They looked entirely convincing on the page, which is the point of
+    saying so here. A radar drawn out of 100 is the most confident way there is
+    to publish a random number. Every dimension that remains carries its
+    measured reliability in <code>model/scale.py</code>, and one that cannot
+    clear half does not get drawn.`],
   ['Projected points', `The mean points total across every simulated season,
     which is why it carries a decimal and why no club is ever projected to a
     round number. The 80% range beside it is the 10th to 90th percentile.`],
