@@ -69,6 +69,21 @@ class TeamRegistry:
         })
         return tid
 
+    def known(self, name: str) -> str | None:
+        """`resolve` without the auto-registration, for a source we do not trust yet.
+
+        `resolve` mints an id for a spelling it has never seen, which is right
+        for a Championship opponent from 2004 and wrong for a second feed of a
+        league we already carry: football-data.co.uk writes "Lech Poznan" where
+        openfootball writes "KKS Lech Poznań", and auto-registering that would
+        put twenty duplicate Polish clubs in the ranking, each with half a
+        season and no history, rather than updating the twenty already there.
+
+        So a new source resolves through this, and a league whose clubs do not
+        all land on ids we already hold does not enter the corpus at all.
+        """
+        return self._by_key.get(normalise(name))
+
     def display(self, tid: str) -> str:
         return self.meta.get(tid, {}).get("name", tid)
 

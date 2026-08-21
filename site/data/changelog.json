@@ -2,6 +2,12 @@
  "note": "Changes that moved a published number, or changed what a published number means. Kept by hand, because a list generated from commit subjects is a list of commit subjects.",
  "entries": [
   {
+   "date": "2026-08-21",
+   "title": "A second feed for the leagues whose first one stopped",
+   "effect": "No change to any number yet. The sources are written and gated; a build with open network access is what turns them on.",
+   "body": "Three hundred and forty-three clubs across twenty-four competitions were rated to 2024-25 and no further, because their openfootball file stopped and this site read nothing but GitHub. That rule is now relaxed by two hosts: football-data.co.uk, which publishes Poland, Romania and Switzerland, and Wikipedia, whose season articles carry a results grid for the twenty-one nobody else covers. Neither is trusted on sight. Each one has to reproduce a season this site already holds, score for score, before anything it says about a newer season counts: a club name in that overlap that does not resolve is a second spelling rather than a new club, and a feed that disagrees about the old season is not the competition it claims to be. Nothing from Wikipedia is switched on; those leagues arrive one at a time as their club names are shown to line up. The method page lists which feeds are in use and which are not, and why."
+  },
+  {
    "date": "2026-08-20",
    "title": "Fixture difficulty for a whole division at once",
    "effect": "No change to any number. The ratings shown are the ones the club pages already used.",

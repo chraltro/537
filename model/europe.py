@@ -235,6 +235,92 @@ def load_domestic(reg: TeamRegistry, assocs: list[str] | None = None,
     return out
 
 
+
+# --------------------------------------------------------------------------
+# Second feeds, off GitHub
+# --------------------------------------------------------------------------
+#: The associations whose openfootball file stopped and which a second source
+#: can carry. Nothing here is trusted on sight: `model.external.probe` fetches
+#: each one, parses it and resolves every club name against the registry before
+#: a single match is allowed into the corpus. See `model/external.py` for why
+#: that gate exists and why it cannot be satisfied where this code is written.
+#:
+#: The group ids match the `DomesticSource` entries above exactly, which is what
+#: lets a second feed extend a league rather than found a parallel one.
+#: Set once the probe has printed, so rebuilding the corpus per competition does
+#: not reprint the same nine lines nine times.
+_ANNOUNCED: list[bool] = []
+
+#: The most recent probe's verdicts, for whoever writes `sources.json`. A
+#: module-level handoff because the corpus is built deep inside a per-league
+#: call and the file is written once for the whole site.
+LAST_VERDICTS: list["object"] = []
+
+
+def external_sources() -> list["object"]:
+    from . import footballdata, wikifootball
+    from .external import ExternalSource
+
+    out: list[ExternalSource] = []
+    for assoc in ("POL", "ROU", "SUI"):
+        src = BY_ASSOC[assoc]
+        out.append(footballdata.source(assoc, src.name, src.group))
+    for assoc in sorted(wikifootball.ARMED):
+        src = BY_ASSOC[assoc]
+        # The last season the GitHub feed carries, plus everything after it. The
+        # first of those is not wanted for its data -- we already have it -- but
+        # as the season the probe lines the two feeds up on.
+        out.append(wikifootball.source(assoc, src.name, src.group,
+                                       wikifootball.seasons_for(src.seasons)))
+    return out
+
+
+def load_external(reg: TeamRegistry, domestic: list[Match],
+                  *, quiet: bool = False) -> tuple[list[Match], list["object"]]:
+    """Matches from every second feed that passes its probe, and the verdicts.
+
+    `domestic` is what the GitHub feeds just produced. Each source is checked
+    against its own league's slice of it, which is what makes the probe a
+    comparison rather than a download.
+
+    The verdicts are returned rather than swallowed because they are the only
+    account of what happened: on a runner they are printed, and in
+    `coverage.json` they are what lets the site say which competitions are
+    running on a second feed and which are still stopped at 2024-25.
+    """
+    from . import external
+
+    srcs = external_sources()
+    if not srcs:
+        return [], []
+    # The corpus is rebuilt once per competition, so a probe that printed every
+    # time would print nine times and say the same thing nine times. The fetch
+    # cache makes the repeats free; this makes them quiet.
+    say = not quiet and not _ANNOUNCED
+    if say:
+        print(f"Probing {len(srcs)} second feed(s) outside GitHub…")
+    by_group: dict[str, list[Match]] = {}
+    for m in domestic:
+        if m.comp:
+            by_group.setdefault(m.comp, []).append(m)
+
+    out: list[Match] = []
+    verdicts = []
+    for src in srcs:
+        mine = by_group.get(src.group, [])
+        v = external.probe(src, reg, mine)
+        verdicts.append(v)
+        if say:
+            print(v.line())
+        out.extend(external.matches(src, reg, mine))
+    if say:
+        armed = sum(1 for v in verdicts if v.ok)
+        print(f"  · {armed}/{len(srcs)} armed, {len(out)} matches added")
+        _ANNOUNCED.append(True)
+    LAST_VERDICTS[:] = verdicts
+    return out, verdicts
+
+
 # --------------------------------------------------------------------------
 # Grouping
 # --------------------------------------------------------------------------
@@ -422,6 +508,8 @@ class Corpus:
         self.reg = reg or TeamRegistry()
         self.matches: list[Match] = []
         self.euro: list[Match] = []
+        #: One `external.Verdict` per second feed, filled in by `load`.
+        self.verdicts: list[object] = []
 
     def add(self, matches: list[Match], group: str) -> "Corpus":
         """Fold in matches from a source that does not label itself."""
@@ -439,7 +527,10 @@ class Corpus:
             self.euro = load_competitions(self.reg, seasons, quiet=quiet)
             self.matches.extend(self.euro)
         if domestic:
-            self.matches.extend(load_domestic(self.reg, quiet=quiet))
+            dom = load_domestic(self.reg, quiet=quiet)
+            self.matches.extend(dom)
+            ext, self.verdicts = load_external(self.reg, dom, quiet=quiet)
+            self.matches.extend(ext)
         if big_five:
             self.matches.extend(load_big_five(self.reg, from_year=from_year,
                                               quiet=quiet))

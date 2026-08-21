@@ -26,18 +26,25 @@ def _cache_path(url: str) -> str:
     return os.path.join(CACHE, url.replace("://", "_").replace("/", "_"))
 
 
-def get(url: str, max_age: float = 6 * 3600, required: bool = True) -> str | None:
+def get(url: str, max_age: float = 6 * 3600, required: bool = True,
+        tries: int = 4) -> str | None:
     """Fetch `url`, using a cached copy when it is younger than `max_age`.
 
     Falls back to a stale cache entry if the network fails, so a transient
     GitHub blip degrades to slightly-old data rather than a broken site.
+
+    `tries` exists for the second feeds. A host that is blocked outright answers
+    immediately and identically every time, so four attempts with a backoff
+    between them spends fifteen seconds to learn what the first one said; the
+    GitHub sources keep the full four because their failures really are
+    transient.
     """
     path = _cache_path(url)
     if os.path.exists(path) and time.time() - os.path.getmtime(path) < max_age:
         return open(path, encoding="utf-8").read()
 
     last: Exception | None = None
-    for attempt in range(4):
+    for attempt in range(max(1, tries)):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": UA})
             with urllib.request.urlopen(req, timeout=45) as resp:

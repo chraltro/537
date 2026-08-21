@@ -1171,6 +1171,49 @@ def build_coverage(ready: set[str]) -> None:
         print(f"  → changelog.json ({len(log.get('entries', []))} entries)")
 
 
+def probe_external(quiet: bool = False) -> list[dict]:
+    """Fetch and check every second feed, and say what happened.
+
+    This is the half of the verification that cannot run where the code is
+    written. The development sandbox reaches GitHub and nothing else, so the
+    readers in `footballdata.py` and `wikifootball.py` ship unfetched; here, on a
+    runner with open egress, they are fetched, parsed, lined up against a season
+    the GitHub feed already gave us, and either armed or refused with a reason.
+
+    Safe to run on its own -- `python -m model.run --probe` -- which is how to
+    find out whether a new league's club names resolve before wiring it in.
+    """
+    from .parse import TeamRegistry
+    reg = TeamRegistry()
+    dom = europe.load_domestic(reg, quiet=True)
+    _, verdicts = europe.load_external(reg, dom, quiet=quiet)
+    return [v.as_json() for v in verdicts]
+
+
+def build_sources(_ready: set[str]) -> None:
+    """`sources.json`: which competitions are running on a second feed.
+
+    Written from whatever the last probe found rather than from the source list,
+    so the file describes what happened and not what was hoped for. A build
+    whose second feeds were all unreachable publishes that fact.
+    """
+    verdicts = [v.as_json() for v in europe.LAST_VERDICTS]
+    if not verdicts:
+        verdicts = probe_external(quiet=True)
+    armed = [v for v in verdicts if v["ok"]]
+    json.dump({"generated": dt.datetime.now(dt.timezone.utc)
+               .isoformat(timespec="seconds"),
+               "note": ("Second feeds, off GitHub, for competitions whose "
+                        "GitHub source stopped publishing. A feed is used only "
+                        "if it reproduces a season this site already holds."),
+               "sources": verdicts},
+              open(os.path.join(OUT, "sources.json"), "w"), indent=1)
+    print(f"  → sources.json ({len(armed)} of {len(verdicts)} second feed(s) armed)")
+    for v in verdicts:
+        if not v["ok"]:
+            print(f"    · {v['source']}/{v['league']}: {v['reason']}")
+
+
 #: How stale a competition's newest result may be, in days, before the build
 #: says so. Chosen from what the feeds actually do rather than from a round
 #: number: openfootball's in-season commits come roughly weekly with multi-week
@@ -1496,7 +1539,17 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--pooled", action="store_true",
                     help="fit domestic leagues on the pooled European corpus "
                          "(off by default; see the Phase 2 gate)")
+    ap.add_argument("--probe", action="store_true",
+                    help="check the second feeds outside GitHub and exit; the "
+                         "only place that check can run is a machine with open "
+                         "egress, which is a runner and not the sandbox")
     args = ap.parse_args(argv)
+
+    if args.probe:
+        rows = probe_external()
+        raise SystemExit(0 if all(r["ok"] for r in rows) else
+                         f"{sum(1 for r in rows if not r['ok'])} second feed(s) "
+                         "did not arm")
 
     try:
         todo = ([leagues.get(s) for s in args.league] if args.league
@@ -1532,6 +1585,7 @@ def main(argv: list[str] | None = None) -> None:
     # landed, so it is reported and the run carries on.
     for name, fn in (("global rankings", build_rankings), ("feeds", build_feeds),
                      ("coverage", build_coverage),
+                     ("second feeds", build_sources),
                      ("club register", build_clubs),
                      ("pooled ratings", build_ratings),
                      ("shooting", build_shooting),

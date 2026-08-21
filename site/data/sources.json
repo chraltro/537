@@ -1,0 +1,54 @@
+{
+ "generated": "2026-08-21T06:53:22+00:00",
+ "note": "Second feeds, off GitHub, for competitions whose GitHub source stopped publishing. A feed is used only if it reproduces a season this site already holds.",
+ "sources": [
+  {
+   "source": "football-data.co.uk",
+   "assoc": "POL",
+   "league": "Ekstraklasa",
+   "ok": false,
+   "reason": "could not be fetched",
+   "detail": "FormatError: unreachable: https://www.football-data.co.uk/new/POL.csv",
+   "matches": 0,
+   "latest": null,
+   "clubs": 0,
+   "overlap_season": null,
+   "compared": 0,
+   "agreed": 0,
+   "unresolved": [],
+   "new_clubs": []
+  },
+  {
+   "source": "football-data.co.uk",
+   "assoc": "ROU",
+   "league": "Liga I",
+   "ok": false,
+   "reason": "could not be fetched",
+   "detail": "FormatError: unreachable: https://www.football-data.co.uk/new/ROU.csv",
+   "matches": 0,
+   "latest": null,
+   "clubs": 0,
+   "overlap_season": null,
+   "compared": 0,
+   "agreed": 0,
+   "unresolved": [],
+   "new_clubs": []
+  },
+  {
+   "source": "football-data.co.uk",
+   "assoc": "SUI",
+   "league": "Swiss Super League",
+   "ok": false,
+   "reason": "could not be fetched",
+   "detail": "FormatError: unreachable: https://www.football-data.co.uk/new/SWZ.csv",
+   "matches": 0,
+   "latest": null,
+   "clubs": 0,
+   "overlap_season": null,
+   "compared": 0,
+   "agreed": 0,
+   "unresolved": [],
+   "new_clubs": []
+  }
+ ]
+}

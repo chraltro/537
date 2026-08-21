@@ -49,6 +49,18 @@ jobs:
       - name: Run tests
         run: python -m pytest tests/ -q
 
+      - name: Probe the second feeds
+        # The one check that cannot run where this code is written. The dev
+        # sandbox reaches raw.githubusercontent.com and nothing else, so the
+        # readers for football-data.co.uk and Wikipedia ship unfetched; here
+        # they are fetched, parsed and lined up against a season the GitHub feed
+        # already gave us. `continue-on-error` because a second feed is an
+        # improvement to the ratings of stale leagues, not a dependency: if a
+        # host is down the build carries on with exactly the data it had before,
+        # and `sources.json` records that it did.
+        continue-on-error: true
+        run: python -m model.run --probe
+
       - name: Build forecast
         # Includes the full walk-forward backtest: warm-starting each fit from
         # the previous round brings it down to about twenty seconds, so there is

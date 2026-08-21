@@ -103,6 +103,22 @@
     <p class="hint" id="compnote" style="margin-top:14px"></p>
   </section>
 
+  <section class="card" id="srccard" hidden>
+    <h2>Second feeds</h2>
+    <p class="sub" id="srcsub"></p>
+    <div class="scroller">
+      <table id="srctbl">
+        <thead><tr>
+          <th class="l">Competition</th>
+          <th class="l">Source</th>
+          <th class="l">Status</th>
+        </tr></thead>
+        <tbody id="srcbody"></tbody>
+      </table>
+    </div>
+    <p class="hint" id="srcnote" style="margin-top:14px"></p>
+  </section>
+
   <section class="card" id="changecard" hidden>
     <h2>What changed, and when</h2>
     <p class="sub">Every change that moved a published number, newest first. A forecast that
@@ -327,6 +343,23 @@
       with no shot data, since it is the same mechanism that rates a promoted club, but those
       three forecasts lean entirely on goals. If one of those feeds stalls, the freshness
       panel at the top of this page is where it shows up.</p>
+
+    <h3>Where a source is allowed to come from</h3>
+    <p>For most of this site's life the answer was GitHub and nothing else. One host, one
+      failure mode, no keys, nothing to pay for, and every source checkable before it
+      shipped. What that rule cost is on the ranking page: three hundred and forty-three
+      clubs across twenty-four competitions rated to 2024-25 and no further, because
+      openfootball stopped publishing their leagues and no other repository picked them up.
+      Poland, Romania, Croatia, Serbia, Ukraine, Gibraltar, San Marino and seventeen more.</p>
+    <p>Two hosts are now allowed in for those leagues, and neither is trusted on sight. A
+      second feed for a league this site already carries is the easiest way to end up with
+      every club in it twice, once under each source's spelling, so before anything it says
+      is used it has to reproduce a season already held here, score for score. A club name in
+      that overlap that does not resolve is a second spelling and not a new club, and it
+      stops the league until somebody writes the alias; a feed that disagrees about the old
+      season is not the competition it claims to be. A club that shows up only after the
+      overlap is a promotion, and gets an id of its own. The table under Second feeds says
+      which sources cleared that and which did not.</p>
 
     <h3>Marking its own homework</h3>
     <p>Scoring a forecast against results it has already absorbed is meaningless. So each
@@ -980,6 +1013,46 @@ try {
   }
 } catch { /* coverage.json predates this build */ }
 
+/* ---- second feeds ---- */
+/* Most of Europe's small leagues lost their feed rather than their season: the
+   openfootball file simply stopped. A second source can carry them, but a
+   second source for a league we already hold is also the easiest way to end up
+   with every club in it twice, so one is used only if it can reproduce a season
+   we already have. This says which ones managed it. */
+try {
+  const sj = await siteData('sources');
+  const rows = sj.sources || [];
+  if (rows.length) {
+    const armed = rows.filter((r) => r.ok);
+    document.getElementById('srcsub').innerHTML =
+      `Everything else on this site comes from GitHub. These do not, and they exist
+       because the GitHub feed for these competitions stopped publishing. A feed here
+       is used only when it reproduces a season this site already holds, score for
+       score, which is what rules out reading the wrong division by mistake.`;
+    document.getElementById('srcbody').innerHTML = rows.map((r) => {
+      const how = r.ok
+        ? `agrees with the old feed on ${r.agreed} of ${r.compared} results in
+           ${esc(r.overlap_season)}, and carries ${r.matches.toLocaleString()} matches
+           through ${esc(r.latest)}`
+        : esc(r.reason);
+      return `<tr>
+        <td class="l">${esc(r.league)}</td>
+        <td class="l"><span class="hint">${esc(r.source)}</span></td>
+        <td class="l">${r.ok ? '' : '<span class="warn">not in use</span> '}
+          <span class="hint">${how}</span></td>
+      </tr>`;
+    }).join('');
+    document.getElementById('srcnote').innerHTML = armed.length
+      ? `${armed.length} of ${rows.length} in use. A competition not listed here has no
+         second feed anywhere that does not want an API key, and is rated from the last
+         season its own feed published.`
+      : `None are in use, so every competition on this site is running on its GitHub feed
+         alone. That is the state the site shipped in and nothing is worse for it; the
+         stale competitions simply stay stale.`;
+    document.getElementById('srccard').hidden = false;
+  }
+} catch { /* sources.json predates this build */ }
+
 /* ---- changelog ---- */
 try {
   const log = await siteData('changelog');
@@ -1007,7 +1080,8 @@ initTabs(document.getElementById('tabs'), [
   { id: 'model', label: 'The model', short: 'Model',
     sections: [document.getElementById('prosecard')].filter(Boolean) },
   { id: 'data', label: 'Data',
-    sections: ['freshcard', 'compcard', 'refcard'].map((x) => document.getElementById(x))
+    sections: ['freshcard', 'compcard', 'srccard', 'refcard']
+      .map((x) => document.getElementById(x))
       .filter(Boolean) },
   { id: 'reference', label: 'Reference', short: 'Terms',
     sections: ['glosscard', 'changecard'].map((x) => document.getElementById(x))
