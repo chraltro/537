@@ -273,7 +273,32 @@ _ANNOUNCED: list[bool] = []
 LAST_VERDICTS: list["object"] = []
 
 
-def external_sources() -> list["object"]:
+def seasons_held_in_full(domestic: list[Match] | None, group: str,
+                         listed: tuple[str, ...]) -> tuple[str, ...]:
+    """The seasons of one league the GitHub feed carries enough of to check against.
+
+    Not the same question as which seasons it lists. openfootball opens a
+    season's file when the season starts and then, for the leagues that went
+    quiet, stops: Norway's 2025 file holds 44 of its 240 matches and Belarus's
+    holds 8 of 240. Anchoring the overlap on a file like that fails the probe on
+    thinness -- 44 fixtures is below the sixty it needs -- and would have read
+    as "Wikipedia disagrees with us" when the truth is that we stopped looking.
+
+    So the anchor is the newest season with a real season's worth of matches in
+    it, and every season after that one, thin file or no file, is asked for.
+    """
+    from .external import MIN_OVERLAP_MATCHES
+    if domestic is None:
+        return tuple(listed)
+    n: dict[str, int] = {}
+    for m in domestic:
+        if m.comp == group and m.played:
+            n[m.season] = n.get(m.season, 0) + 1
+    full = tuple(sorted(s for s, c in n.items() if c >= MIN_OVERLAP_MATCHES))
+    return full or tuple(listed)
+
+
+def external_sources(domestic: list[Match] | None = None) -> list["object"]:
     from . import footballdata, wikifootball
     from .external import ExternalSource
 
@@ -281,13 +306,15 @@ def external_sources() -> list["object"]:
     for assoc in ("POL", "ROU", "SUI"):
         src = BY_ASSOC[assoc]
         out.append(footballdata.source(assoc, src.name, src.group))
-    for assoc in sorted(wikifootball.ARMED):
+    for assoc in sorted(wikifootball.ARMED | wikifootball.CANDIDATES):
         src = BY_ASSOC[assoc]
-        # The last season the GitHub feed carries, plus everything after it. The
-        # first of those is not wanted for its data -- we already have it -- but
-        # as the season the probe lines the two feeds up on.
-        out.append(wikifootball.source(assoc, src.name, src.group,
-                                       wikifootball.seasons_for(src.seasons)))
+        # The last season the GitHub feed carries in full, plus everything after
+        # it. The first of those is not wanted for its data -- we already have
+        # it -- but as the season the probe lines the two feeds up on.
+        have = seasons_held_in_full(domestic, src.group, src.seasons)
+        out.append(wikifootball.source(
+            assoc, src.name, src.group, wikifootball.seasons_for(have),
+            contributes=assoc in wikifootball.ARMED))
     return out
 
 
@@ -306,7 +333,7 @@ def load_external(reg: TeamRegistry, domestic: list[Match],
     """
     from . import external
 
-    srcs = external_sources()
+    srcs = external_sources(domestic)
     if not srcs:
         return [], []
     # The corpus is rebuilt once per competition, so a probe that printed every
@@ -322,16 +349,31 @@ def load_external(reg: TeamRegistry, domestic: list[Match],
 
     out: list[Match] = []
     verdicts = []
+    fed: set[str] = set()
     for src in srcs:
         mine = by_group.get(src.group, [])
         v = external.probe(src, reg, mine)
         verdicts.append(v)
         if say:
             print(v.line())
+        if not src.armed:
+            continue
+        if src.group in fed:
+            # Two armed feeds for one league would each add the seasons the
+            # GitHub feed lacks, and `external.matches` only knows about the
+            # GitHub ones -- so every match of those seasons would go into the
+            # fit twice. Poland is the live case: it has both a football-data
+            # file and a Wikipedia grid.
+            raise ValueError(
+                f"{src.source}/{src.assoc} is a second armed feed for "
+                f"{src.group}; arm one of them, not both")
+        fed.add(src.group)
         out.extend(external.matches(src, reg, mine))
     if say:
-        armed = sum(1 for v in verdicts if v.ok)
-        print(f"  · {armed}/{len(srcs)} armed, {len(out)} matches added")
+        armed = sum(1 for v in verdicts if v.ok and not v.watching)
+        watch = sum(1 for v in verdicts if v.watching)
+        print(f"  · {armed}/{len(srcs) - watch} armed, {len(out)} matches added"
+              + (f", {watch} watched" if watch else ""))
         _ANNOUNCED.append(True)
     LAST_VERDICTS[:] = verdicts
     return out, verdicts

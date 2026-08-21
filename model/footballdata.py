@@ -78,6 +78,14 @@ ALIASES: dict[str, dict[str, str]] = {
         "Korona": "Korona Kielce",
         "Radomiak": "Radomiak Radom",
         "Slask": "Śląsk Wrocław",
+        # Left out on the first pass as a guess -- Poland has a Zagłębie Lubin
+        # and a Zagłębie Sosnowiec -- and then written down when the runner
+        # named it as the last thing blocking the league. It is not a guess now:
+        # the overlap season is 2024-25, we hold that season in full, and the
+        # only Zagłębie in it was Lubin. The collapse check in
+        # `model.external.probe` is what stops this quietly misfiling Sosnowiec
+        # if the publisher ever uses the bare name for the other one.
+        "Zaglebie": "Zagłębie Lubin",
         "Motor": "Motor Lublin",
     },
     "ROU": {

@@ -512,3 +512,33 @@ def test_every_alias_names_a_club_that_league_actually_had(assoc):
         assert reg.known(held) is not None, (
             f"{assoc}: {src_name!r} points at {held!r}, which is not a club the "
             "GitHub feed ever named")
+
+
+def test_one_alias_covering_two_clubs_is_caught_before_they_merge():
+    """The hazard an alias table carries.
+
+    "Zaglebie" is Zagłębie Lubin while Lubin is the only Zagłębie in the league,
+    and becomes wrong the season Zagłębie Sosnowiec comes up. The overlap test
+    cannot see that: it checks a season we already hold, and the mistake happens
+    in a season we do not. What it looks like from here is two spellings landing
+    on one club id -- which is worth refusing on its own account, since that
+    club would take both sets of results, appear to play itself, and stand in
+    the table with twice as many matches as anybody else.
+    """
+    reg = TeamRegistry()
+    have = trusted(reg)
+    rows = second()
+    merged = []
+    for i, (m, h, a) in enumerate(rows):
+        # Two spellings of one club inside one season, exactly what a too-broad
+        # alias produces: half the file says "Legia Warszawa" and half says
+        # "Legia Warsaw", and both are spellings of the club we already hold.
+        if i % 2:
+            h = "Legia Warsaw" if h == "Legia Warszawa" else h
+            a = "Legia Warsaw" if a == "Legia Warszawa" else a
+        merged.append((m, h, a))
+    src = make(merged, assoc="POL")
+    v = external.probe(src, reg, have, today=dt.date(2025, 6, 1))
+    assert not v.ok
+    assert "same club" in v.reason or "two different clubs" in v.reason, v.reason
+    assert external.matches(src, reg, have) == []

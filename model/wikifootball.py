@@ -75,6 +75,10 @@ TITLES: dict[str, str] = {
     "MNE": "{a}–{bb} Montenegrin First League",
     "MLT": "{a}–{bb} Maltese Premier League",
     "LUX": "{a}–{bb} Luxembourg National Division",
+    # Two summer leagues, whose articles are titled by the bare year. The
+    # template still takes {bb}; `title` passes an empty string and strips it.
+    "NOR": "{a} Eliteserien",
+    "BLR": "{a} Belarusian Premier League",
     "GIB": "{a}–{bb} Gibraltar Football League",
     "AND": "{a}–{bb} Primera Divisió",
     "SMR": "{a}–{bb} Campionato Sammarinese di Calcio",
@@ -87,6 +91,22 @@ TITLES: dict[str, str] = {
 #: Adding a code here without a green probe behind it is the one thing this
 #: whole arrangement exists to prevent.
 ARMED: frozenset[str] = frozenset()
+
+#: Leagues being watched: probed on every run, reported beside the armed ones,
+#: and contributing nothing at all until they move up into ARMED.
+#:
+#: These five are the plain double round-robins -- every club plays every other
+#: exactly twice, no championship split, no third round, no play-off inside the
+#: table -- which is the one shape whose remaining fixtures follow from its
+#: played ones. That is what makes them forecastable from a results grid with no
+#: schedule anywhere: see `model/roundrobin.py`. The other leagues in TITLES can
+#: still gain a current season this way, and a rating with it, but not a
+#: projected final table.
+#:
+#: Measured, not assumed: each one's last complete openfootball season has
+#: exactly n(n-1) matches and no ordered pair twice -- Norway 16/240, Belarus
+#: 16/240, Luxembourg 16/240, Ukraine 16/240, Poland 18/306.
+CANDIDATES: frozenset[str] = frozenset({"NOR", "BLR", "LUX", "UKR", "POL"})
 
 #: Extra spellings this source uses for clubs the registry already holds, keyed
 #: by association so a fix for Malta cannot collide with one for Moldova. Filled
@@ -156,6 +176,26 @@ def parse_grid(text: str) -> list[tuple[str, str, int, int]]:
     return out
 
 
+def grid_clubs(text: str) -> list[str]:
+    """Every club in the grid, including the ones that have not played yet.
+
+    `parse_grid` can only see a club that appears in a filled cell, which in the
+    first week of a season is not all of them and in the first day is none of
+    them. The template lists its entrants separately -- `team1=`, `team2=` --
+    and that list is what a remaining-fixture derivation has to start from,
+    because a club missing from it loses every one of its fixtures silently.
+    """
+    names = {code: val.strip() for code, val in _NAME.findall(text)}
+    order = _TEAM.findall(text)
+    seen, out = set(), []
+    for code in order or sorted(names):
+        if code in seen:
+            continue
+        seen.add(code)
+        out.append(names.get(code, code))
+    return out
+
+
 def load(assoc: str, reg: TeamRegistry,
          seasons: tuple[str, ...] = ("2025-26",)) -> list[tuple[Match, str, str]]:
     """Played matches for one association, as `(match, home_name, away_name)`.
@@ -203,10 +243,12 @@ def seasons_for(have: tuple[str, ...],
     return tuple(f"{y}-{str(y + 1)[-2:]}" for y in range(start, stop + 1))
 
 
-def source(assoc: str, league: str, group: str, seasons: tuple[str, ...] = ("2025-26",)):
+def source(assoc: str, league: str, group: str,
+           seasons: tuple[str, ...] = ("2025-26",), *, contributes: bool = True):
     """An `ExternalSource` for one association, ready to be probed."""
     from .external import ExternalSource
     return ExternalSource(
         source="wikipedia", assoc=assoc, league=league, group=group,
         load=lambda reg, a=assoc, s=seasons: load(a, reg, s),
+        contributes=contributes,
         note="Results grid only; every match is dated at its season's midpoint.")

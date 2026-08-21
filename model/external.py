@@ -98,12 +98,25 @@ class Verdict:
     def agreement(self) -> float:
         return self.agreed / self.compared if self.compared else 0.0
 
+    #: A source that was probed to find out what it would do, and is not used.
+    #: Carried on the verdict so the log and the site say so rather than showing
+    #: a green tick beside a league nothing reads.
+    watching: bool = False
+
+    def _new(self) -> str:
+        """Clubs this feed adds to the ranking, by name. Printed rather than
+        counted: minting a club id is the one irreversible thing a second feed
+        does, and 'five new clubs' is not something anyone can check."""
+        return (f", {len(self.new_clubs)} new club(s): "
+                + ", ".join(self.new_clubs)) if self.new_clubs else ""
+
     def line(self) -> str:
         if self.ok:
-            extra = f", {len(self.new_clubs)} new club(s)" if self.new_clubs else ""
-            return (f"  ✓ {self.source}/{self.assoc}: {self.matches} matches to "
-                    f"{self.latest}, agrees on {self.agreed}/{self.compared} of "
-                    f"{self.overlap_season}{extra}")
+            mark = "·" if self.watching else "✓"
+            what = "would arm -- " if self.watching else ""
+            return (f"  {mark} {self.source}/{self.assoc}: {what}{self.matches} "
+                    f"matches to {self.latest}, agrees on {self.agreed}/"
+                    f"{self.compared} of {self.overlap_season}{self._new()}")
         bits = [self.reason]
         if self.unresolved:
             # Every one of them, not the first few. This line is the only thing
@@ -121,7 +134,8 @@ class Verdict:
                 "matches": self.matches, "latest": self.latest,
                 "clubs": self.clubs, "overlap_season": self.overlap_season,
                 "compared": self.compared, "agreed": self.agreed,
-                "unresolved": list(self.unresolved), "new_clubs": list(self.new_clubs)}
+                "unresolved": list(self.unresolved), "new_clubs": list(self.new_clubs),
+                "watching": self.watching}
 
 
 @dataclass
@@ -139,12 +153,22 @@ class ExternalSource:
     group: str                  # competition group id, must match europe.py's
     load: object                # callable(reg) -> list[tuple[Match, str, str]]
     note: str = ""              # what the source does and does not carry
+    #: False for a source being watched rather than used. A candidate is
+    #: fetched, parsed and judged exactly like any other -- the runner prints
+    #: its verdict beside the rest -- and then contributes nothing whatever it
+    #: says. That is the whole way a Wikipedia league gets added: the probe
+    #: reports what would happen, the club names it cannot resolve are written
+    #: down as aliases, and only when a green verdict is on the record does
+    #: anyone arm it. A guess about an article's contents is not evidence, and
+    #: this flag is what keeps the guess out of the ranking while it is checked.
+    contributes: bool = True
     verdict: Verdict | None = field(default=None, repr=False)
     allow_new: frozenset[str] = field(default=frozenset(), repr=False)
 
     @property
     def armed(self) -> bool:
-        return self.verdict is not None and self.verdict.ok
+        return (self.contributes
+                and self.verdict is not None and self.verdict.ok)
 
 
 def _score_counts(matches: list[Match]) -> "collections.Counter":
@@ -172,7 +196,8 @@ def probe(src: ExternalSource, reg: TeamRegistry, existing: list[Match],
     Never raises: a source that cannot be reached is a source we do not use, not
     a build that fails.
     """
-    v = Verdict(src.source, src.assoc, src.league, False)
+    v = Verdict(src.source, src.assoc, src.league, False,
+                watching=not src.contributes)
     src.allow_new = frozenset()
     try:
         rows = src.load(reg)                       # type: ignore[operator]
@@ -223,6 +248,29 @@ def probe(src: ExternalSource, reg: TeamRegistry, existing: list[Match],
                     "rather than new clubs")
         src.verdict = v
         return v
+
+    # -- 2b. and no two of those names may be the same club ----------------
+    # An alias is a mapping written by hand, and the way one goes wrong is by
+    # being too broad: "Zaglebie" means Lubin today and would mean Sosnowiec the
+    # season Sosnowiec comes up. Two spellings landing on one id is what that
+    # looks like from here, and it is worth catching for its own sake -- the
+    # club would take both sets of results, play itself, and stand in a table
+    # with twice as many matches as anybody else.
+    for szn, rowset in theirs_by_season.items():
+        by_id: dict[str, set[str]] = {}
+        for _, home_raw, away_raw in rowset:
+            for raw in (home_raw, away_raw):
+                tid = reg.known(raw)
+                if tid:
+                    by_id.setdefault(tid, set()).add(raw)
+        clash = sorted((tid, sorted(v)) for tid, v in by_id.items() if len(v) > 1)
+        if clash:
+            tid, spellings = clash[0]
+            v.reason = (f"{' and '.join(repr(s) for s in spellings)} are both "
+                        f"read as {reg.display(tid)} in {szn}, so one of the "
+                        "aliases covers two different clubs")
+            src.verdict = v
+            return v
 
     # -- 3. do the two feeds agree about that season? -----------------------
     left = collections.Counter(ours)

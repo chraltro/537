@@ -1252,7 +1252,8 @@ def build_sources(_ready: set[str]) -> None:
     verdicts = [v.as_json() for v in europe.LAST_VERDICTS]
     if not verdicts:
         verdicts = probe_external(quiet=True)
-    armed = [v for v in verdicts if v["ok"]]
+    used = [v for v in verdicts if not v.get("watching")]
+    armed = [v for v in used if v["ok"]]
     json.dump({"generated": dt.datetime.now(dt.timezone.utc)
                .isoformat(timespec="seconds"),
                "note": ("Second feeds, off GitHub, for competitions whose "
@@ -1260,10 +1261,16 @@ def build_sources(_ready: set[str]) -> None:
                         "if it reproduces a season this site already holds."),
                "sources": verdicts},
               open(os.path.join(OUT, "sources.json"), "w"), indent=1)
-    print(f"  → sources.json ({len(armed)} of {len(verdicts)} second feed(s) armed)")
+    watched = [v for v in verdicts if v.get("watching")]
+    print(f"  → sources.json ({len(armed)} of {len(used)} second feed(s) armed"
+          + (f", {len(watched)} watched)" if watched else ")"))
     for v in verdicts:
         if not v["ok"]:
-            print(f"    · {v['source']}/{v['league']}: {v['reason']}")
+            print(f"    · {v['source']}/{v['league']}: {v['reason']}"
+                  + (" -- " + ", ".join(v["unresolved"]) if v["unresolved"] else ""))
+        elif v.get("watching"):
+            print(f"    · {v['source']}/{v['league']}: would arm, "
+                  f"{v['agreed']}/{v['compared']} of {v['overlap_season']}")
 
 
 #: How stale a competition's newest result may be, in days, before the build
@@ -1644,9 +1651,13 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.probe:
         rows = probe_external()
-        raise SystemExit(0 if all(r["ok"] for r in rows) else
-                         f"{sum(1 for r in rows if not r['ok'])} second feed(s) "
-                         "did not arm")
+        # A watched feed is not expected to arm: it is being probed precisely to
+        # find out what it would do, and it contributes nothing either way. Only
+        # a feed the build actually relies on can fail this.
+        used = [r for r in rows if not r.get("watching")]
+        bad = sum(1 for r in used if not r["ok"])
+        raise SystemExit(0 if not bad else
+                         f"{bad} second feed(s) did not arm")
 
     try:
         todo = ([leagues.get(s) for s in args.league] if args.league
