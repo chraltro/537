@@ -1673,21 +1673,27 @@ def check_size(ready: set[str]) -> None:
               "- see SIZE_BUDGET_MB in model/run.py")
 
 
-def _rated_only() -> list[dict]:
-    """Every league in the global ranking that has no forecast page, by size.
+def _rated_only(projected: list[dict] | None = None) -> list[dict]:
+    """Every league in the global ranking that has no page of its own, by size.
 
     Read off `global.json` rather than from a registry, because the set is
     whatever the corpus turned out to contain and a hand-kept copy of that would
     be wrong by the next feed.
+
+    A projected league is rated too, so without `projected` it lands in both
+    lists and the league picker offers it twice, once going to its projected
+    table and once to a filtered ranking. Same name, two entries, two
+    destinations.
     """
     try:
         with open(os.path.join(OUT, "global.json"), encoding="utf-8") as fh:
             clubs = json.load(fh)["clubs"]
     except (OSError, ValueError, KeyError):
         return []
+    has_page = {l["name"] for l in (projected or [])}
     counts: dict[tuple[str, str], int] = {}
     for c in clubs:
-        if c.get("slug"):
+        if c.get("slug") or c["league"] in has_page:
             continue                       # a competition with its own page
         key = (c["league"], c.get("country") or "")
         counts[key] = counts.get(key, 0) + 1
@@ -1717,6 +1723,7 @@ def write_manifest(ready: set[str]) -> dict:
     league that failed to build this run drops back to false and the site shows
     it as coming soon instead of 404ing.
     """
+    projected = _projected()
     payload = {
         "default": leagues.DEFAULT.slug,
         "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
@@ -1731,13 +1738,13 @@ def write_manifest(ready: set[str]) -> dict:
         # picker offered nine competitions while the ranking held sixty, and the
         # only door to the other fifty-one was a filter on one page that did not
         # even survive being linked to. The picker sends these to that filter.
-        "rated": _rated_only(),
+        "rated": _rated_only(projected),
         # And the ones in between: no fixture list anywhere, so no forecast
         # page, but a results grid this site has checked, which is enough to
         # project the final table. Read off what was actually written, so a
         # league whose article went missing this run leaves the picker rather
         # than sending a reader to a file that is not there.
-        "projected": _projected(),
+        "projected": projected,
     }
     os.makedirs(OUT, exist_ok=True)
     json.dump(payload, open(os.path.join(OUT, "leagues.json"), "w"), indent=1)

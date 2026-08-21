@@ -914,9 +914,16 @@ def test_every_rated_league_is_reachable_from_the_league_picker():
     clubs = json.load(open(os.path.join(base, "global.json"), encoding="utf-8"))["clubs"]
     unforecast = {c["league"] for c in clubs if not c.get("slug")}
     listed = {r["name"] for r in man.get("rated", [])}
-    assert listed == unforecast, (
-        f"only in the ranking: {sorted(unforecast - listed)}; "
-        f"only in the picker: {sorted(listed - unforecast)}")
+    # A projected league is rated too, and reachable through its own entry in
+    # the picker rather than through the ranking's filter. Between them the two
+    # lists still have to cover every league in the ranking, with nothing in
+    # both: one league, one entry, one destination.
+    projected = {r["name"] for r in man.get("projected", [])}
+    assert not (listed & projected), (
+        "offered as projected and as rated-only: " + str(sorted(listed & projected)))
+    assert (listed | projected) == unforecast, (
+        f"only in the ranking: {sorted(unforecast - listed - projected)}; "
+        f"only in the picker: {sorted((listed | projected) - unforecast)}")
     forecast = {lg["name"] for lg in man["leagues"]}
     assert not (listed & forecast), (
         "a competition with its own page must not also appear as rated-only: "
@@ -1065,3 +1072,41 @@ def test_a_thin_relegated_sample_falls_back_to_the_carryover_not_the_shrink():
     assert got["slope"] == pytest.approx(priors.PL_FALLBACK["continuing"]["slope"])
     assert got["slope"] > priors.PL_FALLBACK["promoted"]["slope"]
     assert got["intercept"] > priors.PL_FALLBACK["promoted"]["intercept"]
+
+
+def test_a_projected_league_is_offered_once_and_only_once():
+    """The league picker has three lists in it and one league belonged to two.
+
+    A projected league is rated as well as projected, and `_rated_only` read the
+    ranking for anything without a forecast page. So Eliteserien appeared under
+    "Projected table only" and again under "Rated, not forecast": one name, two
+    entries, two different destinations, and no way for a reader to know which
+    of them was the real one.
+    """
+    from model import run
+
+    projected = [{"name": "Eliteserien", "country": "Norway"},
+                 {"name": "Ekstraklasa", "country": "Poland"}]
+    clubs = [{"league": "Eliteserien", "country": "Norway"},
+             {"league": "Ekstraklasa", "country": "Poland"},
+             {"league": "Danish Superliga", "country": "Denmark"},
+             {"league": "Premier League", "country": "England", "slug": "premier-league"}]
+
+    import json as _json
+    import os as _os
+    path = _os.path.join(run.OUT, "global.json")
+    keep = open(path, encoding="utf-8").read() if _os.path.exists(path) else None
+    try:
+        _json.dump({"clubs": clubs}, open(path, "w"))
+        names = {r["name"] for r in run._rated_only(projected)}
+    finally:
+        if keep is not None:
+            open(path, "w").write(keep)
+        elif _os.path.exists(path):
+            _os.remove(path)
+
+    assert "Danish Superliga" in names, "a rated-only league must still be offered"
+    assert "Premier League" not in names, "a forecast league has its own page"
+    for p in projected:
+        assert p["name"] not in names, (
+            f"{p['name']} is offered as projected and as rated-only")

@@ -113,6 +113,15 @@ nav.top a {
 }
 nav.top a:hover { background: var(--raised); color: var(--ink); }
 nav.top a[aria-current="page"] { background: var(--raised); color: var(--ink); }
+/* A tab with nowhere to go. The leagues that are rated or projected rather than
+   forecast have no table, no fixture list and no club pages, and the tabs used
+   to hand back a different league's instead: you chose the Superliga and Table
+   showed you England. It reads as a tab, it says why when you hover it, and it
+   does not move. */
+nav.top .np.off {
+  color: var(--ink2); padding: 7px 12px; border-radius: 7px;
+  font-size: 13.5px; font-weight: 550; opacity: 0.38; cursor: not-allowed;
+}
 /* ================= the overflow menu =================
    The header used to carry eight peer links, two icon buttons, a select and a
    brand that repeated the league name the select was already showing. Four
@@ -175,7 +184,7 @@ nav.top a[aria-current="page"] { background: var(--raised); color: var(--ink); }
     order: 4; width: 100%; margin: 5px -14px 0; padding: 0 8px;
     gap: 0; border-top: 1px solid var(--rule);
   }
-  nav.top a.np {
+  nav.top a.np, nav.top .np.off {
     flex: 1 1 0; text-align: center; padding: 11px 2px; border-radius: 0;
     font-size: 13px; position: relative;
   }

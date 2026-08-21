@@ -488,6 +488,44 @@ export function initChrome(page) {
   const group = (ratedOpts || projOpts)
     ? `<optgroup label="Forecast here">${opts}</optgroup>${projOpts}${ratedOpts}` : opts;
 
+  /* Which entry the picker is actually standing on.
+     The three kinds of league live on different pages and only one of them is
+     addressed by `?lg=`, so a page showing the Danish Superliga's ranking or
+     Eliteserien's projected table was leaving the picker reading "Premier
+     League": you chose a league, the box denied it, and the section tabs beside
+     it then carried the league the box claimed rather than the one on screen.
+     Choosing Superliga and then Table took you to England. */
+  const P = new URLSearchParams(location.search);
+  const asked = (P.get('league') || '').trim();
+  const projByslug = new Map(projected.map((l) => [l.slug, l]));
+  const ratedByName = new Map(rated.map((l) => [l.name, l]));
+  let choice = '', awayName = '', awayKind = '';
+  if (page === 'projection') {
+    /* No `?league=` means the page picks the first one itself, and the box has
+       to say the same thing the page does. */
+    const l = projByslug.get(asked) || projected[0];
+    if (l) { choice = `proj:${l.slug}`; awayName = l.name; awayKind = 'proj'; }
+  } else if (page === 'rankings' && asked) {
+    /* The ranking filtered to one league is that league, as far as the picker
+       is concerned. A projected league reached this way still points its table
+       tab at its projection, which is the page that has one. */
+    const pl = projected.find((l) => l.name === asked);
+    if (pl) { choice = `proj:${pl.slug}`; awayName = pl.name; awayKind = 'proj'; }
+    else if (ratedByName.has(asked)) {
+      choice = `rated:${asked}`; awayName = asked; awayKind = 'rated';
+    }
+  }
+  /* A league-scoped tab means nothing for these two, because the pages behind
+     them do not exist: neither kind has a fixture list. Rather than quietly
+     hand back a different league's table, the tab says so and does not move.
+     The exception is a projected league's table, which is the page you are
+     already looking at. */
+  const offWhy = awayKind === 'proj'
+    ? `${awayName} is projected from a results grid, which carries no fixtures, `
+      + 'so this page does not exist for it'
+    : `${awayName} has no fixture list anywhere this site can read, so it is `
+      + 'rated but not forecast, and this page does not exist for it';
+
   document.body.insertAdjacentHTML('afterbegin', `
     <a class="skip" href="#main">Skip to content</a>
     <header class="masthead"><div class="wrap">
@@ -500,9 +538,19 @@ export function initChrome(page) {
         <select id="lgsel" aria-label="Choose a league">${group}</select>
       </label>
       <nav class="top" aria-label="Sections">
-        ${PAGES.filter((p) => p.primary).map((p) => `
-          <a class="np" href="${pageHref(p)}"${
-            page === p.id ? ' aria-current="page"' : ''}>${esc(p.label)}</a>`).join('')}
+        ${PAGES.filter((p) => p.primary).map((p) => {
+          if (!awayKind || p.group !== 'league') {
+            return `<a class="np" href="${pageHref(p)}"${
+              page === p.id ? ' aria-current="page"' : ''}>${esc(p.label)}</a>`;
+          }
+          if (awayKind === 'proj' && p.id === 'table') {
+            return `<a class="np" href="${ROOT}projection.html?league=${
+              encodeURIComponent(choice.slice(5))}" aria-current="page">${
+              esc(p.label)}</a>`;
+          }
+          return `<span class="np off" title="${esc(offWhy)}" aria-disabled="true">${
+            esc(p.label)}</span>`;
+        }).join('')}
         <div class="navmenu">
           <button class="morebtn" id="moretog" aria-expanded="false" aria-haspopup="true"
                   aria-controls="morepop"${here ? ' data-here="1"' : ''}>
@@ -541,6 +589,13 @@ export function initChrome(page) {
       </div>
     </div></header>`);
 
+  /* Set as a property rather than an attribute, because the option carrying
+     `selected` is a forecast league and this has to beat it. */
+  if (choice) {
+    const sel = document.getElementById('lgsel');
+    if ([...sel.options].some((o) => o.value === choice)) sel.value = choice;
+  }
+
   document.getElementById('tt').addEventListener('click', () => {
     const now = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', now);
@@ -565,6 +620,21 @@ export function initChrome(page) {
       return;
     }
     const u = new URL(location.href);
+    /* `?league=` belongs to the league being left, not the one being chosen.
+       Left behind it kept the page showing the old one while the box showed the
+       new: choosing Serie A from Eliteserien's projected table stayed on
+       Eliteserien and added a parameter that did nothing. */
+    u.searchParams.delete('league');
+    if (page === 'projection') {
+      /* There is no projected version of a forecast league, so this is a jump
+         back to the table, which is the page the projection stands in for. */
+      u.pathname = u.pathname.replace(/projection\.html$/, 'index.html');
+    } else if (page === 'rankings') {
+      /* The ranking's own axis is the league filter, so switching league here
+         means filtering to it rather than leaving. */
+      const pick = LEAGUES.find((l) => l.slug === v);
+      if (pick) u.searchParams.set('league', pick.name);
+    }
     if (v === DEFAULT_LEAGUE) u.searchParams.delete('lg');
     else u.searchParams.set('lg', v);
     location.href = u.toString();
