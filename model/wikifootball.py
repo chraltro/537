@@ -90,7 +90,7 @@ TITLES: dict[str, str] = {
 #: which therefore contribute matches. Empty by design; see the module docstring.
 #: Adding a code here without a green probe behind it is the one thing this
 #: whole arrangement exists to prevent.
-ARMED: frozenset[str] = frozenset()
+ARMED: frozenset[str] = frozenset({"NOR", "LUX"})
 
 #: Leagues being watched: probed on every run, reported beside the armed ones,
 #: and contributing nothing at all until they move up into ARMED.
@@ -108,6 +108,11 @@ ARMED: frozenset[str] = frozenset()
 #: 16/240, Luxembourg 16/240, Ukraine 16/240, Poland 18/306.
 CANDIDATES: frozenset[str] = frozenset({"NOR", "BLR", "LUX", "UKR", "POL"})
 
+#: Names the twin check flags as looking like a club we already hold, which are
+#: genuinely their own club. Ukraine has both a Vorskla Poltava and an FC
+#: Poltava, and the check cannot tell them apart from the names alone.
+DISTINCT: dict[str, frozenset[str]] = {}
+
 #: Leagues whose grid drives a projected final table. A separate set from ARMED
 #: because the two answer different questions. ARMED is "does this feed's
 #: results go into the pooled corpus", and only one feed per league may say yes
@@ -118,7 +123,7 @@ CANDIDATES: frozenset[str] = frozenset({"NOR", "BLR", "LUX", "UKR", "POL"})
 #: Poland is exactly that case: football-data.co.uk carries its results with
 #: dates on them and is the feed in service, while the Wikipedia article is
 #: where the list of who is in the league this season comes from.
-PROJECTED: frozenset[str] = frozenset()
+PROJECTED: frozenset[str] = frozenset({"NOR", "LUX", "POL"})
 
 #: Extra spellings this source uses for clubs the registry already holds, keyed
 #: by association so a fix for Malta cannot collide with one for Moldova. Filled
@@ -150,6 +155,7 @@ ALIASES: dict[str, dict[str, str]] = {
         "Minsk": "FK Minsk",
         "Slavia Mozyr": "FK Slaviya Mozyr",
         "Slutsk": "FK Slutsk",
+        "Shakhtyor Soligorsk": "Shakhter Soligorsk",
         "Smorgon": "FK Smorgon",
         "Vitebsk": "FK Vitebsk",
     },
@@ -162,6 +168,12 @@ ALIASES: dict[str, dict[str, str]] = {
         "Racing FC Union Luxembourg": "RFCU Luxemburg",
     },
     "UKR": {
+        # The 2025-26 and 2026-27 articles drop the city the 2024-25 one keeps,
+        # so each of these is here twice.
+        "Chornomorets": "Chernomorets Odessa",
+        "Obolon": "FK Obolon",
+        "Veres": "NK Veres",
+        "Zorya": "Zorya Lugansk",
         "Chornomorets Odesa": "Chernomorets Odessa",
         "Livyi Bereh Kyiv": "Livyi Bereh",
         "Obolon Kyiv": "FK Obolon",
@@ -384,5 +396,5 @@ def source(assoc: str, league: str, group: str,
     return ExternalSource(
         source="wikipedia", assoc=assoc, league=league, group=group,
         load=lambda reg, a=assoc, s=seasons: load(a, reg, s),
-        contributes=contributes,
+        contributes=contributes, distinct=DISTINCT.get(assoc, frozenset()),
         note="Results grid only; every match is dated at its season's midpoint.")

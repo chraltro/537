@@ -53,9 +53,10 @@ from __future__ import annotations
 
 import collections
 import datetime as dt
+import difflib
 from dataclasses import dataclass, field
 
-from .parse import Match, TeamRegistry
+from .parse import Match, TeamRegistry, normalise
 
 #: How much of the overlap season the two feeds must agree on. Not 1.0: feeds
 #: disagree about awarded forfeits and about the occasional abandoned match
@@ -162,6 +163,11 @@ class ExternalSource:
     #: anyone arm it. A guess about an article's contents is not evidence, and
     #: this flag is what keeps the guess out of the ranking while it is checked.
     contributes: bool = True
+    #: Names the twin check flags that are genuinely a club of their own. Every
+    #: one of these is a decision someone made after reading a refusal, which is
+    #: the point: the check is deliberately eager, and this is where the answer
+    #: goes when the eager reading is wrong.
+    distinct: frozenset[str] = field(default=frozenset(), repr=False)
     verdict: Verdict | None = field(default=None, repr=False)
     allow_new: frozenset[str] = field(default=frozenset(), repr=False)
 
@@ -187,6 +193,40 @@ def _score_counts(matches: list[Match]) -> "collections.Counter":
         if m.played and m.hg is not None and m.ag is not None:
             out[(m.season, m.home, m.away, m.hg, m.ag)] += 1
     return out
+
+
+#: How alike two club names have to read before one is treated as a second
+#: spelling of the other rather than a club in its own right. Measured against
+#: the pairs this actually has to separate: "chornomorets" against
+#: "chernomorets odessa" scores above it, and "dinamo minsk" against "dinamo
+#: brest" -- two real clubs a hundred miles apart -- scores well below.
+TWIN_RATIO = 0.85
+
+
+def _twin(name: str, held: set[str], reg: TeamRegistry) -> str | None:
+    """The club in `held` that `name` is probably another spelling of.
+
+    Two ways a feed shortens a name, both of them here. It drops a word --
+    "Obolon" for "FK Obolon", "Zorya" for "Zorya Lugansk" -- which is a token
+    subset. Or it transliterates the same Cyrillic differently, which no amount
+    of token matching reaches and a similarity ratio does.
+    """
+    key = normalise(name)
+    toks = set(key.split())
+    if not toks:
+        return None
+    best, score = None, 0.0
+    for other in held:
+        okey = normalise(other)
+        if okey == key:
+            continue
+        otoks = set(okey.split())
+        if toks < otoks or otoks < toks:
+            return other
+        r = difflib.SequenceMatcher(None, key, okey).ratio()
+        if r > score:
+            best, score = other, r
+    return best if score >= TWIN_RATIO else None
 
 
 def probe(src: ExternalSource, reg: TeamRegistry, existing: list[Match],
@@ -308,6 +348,26 @@ def probe(src: ExternalSource, reg: TeamRegistry, existing: list[Match],
     newer = {n for s, rowset in theirs_by_season.items() if s > season
              for _, h, a in rowset for n in (h, a)}
     v.new_clubs = tuple(sorted(n for n in newer - overlap_names if reg.known(n) is None))
+
+    # Unless one of them is a club we already have under a longer name. The
+    # overlap test cannot see this: it checks the season we hold, and the
+    # mistake happens in the seasons we do not. Wikipedia's Ukrainian articles
+    # write "Chornomorets Odesa" in one season and "Chornomorets" in the next,
+    # and minting the second is how a club ends up in the ranking twice, each
+    # copy with half a record and neither one right.
+    twins = []
+    for name in v.new_clubs:
+        if name in src.distinct:
+            continue
+        held = _twin(name, overlap_names, reg)
+        if held:
+            twins.append(f"{name!r} looks like {held!r}")
+    if twins:
+        v.new_clubs = ()
+        v.reason = ("; ".join(twins) + " -- a club this league already has under "
+                    "another name, so an alias is needed before it is minted")
+        src.verdict = v
+        return v
     src.allow_new = frozenset(v.new_clubs)
 
     # -- 5. and it has to actually be current -------------------------------

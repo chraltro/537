@@ -651,3 +651,54 @@ def test_every_grid_alias_names_a_club_that_league_actually_had(assoc):
         assert reg.known(held) is not None, (
             f"{assoc}: {src_name!r} points at {held!r}, which is not a club the "
             "GitHub feed ever named")
+
+
+def test_a_new_club_that_is_an_old_club_under_a_shorter_name_is_refused():
+    """The hole the overlap test cannot cover.
+
+    Clubs that appear only after the overlap season are promotions, and minting
+    ids for them is the right thing. But Wikipedia's Ukrainian articles write
+    "Chornomorets Odesa" in one season and "Chornomorets" in the next, and the
+    overlap test cannot see it: it checks the season we hold, and this happens
+    in the seasons we do not. Minting it puts the club in the ranking twice.
+    """
+    reg = TeamRegistry()
+    have = trusted(reg)
+    later = [(m, h, a) for m, h, a in
+             second(season="2025-26", start=dt.date(2025, 8, 1))]
+    short = [(m, "Legia" if h == "Legia Warszawa" else h,
+              "Legia" if a == "Legia Warszawa" else a) for m, h, a in later]
+    src = make(second() + short, assoc="POL")
+    v = external.probe(src, reg, have, today=dt.date(2026, 6, 1))
+    assert not v.ok
+    assert "'Legia' looks like 'Legia Warszawa'" in v.reason, v.reason
+    assert not v.new_clubs
+
+
+def test_a_club_that_really_is_new_still_gets_through():
+    """The check is eager on purpose, so this is the half that has to keep
+    working: a genuinely promoted club with a name of its own is minted."""
+    reg = TeamRegistry()
+    have = trusted(reg)
+    later = second(clubs=CLUBS[:-1] + ["Wisła Płock"], season="2025-26",
+                   start=dt.date(2025, 8, 1))
+    v = external.probe(make(second() + later, assoc="POL"), reg, have,
+                       today=dt.date(2026, 6, 1))
+    assert v.ok, v.reason
+    assert v.new_clubs == ("Wisła Płock",), v.new_clubs
+
+
+def test_the_eager_check_can_be_overruled_for_a_club_that_really_is_separate():
+    """Ukraine has a Vorskla Poltava and an FC Poltava, and no reading of the
+    two names tells them apart. The refusal is the default and this is the
+    answer when the default is wrong."""
+    reg = TeamRegistry()
+    have = trusted(reg)
+    later = [(m, "Legia" if h == "Legia Warszawa" else h,
+              "Legia" if a == "Legia Warszawa" else a)
+             for m, h, a in second(season="2025-26", start=dt.date(2025, 8, 1))]
+    src = make(second() + later, assoc="POL")
+    src.distinct = frozenset({"Legia"})
+    v = external.probe(src, reg, have, today=dt.date(2026, 6, 1))
+    assert v.ok, v.reason
+    assert v.new_clubs == ("Legia",)

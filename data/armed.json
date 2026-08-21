@@ -1,0 +1,46 @@
+{
+ "note": "Second feeds off GitHub that are in service, and the runner verdict that put them there. Nothing in this repository can reach Wikipedia or football-data.co.uk: the development sandbox allows GitHub and denies everything else, so a feed is armed on evidence produced by an Actions runner and this file is where that evidence is copied. Each row is a line from the probe step of the run it names, and can be read back against it.",
+ "probes": [
+  {
+   "assoc": "NOR",
+   "league": "Eliteserien",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32493275690",
+   "date": "2026-08-21",
+   "overlap_season": "2024",
+   "compared": 238,
+   "agreed": 238,
+   "matches": 578,
+   "latest": "2026-07-01",
+   "new_clubs": ["Start", "Vålerenga"]
+  },
+  {
+   "assoc": "LUX",
+   "league": "Luxembourg National Division",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32493275690",
+   "date": "2026-08-21",
+   "overlap_season": "2024-25",
+   "compared": 240,
+   "agreed": 240,
+   "matches": 504,
+   "latest": "2027-01-01",
+   "new_clubs": ["Atert Bissen", "Etzella Ettelbruck", "Jeunesse Canach",
+                 "Käerjeng 97", "Mamer 32", "Rumelange", "Résidence Walferdange"]
+  },
+  {
+   "assoc": "POL",
+   "league": "Ekstraklasa",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32493275690",
+   "date": "2026-08-21",
+   "overlap_season": "2024-25",
+   "compared": 240,
+   "agreed": 240,
+   "matches": 534,
+   "latest": "2027-01-01",
+   "new_clubs": ["Bruk-Bet Termalica Nieciecza", "Wisła Kraków"],
+   "used_for": "the season's entrant list only; the results in service come from football-data.co.uk, which carries dates"
+  }
+ ]
+}
