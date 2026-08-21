@@ -804,6 +804,11 @@ export function makeSortable(table, rows, render, initial, opts = {}) {
     }
     const sorted = [...rows].sort((a, b) => {
       const x = a[key], y = b[key];
+      /* A missing value sorts last whichever way the column runs, and never as
+         a zero: a club the pooled fit cannot rate is not a club rated nothing.
+         `x - y` with an undefined on either side is NaN, and a comparator that
+         returns NaN leaves the order to chance. */
+      if (x == null || y == null) return x == null ? (y == null ? 0 : 1) : -1;
       const c = typeof x === 'string' ? x.localeCompare(y) : x - y;
       return c * dir;
     });

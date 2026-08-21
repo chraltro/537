@@ -60,9 +60,10 @@
   <div class="split" id="c-season">
     <section class="card">
       <h2>Rating trajectory</h2>
-      <p class="sub" id="sparksub">SPI at the start of each season: the share of points this
-        club would take against an average team, home and away. Every point is fitted only on
-        matches played before that season began.</p>
+      <p class="sub" id="sparksub">SPI each July: the share of points this club would take
+        against an average club of the big five, home and away. Every point is fitted only on
+        matches played before that date, and on one scale, so a season spent a division down
+        shows as a drop rather than a gap.</p>
       <div id="spark"></div>
       <div id="sparklab" style="color:var(--muted);font-size:11.5px;margin-top:6px"></div>
     </section>
@@ -502,8 +503,8 @@ function render() {
     : `Projected to finish ${ord(rank)} on ${t.pts.toFixed(1)} points, `
       + `with 80% of simulations between ${t.pts_lo} and ${t.pts_hi}.`;
   document.getElementById('stamp').innerHTML =
-    `<span title="Expected share of points against an average club in this competition">SPI
-       <b>${t.spi.toFixed(1)}</b>${t.spi_lo != null
+    `<span title="Expected share of points against an average club of the big five leagues, home and away">SPI
+       <b>${t.spi != null ? t.spi.toFixed(1) : '—'}</b>${t.spi_lo != null
          ? ` <span class="muted">${t.spi_lo}–${t.spi_hi}</span>` : ''}</span>
      <span title="${t.off.toFixed(2)} goals a game against an average opponent">Attack
        <b>${t.att_r ?? '—'}</b> out of 100</span>
@@ -559,7 +560,10 @@ function render() {
     document.getElementById('sparklab').textContent =
       `${hist.length} seasons, ${hist[0].season} to ${hist[hist.length - 1].season}. `
       + `Strongest ${best.season} (${best.spi}), weakest ${worst.season} (${worst.spi}). `
-      + 'A gap in the line is a season spent outside this division.';
+      + 'On the European scale, so the line can be read against any other club\u2019s. '
+      + `It starts at ${hist[0].season}, which is when the pooled corpus can first see `
+      + `${esc(W.the)}: no earlier than 2011-12, where the UEFA matches that join one `
+      + 'league to another begin, and later for a league whose own feed starts later.';
   } else {
     document.getElementById('sparklab').textContent = '';
   }

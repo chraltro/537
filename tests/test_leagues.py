@@ -693,7 +693,7 @@ def test_the_global_ranking_rates_far_more_than_the_clubs_we_forecast():
 
 
 # ------------------------------------------------- one scale, one source
-def test_a_forecast_carries_no_ratings_at_all():
+def test_a_forecast_carries_no_published_rating_at_all():
     """The structural half of the fix, and the reason it cannot come apart again.
 
     Ratings used to exist twice: once on every forecast row, measured against
@@ -713,12 +713,15 @@ def test_a_forecast_carries_no_ratings_at_all():
     for path in sorted(glob.glob(os.path.join(base, "*", "forecast.json"))):
         fc = json.load(open(path, encoding="utf-8"))
         for t in fc.get("teams", []):
-            rated = sorted(k for k in t if k.endswith("_r"))
+            rated = sorted(k for k in t if k.endswith("_r") or k.startswith("spi"))
             assert not rated, (
                 f"{os.path.basename(os.path.dirname(path))}/{t['id']} carries "
-                f"{rated} on its forecast row; ratings belong in ratings.json "
-                "and nowhere else")
+                f"{rated} on its forecast row; every published rating belongs in "
+                "ratings.json and nowhere else")
             assert "off" in t and "def" in t, "the goal rates must survive"
+            assert "lg_strength" in t, (
+                "the competition's own strength scale must survive: it is what "
+                "ranks a club's opponents inside its own division")
 
 
 def test_every_rating_the_site_publishes_is_on_the_european_scale():
@@ -735,8 +738,9 @@ def test_every_rating_the_site_publishes_is_on_the_european_scale():
     assert doc["scale"]["league"] == [], (
         "a league-relative rating is back: " + str(doc["scale"]["league"]))
     declared = set(doc["scale"]["global"])
-    assert declared == {"att_r", "def_r", "consistency_r",
-                        "creation_r", "finishing_r", "discipline_r"}
+    assert declared == {"spi", "spi_lo", "spi_hi", "att_r", "def_r",
+                        "consistency_r", "creation_r", "finishing_r",
+                        "discipline_r"}
 
     seen = {k for row in doc["clubs"].values() for k in row}
     assert seen <= declared, f"undeclared rating fields: {sorted(seen - declared)}"
@@ -768,6 +772,93 @@ def test_the_pages_that_show_a_rating_all_read_the_same_file():
         src = open(os.path.join(HERE, "site", name), encoding="utf-8").read()
         assert "siteData('ratings')" in src, (
             f"{name} shows ratings but never fetches ratings.json")
+
+
+def test_the_published_spi_is_the_pooled_one_everywhere():
+    """A league's own SPI put Sporting CP at 89.3 and FC Barcelona at 80.8 on
+    two club pages of the same site, which is backwards: the pooled fit has them
+    at 62 and 74. Both numbers were correct about different questions and only
+    one of them was labelled.
+
+    The competition's own scale still exists, under a name no page reads by
+    accident, because the schedule-difficulty numbers need it: how hard a run of
+    fixtures is *within one division* is a question about that division.
+    """
+    base = os.path.join(HERE, "site", "data")
+    if not os.path.exists(os.path.join(base, "ratings.json")):
+        pytest.skip("pipeline has not been run in this checkout")
+    rated = json.load(open(os.path.join(base, "ratings.json"), encoding="utf-8"))
+    clubs = rated["clubs"]
+    assert "spi" in rated["scale"]["global"]
+    gl = {c["id"]: c for c in json.load(
+        open(os.path.join(base, "global.json"), encoding="utf-8"))["clubs"]}
+    for cid, row in clubs.items():
+        if "spi" in row and cid in gl:
+            assert row["spi"] == gl[cid]["spi"], (
+                f"{cid} is rated {row['spi']} in ratings.json and "
+                f"{gl[cid]['spi']} in the global ranking")
+
+
+def test_a_club_line_ends_where_its_rating_is_quoted():
+    """The last point of a trajectory is the SPI printed above it.
+
+    Both come from a pooled fit, and they used to be fitted at dates a fortnight
+    apart, which is enough to make a chart disagree with its own headline by a
+    point. `run.RANK_REF` is the one date they share.
+    """
+    base = os.path.join(HERE, "site", "data")
+    path = os.path.join(base, "ratings.json")
+    if not os.path.exists(path):
+        pytest.skip("pipeline has not been run in this checkout")
+    rated = json.load(open(path, encoding="utf-8"))["clubs"]
+    checked = 0
+    for fc_path in sorted(glob.glob(os.path.join(base, "*", "forecast.json"))):
+        fc = json.load(open(fc_path, encoding="utf-8"))
+        for t in fc.get("teams", []):
+            line = t.get("history") or []
+            if not line or t["id"] not in rated:
+                continue
+            checked += 1
+            assert line[-1]["spi"] == rated[t["id"]]["spi"], (
+                f"{t['id']}'s line ends at {line[-1]['spi']} and its page quotes "
+                f"{rated[t['id']]['spi']}")
+    assert checked > 100, f"only {checked} club lines checked; the data moved"
+
+
+def test_a_trajectory_never_starts_before_the_leagues_are_joined():
+    """A pooled rating needs the UEFA matches that bridge one league to another.
+    `openfootball/champions-league` begins at 2011-12, probed rather than
+    assumed, so a point before that would be quoting a club against an average
+    big-five club on evidence that never touched the big five."""
+    from model import rankings
+    base = os.path.join(HERE, "site", "data")
+    if not os.path.exists(os.path.join(base, "ratings.json")):
+        pytest.skip("pipeline has not been run in this checkout")
+    floor = rankings.FIRST_BRIDGED_SEASON
+    for fc_path in sorted(glob.glob(os.path.join(base, "*", "forecast.json"))):
+        for t in json.load(open(fc_path, encoding="utf-8")).get("teams", []):
+            for point in (t.get("history") or []):
+                assert point["season"] >= floor, (
+                    f"{t['id']} has a pooled rating for {point['season']}, before "
+                    f"the leagues are joined at {floor}")
+
+
+def test_a_second_tier_is_never_loaded_twice():
+    """England's second tier is the Championship, which this site forecasts in
+    its own right. Read as both, every Championship match enters the pooled fit
+    twice and silently counts double."""
+    from model import config, europe, leagues
+    tops = {lg.of_url(config.SEASON, "top") for lg in leagues.LEAGUES}
+    seconds = [lg.of_url(config.SEASON, "second") for lg in leagues.LEAGUES
+               if lg.of_second]
+    overlap = sorted(set(seconds) & tops)
+    assert overlap, "the Championship case is what this guards; it has moved"
+    reg = __import__("model.parse", fromlist=["TeamRegistry"]).TeamRegistry()
+    got = europe.load_second_tiers(reg, quiet=True)
+    comps = {m.comp for m in got}
+    assert "premier-league-2" not in comps, (
+        "England's second tier is the Championship and is loaded under its own "
+        "slug by the ranking build")
 
 
 def test_a_rating_is_only_published_when_the_matches_can_resolve_it():

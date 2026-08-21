@@ -77,36 +77,23 @@ def spi(fit: ratings.Fit, team: str, adj: float = 0.0) -> float:
 
 def _rating_history(ds: Dataset, teams, shot_conv, adj: dict[str, float],
                     kickoff: dt.date) -> dict[str, list]:
-    """SPI at the start of every season in the record, so each club has a
-    trajectory rather than a single number with no context.
+    """SPI at each July, so a club has a trajectory and not one number.
 
-    This used to stop at four seasons, which is enough to see a trend and far
-    too little to see a club. The mirror carries all five big-five leagues back
-    to 1993-94, and one fit costs about four tenths of a second on the full
-    corpus, so the whole run is a handful of seconds per league — a cheap price
-    for the one chart on the site that shows a decade instead of a season.
+    Read straight off the pooled trajectory rather than fitted here. It used to
+    be fitted here, on this league's own matches, which made every point mean
+    "how strong in this division" and cost the chart two things: a club that
+    spent a season one division down left a hole in its line, and two clubs from
+    different leagues drawn on one axis said whatever their divisions' averages
+    happened to say.
 
-    Every point is fitted only on matches played before that season started, so
-    the line is a walk-forward record and not a curve drawn through hindsight.
-    The final point carries the same prior and market adjustment as the headline
-    rating, so the trajectory ends exactly where the club's SPI is quoted.
+    The window is shorter for it. A pooled rating needs the UEFA matches that
+    join one league to another, and `openfootball/champions-league` begins at
+    2011-12, so the line starts there instead of in 2003-04. Every point on it
+    now means the same thing as every other, which the long version could not
+    say about any two of its points from different divisions.
     """
-    hist: dict[str, list] = {t: [] for t in teams}
-    seasons = sorted({m.season for m in ds.top if m.season != ds.season})
-    points = [(s, dt.date(int(s.split("-")[0]), 7, 1)) for s in seasons]
-    points.append((ds.season, kickoff))
-    for label, ref in points:
-        past = ds.before(ref)
-        if len(past) < 1000:
-            continue                   # too little history to fit anything honest
-        pool = sorted({m.home for m in past} | {m.away for m in past})
-        f = ratings.fit(past, pool, ref, shot_conv=shot_conv)
-        live = label == ds.season
-        for t in teams:
-            if t in f.index:
-                a = adj.get(t, 0.0) if live else 0.0
-                hist[t].append({"season": label, "spi": round(spi(f, t, a), 1)})
-    return hist
+    tr = global_trajectory()
+    return {t: list(tr.get(t, [])) for t in teams}
 
 
 def _second_tier_rating(ds: Dataset, fit: ratings.Fit, teams: list[str],
@@ -204,7 +191,14 @@ def write_cards(league: leagues.League, fc: dict) -> None:
     try:
         n = int(social.save(social.league_card(fc, words),
                             os.path.join(base, f"{league.slug}.png")))
+        # The card prints the club's rating, and the published rating is the
+        # pooled one. The trajectory's last point is fitted at the same date as
+        # the ranking, so it is that number and not one near it.
+        tr = global_trajectory()
         for rank, t in enumerate(fc["teams"], 1):
+            line = tr.get(t["id"]) or []
+            if line:
+                t = {**t, "spi": line[-1]["spi"]}
             n += int(social.save(social.club_card(fc, t, rank, words),
                                  os.path.join(base, league.slug, f"{t['id']}.png")))
         print(f"  → og/{league.slug}: {n} share card(s) redrawn")
@@ -225,6 +219,31 @@ def write_cards(league: leagues.League, fc: dict) -> None:
 #: League SPI by up to several points, none of it from evidence the domestic
 #: fit lacked, so domestic builds stay on the path they were calibrated for.
 POOLED_DOMESTIC = os.environ.get("POOLED_FIT") == "1"
+
+
+#: The date every pooled number is quoted at. One constant, because the ranking
+#: and the trajectory both fit at it and their answers have to be the same
+#: answer: the last point of a club's line is the SPI its page prints.
+RANK_REF = max(dt.date.today(), dt.date(2026, 8, 1))
+
+_TRAJECTORY: list = []
+
+
+def global_trajectory() -> dict[str, list]:
+    """Every club's SPI at each July, on the European scale, computed once.
+
+    This replaced a per-league walk-forward fit whose points meant "how strong
+    in this division". That version put Sporting CP at 89 and Barcelona at 80 on
+    the comparison page's shared axis, which is exactly backwards and is how the
+    whole business was noticed.
+    """
+    if not _TRAJECTORY:
+        print("Rating trajectories, on the European scale…")
+        t0 = time.perf_counter()
+        tr = rankings.trajectory(shared_corpus(), RANK_REF)
+        print(f"  · {len(tr)} clubs, {time.perf_counter() - t0:.0f}s")
+        _TRAJECTORY.append(tr)
+    return _TRAJECTORY[0]
 
 
 def pooled_fit_for(ds: Dataset, ref: dt.date, *, league: leagues.League,
@@ -393,13 +412,14 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
         rows.append({
             "id": t, "name": m["name"], "short": m["short"],
             "primary": m["primary"], "secondary": m["secondary"],
-            "spi": round(spi(fit, t, a), 1),
-            # The rating already has a measured uncertainty -- it is what the
-            # simulation resamples between scenarios -- and it was being printed
-            # as a bare number. One standard deviation either way, in the same
-            # units the rating is quoted in.
-            "spi_lo": round(spi(fit, t, a - config.RATING_SD), 1),
-            "spi_hi": round(spi(fit, t, a + config.RATING_SD), 1),
+            # This competition's own strength scale, not the site's. It ranks
+            # the clubs in this division against each other and nothing else,
+            # which is exactly what the schedule-difficulty numbers need and
+            # exactly what a reader must never be shown next to a rating from
+            # another league: quoted as "SPI" it made Sporting CP 89.3 and FC
+            # Barcelona 80.8 on two club pages of the same site. Published SPI
+            # comes from `ratings.json` and is the pooled European one.
+            "lg_strength": round(spi(fit, t, a), 1),
             "off": round(fit.offence(t) * np.exp(a / 2), 2),
             "def": round(fit.defence(t) * np.exp(-a / 2), 2),
             "pts": round(float(sim["points_mean"][i]), 1),
@@ -477,7 +497,7 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
     print(f"  → matches.json ({len(ms)} matches)")
 
     print("Deriving schedule strength, history and in-season scoring…")
-    spi_by_team = {r["id"]: r["spi"] for r in rows}
+    spi_by_team = {r["id"]: r["lg_strength"] for r in rows}
     sos = insight.strength_of_schedule(ds.fixtures, teams, spi_by_team, fit.home)
     for r in rows:
         s_ = sos[r["id"]]
@@ -730,7 +750,9 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
         rows.append({
             "id": t, "name": m["name"], "short": m["short"],
             "primary": m["primary"], "secondary": m["secondary"],
-            "spi": round(spi(fit, t, (adj or {}).get(t, 0.0)), 1),
+            # As above: this competition's own scale, for its own
+            # schedule numbers. The published rating is in ratings.json.
+            "lg_strength": round(spi(fit, t, (adj or {}).get(t, 0.0)), 1),
             "off": round(fit.offence(t) * np.exp((adj or {}).get(t, 0.0) / 2), 2),
             "def": round(fit.defence(t) * np.exp(-(adj or {}).get(t, 0.0) / 2), 2),
             "pot": p.get("pot"), "assoc": p.get("assoc"),
@@ -773,7 +795,7 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
     print(f"  → matches.json ({len(ms)} rows, "
           f"{len(ms) - len(fixtures)} knockout)")
 
-    spi_by_team = {r["id"]: r["spi"] for r in rows}
+    spi_by_team = {r["id"]: r["lg_strength"] for r in rows}
     sos = insight.strength_of_schedule(fixtures, teams, spi_by_team,
                                        fit.home_advantage(europe.EUROPE))
     for r in rows:
@@ -992,16 +1014,38 @@ def validate(league: leagues.League) -> None:
 #: seconds cold, nothing at all against a warm `.cache`) and both the cup build
 #: and the global ranking want it. Built once per process.
 _CORPUS: europe.Corpus | None = None
-#: Competitions already folded into the shared corpus, so a second call does not
-#: add the same matches twice and double their weight in the fit.
-_RANKED_EXTRA: set[str] = set()
 
 
 def shared_corpus(reg=None, *, quiet: bool = True) -> europe.Corpus:
+    """The pooled corpus, loaded once and complete, for everything that fits it.
+
+    Complete matters more than once. The rating trajectory and the global
+    ranking are two fits of the same model, and their answers have to be the
+    same answer where they overlap: the last point of a club's line is the SPI
+    its page prints. They were fitted on corpora that differed by the whole
+    Championship, because that competition used to be added here after the
+    league builds had already drawn their trajectories, and RB Leipzig came out
+    at 52.2 on one and 52.3 on the other.
+    """
     global _CORPUS
     if _CORPUS is None:
         from .parse import TeamRegistry
         _CORPUS = europe.Corpus(reg or TeamRegistry()).load(quiet=quiet)
+        # A second tier this site forecasts in its own right is not in
+        # `load_second_tiers` -- that would read it twice -- so it joins here,
+        # through the same registry, and a club that goes up keeps one id and
+        # one unbroken line.
+        for lg in leagues.LEAGUES:
+            if lg.kind != "promotion":
+                continue
+            try:
+                ds = Dataset(lg).load()
+            except Exception as exc:               # noqa: BLE001
+                print(f"  ! {lg.slug} not added to the pooled corpus: {exc}")
+                continue
+            _CORPUS.add([m for m in ds.top if m.played], lg.slug)
+            if not quiet:
+                print(f"  · added {len(ds.top)} {lg.name} matches to the corpus")
     return _CORPUS
 
 
@@ -1021,26 +1065,26 @@ def build_rankings(ready: set[str]) -> None:
         except (OSError, ValueError, KeyError):
             continue
     corpus = shared_corpus(quiet=False)
-    # Second tiers this site forecasts in their own right belong in the pooled
-    # fit too, or the Championship would have a projected table on one page and
-    # no rating on the other. Loaded through the same registry, so a club that
-    # goes up keeps one id and one rating history.
-    for lg in leagues.LEAGUES:
-        if lg.kind != "promotion" or lg.slug in _RANKED_EXTRA:
-            continue
-        try:
-            ds = Dataset(lg).load()
-        except Exception as exc:                   # noqa: BLE001
-            print(f"  ! {lg.slug} not added to the pooled corpus: {exc}")
-            continue
-        corpus.add([m for m in ds.top if m.played], lg.slug)
-        _RANKED_EXTRA.add(lg.slug)
-        print(f"  · added {len(ds.top)} {lg.name} matches to the pooled corpus")
-    payload = rankings.build(corpus, featured=featured)
+    payload = rankings.build(corpus, RANK_REF, featured=featured)
     json.dump(payload, open(os.path.join(OUT, "global.json"), "w"),
               separators=(",", ":"))
     print(f"  → global.json ({payload['n_clubs']} clubs across "
           f"{payload['n_leagues']} leagues, from {payload['n_matches']:,} matches)")
+    # And the same lines as their own file, for the comparison page. It can
+    # offer 836 clubs and could draw a trajectory for the 174 with a forecast
+    # page, because that is where the points lived; the rest got a sentence
+    # explaining that this site does not build their competition, which is true
+    # and not what anybody wanted to read.
+    tr = global_trajectory()
+    json.dump({"generated": payload["generated"],
+               "note": ("SPI each July, on the pooled European scale. A line "
+                        "starts when the corpus can first see that club's "
+                        "league, so they are not all the same length."),
+               "clubs": tr},
+              open(os.path.join(OUT, "trajectory.json"), "w"),
+              separators=(",", ":"))
+    kb = os.path.getsize(os.path.join(OUT, "trajectory.json")) / 1024
+    print(f"  → trajectory.json ({len(tr)} clubs, {kb:.0f}KB)")
     try:
         social.save(social.global_card(payload),
                     os.path.join(HERE, "site", "og", "global.png"))
@@ -1359,8 +1403,10 @@ def build_ratings(ready: set[str]) -> None:
     what stops a page picking up a league-scale rating by accident -- the way the
     league table did for months while the club page had it right.
 
-    Three come from the pooled fit by way of `global.json`. Three need a shot or
-    a card and so exist only for the big five, and are measured against the mean
+    Four come from the pooled fit by way of `global.json`, SPI among them: a
+    league page used to quote its own, which put Sporting CP at 89.3 and FC
+    Barcelona at 80.8 on two club pages of the same site. Three more need a shot
+    or a card and so exist only for the big five, and are measured against the mean
     of that whole population rather than against each of its five leagues.
 
     There were eight for about an hour. Two of them, home advantage and big
@@ -1379,7 +1425,7 @@ def build_ratings(ready: set[str]) -> None:
     except (OSError, ValueError):
         print("  · global.json unreadable, skipping ratings.json")
         return
-    keep = ("att_r", "def_r", "consistency_r")
+    keep = ("spi", "spi_lo", "spi_hi", "att_r", "def_r", "consistency_r")
     clubs: dict[str, dict] = {}
     for c in g.get("clubs", []):
         row = {k: c[k] for k in keep if c.get(k) is not None}
@@ -1419,13 +1465,15 @@ def build_ratings(ready: set[str]) -> None:
                 n_shot += 1
 
     json.dump({"generated": g.get("generated"),
-               "scale": {"global": ["att_r", "def_r", "consistency_r",
+               "scale": {"global": ["spi", "spi_lo", "spi_hi",
+                                    "att_r", "def_r", "consistency_r",
                                     "creation_r", "finishing_r",
                                     "discipline_r"],
                          "league": []},
                "note": ("Every rating here is measured against one reference, "
-                        "so a 70 means the same thing in any league. Attack, "
-                        "defence and consistency come from the pooled European "
+                        "so a 70 means the same thing in any league. SPI, "
+                        "attack, defence and consistency come from the pooled "
+                        "European "
                         "fit; creation, finishing and discipline need a shot or "
                         "a card and exist for the big five only, measured "
                         "against the mean of all five together. Each is shrunk "

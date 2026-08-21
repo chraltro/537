@@ -111,6 +111,117 @@ def spi_from(off: float, dfn: float, home: float, rho: float) -> float:
     return float(pts / 6.0 * 100.0)
 
 
+def _recentre(fit, pool, club_league, played, last, ref):
+    """Where the scale sits: an average club of the big-five top flights.
+
+    Returned rather than inlined because two things need it and they must agree
+    exactly. `build` quotes today's SPI against it; `trajectory` quotes each
+    past season's against the same definition applied to that season, which is
+    what lets a line be read across clubs and across years at once.
+    """
+    big5 = {lg.slug for lg in leagues.BIG_FIVE}
+    scale_set = [t for t in pool if club_league.get(t) in big5
+                 and played.get(t, 0) >= MIN_MATCHES
+                 and (ref - last[t]).days <= 400]
+    if len(scale_set) < 40:                       # corpus too thin; use everything
+        scale_set = list(pool)
+    idx = [fit.index[t] for t in scale_set]
+    return (float(np.mean(fit.att[idx])), float(np.mean(fit.dfn[idx])), scale_set)
+
+
+def _spi_at(fit, t, a_bar, d_bar, home, adj: float = 0.0) -> float:
+    off = float(np.exp(fit.mu + a_bar - d_bar + (fit.att[fit.index[t]] - a_bar) + adj))
+    dfn = float(np.exp(fit.mu + a_bar - d_bar - (fit.dfn[fit.index[t]] - d_bar)))
+    return spi_from(off, dfn, home, fit.rho)
+
+
+#: The first season the pooled corpus can produce a rating anyone should read.
+#: `openfootball/champions-league` starts at 2011-12 and those matches are the
+#: only edges joining one league to another, so before it the corpus is five or
+#: fifty disconnected leagues and a number quoted "against an average big-five
+#: club" would be quoting against nothing. Probed, not assumed: every season
+#: from 2000-01 to 2010-11 returns 404 upstream.
+FIRST_BRIDGED_SEASON = "2012-13"
+
+
+def trajectory(corpus: europe.Corpus, ref_date: dt.date | None = None,
+               *, quiet: bool = True) -> dict[str, list]:
+    """Every club's SPI at the start of every season, on one scale.
+
+    The club pages used to draw this from each league's own fit, which made the
+    line mean "how strong in this division" and put a gap in it for any season
+    the club spent somewhere else. Two clubs from different leagues drawn on one
+    axis then said whatever their divisions' averages happened to say: Sporting
+    at 89 above Barcelona at 80, which is how this was noticed.
+
+    So each point is a walk-forward pooled fit on everything played before that
+    season began, recentred on that season's big-five average. A club that went
+    down a division stays on the line, because the division below is in the
+    corpus too, and it drops rather than disappearing -- which is the whole
+    point of a trajectory.
+
+    Costs about fifteen fits, three seconds each at full size, once per build.
+    """
+    # One point per year, not per season label. The corpus holds both spellings
+    # -- a winter league writes 2025-26 and a summer league writes 2025 -- and
+    # both cut at the same 1 July, so iterating labels drew every point twice
+    # with identical values. Years, labelled in the winter convention the chart
+    # already renders; each point is the fit as it stood that July.
+    years = sorted({int(m.season[:4]) for m in corpus.matches if m.season[:4].isdigit()})
+    first = int(FIRST_BRIDGED_SEASON[:4])
+    out: dict[str, list] = {}
+    # The newest point is fitted at exactly the date `build` uses, so the end of
+    # a club's line is the SPI its page quotes rather than a number half a month
+    # away from it. A chart whose last point disagrees with the headline above it
+    # is the same class of bug as the one this whole change is about.
+    today = ref_date or max(dt.date.today(), dt.date(2026, 8, 1))
+    live = max(y for y in years) if years else None
+    for year in [y for y in years if y >= first]:
+        label = f"{year}-{(year + 1) % 100:02d}"
+        ref = today if year == live else dt.date(year, 7, 1)
+        past = corpus.before(ref)
+        if len(past) < 2000:
+            continue
+        pool = sorted({m.home for m in past} | {m.away for m in past})
+        played: dict[str, int] = {}
+        domestic: dict[str, int] = {}
+        last: dict[str, dt.date] = {}
+        for m in past:
+            league_match = m.comp not in europe.EURO_COMPS
+            for t in (m.home, m.away):
+                played[t] = played.get(t, 0) + 1
+                if league_match:
+                    domestic[t] = domestic.get(t, 0) + 1
+                if t not in last or m.date > last[t]:
+                    last[t] = m.date
+        fit = ratings.fit_pooled(past, pool, ref, group_of=corpus.group_of,
+                                 club_league=corpus.club_leagues(),
+                                 default_group=europe.EUROPE)
+        a_bar, d_bar, _ = _recentre(fit, pool, corpus.club_leagues(),
+                                    played, last, ref)
+        home = fit.home_advantage(europe.EUROPE)
+        n = 0
+        for t in pool:
+            # The same floor the ranking uses. A club with four matches in the
+            # corpus has a rating the fit invented from its ridge, and a line
+            # that starts on one is a line that starts on a prior.
+            # Domestic matches, not any matches. A club whose only appearances
+            # that year were a Champions League group stage has been seen twelve
+            # times against six opponents, and a rating off that lands wherever
+            # those twelve fell: it put FC Barcelona at 52 in 2013-14, between
+            # two seasons in the high eighties. A line should start when the
+            # corpus can see the club's league, and not before.
+            if (domestic.get(t, 0) < MIN_MATCHES
+                    or (ref - last[t]).days > MAX_STALE_DAYS):
+                continue
+            out.setdefault(t, []).append(
+                {"season": label, "spi": round(_spi_at(fit, t, a_bar, d_bar, home), 1)})
+            n += 1
+        if not quiet:
+            print(f"    {label}: {n} clubs")
+    return out
+
+
 def build(corpus: europe.Corpus, ref_date: dt.date | None = None, *,
           featured: set[str] | None = None,
           quiet: bool = True) -> dict:
@@ -137,15 +248,7 @@ def build(corpus: europe.Corpus, ref_date: dt.date | None = None, *,
     # The scale: an average club of the five leagues we forecast. Those are the
     # clubs in the current fixture lists, which the caller passes as `featured`;
     # with none passed, fall back to every club the big-five groups contain.
-    big5 = {lg.slug for lg in leagues.BIG_FIVE}
-    scale_set = [t for t in pool if club_league.get(t) in big5
-                 and played.get(t, 0) >= MIN_MATCHES
-                 and (ref - last[t]).days <= 400]
-    if len(scale_set) < 40:                       # corpus too thin; use everything
-        scale_set = list(pool)
-    idx = [fit.index[t] for t in scale_set]
-    a_bar = float(np.mean(fit.att[idx]))
-    d_bar = float(np.mean(fit.dfn[idx]))
+    a_bar, d_bar, scale_set = _recentre(fit, pool, club_league, played, last, ref)
     home = fit.home_advantage(europe.EUROPE)
 
     # Goals an average scale-set club scores, and concedes, against another of
@@ -210,6 +313,13 @@ def build(corpus: europe.Corpus, ref_date: dt.date | None = None, *,
             "country": lab["country"],
             "slug": lab["slug"],
             "spi": round(spi_from(off, dfn, home, fit.rho), 1),
+            # One standard deviation of the rating either way, in the units the
+            # rating is quoted in. The league forecasts published this and the
+            # ranking did not, so moving SPI here would have lost it.
+            "spi_lo": round(_spi_at(fit, t, a_bar, d_bar, home,
+                                    -config.RATING_SD), 1),
+            "spi_hi": round(_spi_at(fit, t, a_bar, d_bar, home,
+                                    config.RATING_SD), 1),
             "off": round(off, 2),
             "def": round(dfn, 2),
             # The same two as a rating out of 100, higher better both times.

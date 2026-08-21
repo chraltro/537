@@ -68,10 +68,11 @@
 
   <section class="card" id="c-traj">
     <h2>Rating trajectory</h2>
-    <p class="sub">Both clubs on one scale, season by season. The line comes from that club's
-      own league forecast, so a club in a competition this site does not build has no line to
-      draw. A season spent in another division is a gap, not a straight segment across
-      years the club was not there for.</p>
+    <p class="sub">Both clubs on one scale, July by July. Every point is a pooled European
+      fit on everything played before that date, so a club that dropped a division shows a
+      fall rather than a gap, and two clubs from different countries can be read against
+      each other. A line starts when the corpus can first see that club's league, which is
+      why they are not all the same length.</p>
     <div id="traj"></div>
   </section>
 </main>
@@ -251,21 +252,20 @@ async function ratings(c) {
   return Object.values(out).some((v) => v != null) ? out : null;
 }
 
+const TRAJ = siteData('trajectory').then((d) => d.clubs || {}).catch(() => ({}));
+
 async function trajectory(c) {
-  if (!c.slug) return { why: `this site does not forecast ${c.league}` };
-  try {
-    const r = await fetch(`data/${c.slug}/forecast.json`, { cache: 'no-cache' });
-    if (!r.ok) return { why: `its forecast did not load (${r.status})` };
-    const fc = await r.json();
-    const t = (fc.teams || []).find((x) => x.id === c.id);
-    if (!t) return { why: 'it is not in this season\u2019s squad list' };
-    if (!t.history || t.history.length < 2) {
-      return { why: 'it has only one season on record' };
-    }
-    return { points: t.history };
-  } catch (e) {
-    return { why: 'its forecast could not be fetched' };
+  /* Every club in the ranking has a line now, not only the 174 with a forecast
+     page. The points used to live on each competition's forecast, which meant
+     the comparison page could offer 836 clubs and draw a chart for a fifth of
+     them; the rest got a sentence saying this site does not build their league,
+     which was true and useless. */
+  const line = (await TRAJ)[c.id];
+  if (!line || line.length < 2) {
+    return { why: line ? 'it has only one season on record'
+                       : 'the pooled fit has too little of its league to rate it' };
   }
+  return { points: line };
 }
 
 async function render() {
@@ -425,8 +425,9 @@ async function render() {
         `<p class="hint" style="margin-top:10px">No line for <b>${esc(c.name)}</b>: ${
           esc(r.why)}.</p>`).join('') : '')
     + `<p class="hint" style="margin-top:10px">Each point is fitted only on matches played
-      before that season began, so the line is a walk-forward record rather than a curve
-      drawn through hindsight. Both clubs share one vertical scale.${
+      before that July, so the line is a walk-forward record rather than a curve drawn
+      through hindsight, and every point on both lines means the same thing: the share of
+      points that club would take against an average club of the big five.${
         /* The fallback pair can come back either way round, since each club
            takes whichever of the two is nearer its own colour. Testing for one
            order missed half the cases. */

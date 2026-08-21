@@ -94,7 +94,11 @@ def append_history(rows: list[dict], played: int, out_dir: str | None = None) ->
         "played": played,
         "teams": {r["id"]: {"title": round(r["title"], 4), "ucl": round(r["ucl"], 4),
                             "releg": round(r["releg"], 4), "pts": r["pts"],
-                            "spi": r["spi"]} for r in rows},
+                            # The competition's own strength, which is what
+                            # this snapshot has always held: it exists to say
+                            # what moved since last week inside one table, and
+                            # the published SPI is the pooled European one.
+                            "lg_strength": r["lg_strength"]} for r in rows},
     }
     hist = [h for h in hist if h["date"] != today]
     hist.append(snap)

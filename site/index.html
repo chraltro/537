@@ -61,7 +61,7 @@
         <thead><tr>
           <th class="l" data-k="rank">#</th>
           <th class="l" data-k="name">Club</th>
-          <th data-k="spi" title="Expected share of points against an average club in this competition">SPI</th>
+          <th data-k="spi" title="Expected share of points against an average club of the big five leagues. The same scale on every page of this site, so most of Europe sits below 50">SPI</th>
           <th data-k="att_r" title="Attack out of 100. Higher is better">Attack</th>
           <th data-k="def_r" title="Defence out of 100. Higher is better, because it is the conceding that is low">Defence</th>
           <th data-k="off" title="Goals expected against an average opponent">Scored</th>
@@ -318,8 +318,9 @@ tbody.addEventListener('mousemove', (e) => {
     ...(t.p_releg_playoff != null
       ? [['Down through the play-off', pct(t.p_releg_playoff, 1)],
          ['Relegated, either way', pct(t.down, 1)]] : []),
-    ['Rating (SPI)', t.spi_lo != null ? `${t.spi.toFixed(1)} (${t.spi_lo}–${t.spi_hi})`
-                                      : t.spi.toFixed(1)],
+    ['Rating (SPI)', t.spi == null ? '—'
+      : (t.spi_lo != null ? `${t.spi.toFixed(1)} (${t.spi_lo}–${t.spi_hi})`
+                          : t.spi.toFixed(1))],
     ['Attack', `${t.att_r ?? '—'} · ${t.off.toFixed(2)} goals a game vs average`],
     ['Defence', `${t.def_r ?? '—'} · ${t.def.toFixed(2)} conceded a game vs average`],
     ['Schedule left', t.sos ? `${t.sos} avg opponent (${ord(t.sos_rank)} hardest)` : '—'],
@@ -353,7 +354,7 @@ function renderRatings(list) {
       </span></td>
       <td title="${t.spi_lo != null
         ? `One standard deviation either way: ${t.spi_lo}–${t.spi_hi}` : ''}"><b>${
-        t.spi.toFixed(1)}</b></td>
+        t.spi != null ? t.spi.toFixed(1) : '—'}</b></td>
       <td class="rated"><b>${t.att_r ?? '—'}</b>${bar(t.att_r)}</td>
       <td class="rated"><b>${t.def_r ?? '—'}</b>${bar(t.def_r)}</td>
       <td>${t.off.toFixed(2)}</td>

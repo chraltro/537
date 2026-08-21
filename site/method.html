@@ -328,11 +328,11 @@
       league's mean rather than toward the global one. Without that, a pooled fit would drag
       Real Madrid down and Lincoln Red Imps up by the same amount, and what came out would
       not be a rating of anything.</p>
-    <p>That rating is published on its own page and on its own scale, and it does
-      <em>not</em> feed the league forecasts here. SPI means "share of points against an
-      average opponent", and pooling redefines the average as the average of eight hundred
-      clubs across fifty-three leagues; swapping one for the other would move every number on
-      this site without a single new result behind it.</p>
+    <p>That fit is where every rating on this site comes from, SPI included. It does
+      <em>not</em> produce the forecasts: the probabilities, the projected points and the
+      title chances are still each competition's own fit on its own matches, and the goal
+      rates beside them are that fit's. What the pooled fit supplies is the answer to "how
+      good is this club", which is a question that has to cross a border to mean anything.</p>
 
     <h3>Competitions with only one feed</h3>
     <p>Five of the eight competitions on this site come from the football-datasets mirror,
@@ -889,16 +889,18 @@ if (!bt) {
    and neither has to be guessed at from the column head. */
 const GLOSS = [
   ['SPI', `Expected share of the points a club would take against an average
-    ${esc(W.name)} club, home and away. 50 is exactly average. It is a rating,
-    not a forecast: it says how good a club is, not where it will finish.
-    <b>It is not comparable between
-    competitions</b>: a 60 in the Championship
-    and a 60 in the Premier League both mean "well above the clubs around
-    them", and those are different clubs. The
-    <a href="${url('rankings.html')}">global rankings</a> page is the one that
-    compares across borders, and it is built on a different fit: one that uses
-    UEFA competition matches as the only evidence joining one league to
-    another.`],
+    club of the big five leagues, home and away, from the pooled European fit.
+    It is a rating, not a forecast: it says how good a club is, not where it
+    will finish. One scale, on every page of this site, which means most of
+    Europe sits below 50 and a mid-table Eredivisie side rates below a mid-table
+    Premier League one.
+    <br>It used to be quoted against an average club <em>of the competition you
+    were looking at</em>, and the two coexisted: this page said so and the club
+    pages did not, so Sporting CP read 89.3 and FC Barcelona 80.8 on the same
+    site, both correct about different questions. The competition's own scale
+    still exists behind the scenes, because the schedule-difficulty numbers need
+    it -- how hard a run of fixtures is inside one division is a question about
+    that division -- but it is not called SPI and it is not published.`],
   ['Attack / Defence', `Out of 100, and higher is better both times, including
     defence, where it is the <em>conceding</em> that is low. Both come from the
     pooled European fit and are measured against an average big-five club, on
@@ -906,9 +908,7 @@ const GLOSS = [
     attack, which is the whole point of putting a number on it. Most of Europe
     therefore sits below 50, and a mid-table Eredivisie side rates below a
     mid-table Premier League one, as it should. Every rating on this site works
-    this way, and SPI on a competition page does <em>not</em>: it stays relative
-    to that competition, and the global rankings page is where SPI crosses a
-    border.
+    this way, SPI included.
     <br>The model itself thinks in goals: 1.91 expected against an average
     opponent, 0.55 conceded. Those are still what every probability is
     computed from and what the tooltips show. The rating is a readable form of

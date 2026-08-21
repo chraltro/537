@@ -25,7 +25,7 @@ import datetime as dt
 import os
 from dataclasses import dataclass
 
-from . import fetch
+from . import config, fetch, leagues
 from .parse import Match, TeamRegistry, parse_openfootball, parse_openfootball_euro
 
 OF = "https://raw.githubusercontent.com/openfootball"
@@ -496,6 +496,59 @@ def load_big_five(reg: TeamRegistry, *, from_year: int = 2015,
     return out
 
 
+def load_second_tiers(reg: TeamRegistry, *, from_year: int = 2015,
+                      quiet: bool = False) -> list[Match]:
+    """The division below each competition this site forecasts.
+
+    Not for its own sake. Fourteen clubs with a forecast page had no rating at
+    all -- no SPI, no attack, no defence -- because they are projected up from a
+    division the pooled corpus could not see, and their only top-flight record
+    was too old for the fit to use. A league table with three blank rows in its
+    strength column is a worse answer than the one this fixes.
+
+    It also closes the gaps in a club's rating trajectory. A season spent one
+    division down used to be a hole in the line, because the corpus had nothing
+    from it; now the line runs through it, which is what a trajectory is for.
+
+    Tagged `<slug>-2`, its own competition group, so the pooled fit gives the
+    division its own home-advantage term and its own ridge centre rather than
+    pretending the Championship and the Premier League are one population. The
+    scale set is unchanged: it is defined as the big-five *top* flights, and a
+    second-tier group is not one of them, so no published number moves because
+    of what a second tier does.
+    """
+    # A division this site forecasts in its own right is loaded by the ranking
+    # build under its own slug. England's second tier is the Championship, which
+    # is one of the nine, so reading it here as well would put every Championship
+    # match into the fit twice and quietly double its weight. Compared by URL
+    # rather than by a hand-kept list of exceptions, so a second tier promoted to
+    # a forecast competition later cannot reintroduce this.
+    forecast_top = {lg.of_url(config.SEASON, "top") for lg in leagues.LEAGUES}
+    out: list[Match] = []
+    for lg in leagues.LEAGUES:
+        if not lg.of_second:
+            continue
+        if lg.of_url(config.SEASON, "second") in forecast_top:
+            if not quiet:
+                print(f"  · {lg.slug}: second tier is a forecast competition, "
+                      "loaded there instead")
+            continue
+        n0 = len(out)
+        for label in lg.second_season_labels(config.SEASON):
+            if int(label.split("-")[0]) < from_year:
+                continue
+            text = fetch.get(lg.of_url(label, "second"), required=False)
+            if not text:
+                continue
+            got = parse_openfootball(text, label, reg, comp=f"{lg.slug}-2")
+            out.extend(m for m in got if m.played)
+        if not quiet and len(out) == n0:
+            print(f"  ! {lg.slug}: no reachable second-tier seasons")
+    if not quiet:
+        print(f"  · {len(out)} matches from the divisions below")
+    return out
+
+
 class Corpus:
     """Every match the pooled fit sees, with its competition group attached.
 
@@ -520,8 +573,14 @@ class Corpus:
                 self.matches.append(m)
         return self
 
+    #: Where the corpus starts. 2011, because that is where the UEFA files start
+    #: and those matches are the only edges joining one league to another: a
+    #: season with domestic results and no European ties is a set of leagues
+    #: with no exchange rate between them. It used to be 2015, which left the
+    #: 2012-13 and 2013-14 fits with nothing but European ties in them, and a
+    #: club rated off twelve of those came out wherever those twelve fell.
     def load(self, *, competitions: bool = True, domestic: bool = True,
-             big_five: bool = True, from_year: int = 2015,
+             big_five: bool = True, second: bool = True, from_year: int = 2011,
              seasons: list[str] | None = None, quiet: bool = False) -> "Corpus":
         if competitions:
             self.euro = load_competitions(self.reg, seasons, quiet=quiet)
@@ -534,6 +593,9 @@ class Corpus:
         if big_five:
             self.matches.extend(load_big_five(self.reg, from_year=from_year,
                                               quiet=quiet))
+        if second:
+            self.matches.extend(load_second_tiers(self.reg, from_year=from_year,
+                                                  quiet=quiet))
         return self
 
     # -- views the fit needs ------------------------------------------------
