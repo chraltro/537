@@ -45,6 +45,61 @@ _HG = ("HG", "FTHG")
 _AG = ("AG", "FTAG")
 
 
+#: The spellings this publisher uses for clubs the GitHub feed spells another
+#: way, keyed by association so a fix for Poland cannot reach into Romania.
+#:
+#: These are not decoration. `model.external.probe` refuses a league outright
+#: when a club in the overlap season does not resolve, because that season is
+#: one we already hold in full: a name that fails there is a second spelling of
+#: a club already in the ranking, and minting an id for it would put the same
+#: club in twice with half a record each. On 2026-08-21 the runner refused all
+#: three leagues for exactly this reason -- seven names in Poland, seven in
+#: Romania, three in Switzerland -- and every one of them is below.
+#:
+#: Accents are not the problem; `normalise` folds those, which is why "Zurich"
+#: finds "FC Zürich" and "Slask Wroclaw" finds "Śląsk Wrocław" with nothing
+#: written here. The problem is the publisher dropping the town: "Rakow" for
+#: "Raków Częstochowa", "Legia" for "Legia Warszawa", "U. Cluj" for
+#: "Universitatea Cluj". Only names that are unambiguous in their own league are
+#: written down -- "Lausanne" is Lausanne-Sport and nothing else, while a bare
+#: "Zaglebie" could be Lubin or Sosnowiec and is therefore left to fail loudly.
+ALIASES: dict[str, dict[str, str]] = {
+    "POL": {
+        "Cracovia": "KS Cracovia",
+        "Jagiellonia": "Jagiellonia Białystok",
+        "Legia": "Legia Warszawa",
+        "Puszcza": "Puszcza Niepołomice",
+        "Rakow": "Raków Częstochowa",
+        "Stal Mielec": "FKS Stal Mielec",
+        "Lech": "Lech Poznan",
+        "Lechia": "Lechia Gdańsk",
+        "Widzew": "Widzew Łódź",
+        "Piast": "Piast Gliwice",
+        "Korona": "Korona Kielce",
+        "Radomiak": "Radomiak Radom",
+        "Slask": "Śląsk Wrocław",
+        "Motor": "Motor Lublin",
+    },
+    "ROU": {
+        "Din. Bucuresti": "Dinamo Bucureşti",
+        "Otelul": "Oţelul Galaţi",
+        "Petrolul": "Petrolul Ploieşti",
+        "Poli Iasi": "FC Politehnica Iași",
+        "Sepsi Sf. Gheorghe": "Sepsi OSK",
+        "U. Cluj": "Universitatea Cluj",
+        "Univ. Craiova": "CS Universitatea Craiova",
+        "Sepsi": "Sepsi OSK",
+        "Farul": "Farul Constanța",
+        "Rapid": "Rapid Bucureşti",
+    },
+    "SUI": {
+        "Grasshoppers": "Grasshopper Club Zürich",
+        "Lausanne": "FC Lausanne-Sport",
+        "Yverdon": "Yverdon Sport FC",
+    },
+}
+
+
 class FormatError(RuntimeError):
     """The file came back but is not the file we were promised. Raised rather
     than worked around: a reader that guesses at an unexpected header is how a
@@ -106,9 +161,11 @@ def load(assoc: str, reg: TeamRegistry,
             raise FormatError(
                 f"{url(assoc)} has no {label} column; saw {sorted(head)[:12]}")
 
+    alias = ALIASES.get(assoc, {})
     out: list[tuple[Match, str, str]] = []
     for row in rows:
         home, away = _pick(row, _HOME), _pick(row, _AWAY)
+        home, away = alias.get(home, home), alias.get(away, away)
         hg, ag = _pick(row, _HG), _pick(row, _AG)
         when = _date(row.get("Date", ""))
         if not (home and away and when) or hg is None or ag is None:

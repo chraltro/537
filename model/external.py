@@ -106,7 +106,11 @@ class Verdict:
                     f"{self.overlap_season}{extra}")
         bits = [self.reason]
         if self.unresolved:
-            bits.append(", ".join(self.unresolved[:6]))
+            # Every one of them, not the first few. This line is the only thing
+            # a runner tells anyone about why a league did not arm, and the
+            # answer is an alias per name: a list that stops at six sends the
+            # next build round-tripping for the seventh.
+            bits.append(", ".join(self.unresolved))
         if self.detail:
             bits.append(self.detail)
         return f"  ✗ {self.source}/{self.assoc}: " + " -- ".join(bits)

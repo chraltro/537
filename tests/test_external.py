@@ -260,7 +260,10 @@ def test_the_football_data_reader_reads_the_published_shape(monkeypatch):
     rows = footballdata.load("POL", TeamRegistry())
     assert len(rows) == 2                      # the third has no score yet
     m, home, away = rows[0]
-    assert (home, away) == ("Lech Poznan", "Cracovia")
+    # "Cracovia" comes back as "KS Cracovia": the publisher's short names are
+    # mapped onto the spellings the GitHub feed defined the club ids from,
+    # inside the reader, so no caller can forget to do it.
+    assert (home, away) == ("Lech Poznan", "KS Cracovia")
     assert (m.hg, m.ag) == (1, 0)
     assert m.date == dt.date(2025, 7, 18)
     assert m.season == "2025-26"
@@ -444,3 +447,68 @@ def test_a_blocked_network_leaves_the_corpus_exactly_as_it_was():
         src.load = lambda _r: (_ for _ in ()).throw(OSError("blocked"))
     out = [m for src in srcs for m in external.matches(src, reg, have)]
     assert out == []
+
+
+# ------------------------------------------------------------------- spellings
+def test_a_publishers_short_name_finds_the_club_we_already_hold():
+    """The gap the ASCII test above cannot see.
+
+    That test builds football-data.co.uk's file by folding accents out of our
+    own club names, so every name it produces resolves by construction. The real
+    file drops the town as well as the accents -- "Rakow", not "Rakow
+    Czestochowa" -- and on 2026-08-21 that refused all three leagues on the
+    runner. An alias is what fixes it, and this is the test that the alias is
+    actually applied to what the reader returns.
+    """
+    reg = TeamRegistry()
+    held = reg.resolve("Raków Częstochowa")
+    header = "Country,League,Season,Date,Time,Home,Away,HG,AG,Res"
+    text = (f"{header}\n"
+            "POL,x,2024/2025,10/08/2024,18:00,Rakow,Legia,2,1,H\n"
+            "POL,x,2024/2025,17/08/2024,18:00,Legia,Rakow,0,0,D\n")
+
+    rows = _read(text, "POL")
+    names = {raw for _, h, a in rows for raw in (h, a)}
+    assert "Rakow" not in names, "the publisher's short name reached the gate raw"
+    assert "Raków Częstochowa" in names
+    assert reg.known("Raków Częstochowa") == held
+    assert all(reg.known(n) is not None for n in names), sorted(names)
+
+
+def test_an_alias_never_points_at_itself_or_at_another_alias():
+    """A table of spellings is only useful while every entry moves a name onto a
+    different one, exactly once. An entry that maps a name to itself is dead
+    weight that reads as a fix, and two entries whose keys fold to the same key
+    silently disagree about which club a name means."""
+    from model.parse import normalise
+    for assoc, table in footballdata.ALIASES.items():
+        seen: dict[str, str] = {}
+        for src_name, held in table.items():
+            assert normalise(src_name) != normalise(held), (
+                f"{assoc}: {src_name!r} -> {held!r} changes nothing")
+            assert held not in table, (
+                f"{assoc}: {held!r} is both an alias target and an alias key")
+            key = normalise(src_name)
+            assert key not in seen, (
+                f"{assoc}: {src_name!r} and {seen[key]!r} are the same key")
+            seen[key] = src_name
+
+
+@pytest.mark.parametrize("assoc", ["POL", "ROU", "SUI"])
+def test_every_alias_names_a_club_that_league_actually_had(assoc):
+    """An alias written from a probe's output is a guess about the target as
+    well as the source: "Sepsi OSK" and "Sepsi OSK Sfantu Gheorghe" are both
+    plausible spellings of the club we hold, and only one of them is the one the
+    GitHub feed wrote. A target that resolves to nothing mints a duplicate club
+    the moment the league arms, which is the exact failure the gate exists to
+    prevent -- so the target is checked against the feed that defined the ids."""
+    from model import europe
+
+    reg = TeamRegistry()
+    dom = europe.load_domestic(reg, assocs=[assoc], quiet=True)
+    if len(dom) < 200:
+        pytest.skip(f"{assoc}'s GitHub feed is not reachable in this checkout")
+    for src_name, held in footballdata.ALIASES.get(assoc, {}).items():
+        assert reg.known(held) is not None, (
+            f"{assoc}: {src_name!r} points at {held!r}, which is not a club the "
+            "GitHub feed ever named")
