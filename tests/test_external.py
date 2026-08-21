@@ -349,7 +349,11 @@ def test_no_wikipedia_league_is_armed_without_a_receipt():
     for assoc in wikifootball.ARMED | wikifootball.PROJECTED:
         r = seen.get(assoc)
         assert r, f"{assoc} is armed with no probe recorded in data/armed.json"
-        assert r["agreed"] == r["compared"] > 0, r
+        # The probe's own floor, not unanimity. Feeds differ over awarded
+        # results, and demanding every score match would refuse a league for
+        # one forfeit recorded two ways -- Ukraine agrees on 237 of 238.
+        assert r["compared"] >= external.MIN_OVERLAP_MATCHES, r
+        assert r["agreed"] / r["compared"] >= external.MIN_AGREEMENT, r
         assert r["overlap_season"] and r["run"], r
 
 

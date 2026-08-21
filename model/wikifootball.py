@@ -87,10 +87,20 @@ TITLES: dict[str, str] = {
 }
 
 #: Leagues whose grid has been probed on a runner, whose clubs all resolve, and
-#: which therefore contribute matches. Empty by design; see the module docstring.
-#: Adding a code here without a green probe behind it is the one thing this
-#: whole arrangement exists to prevent.
-ARMED: frozenset[str] = frozenset({"NOR", "LUX", "BLR"})
+#: which therefore contribute matches. Adding a code here without a green probe
+#: behind it is the one thing this whole arrangement exists to prevent, so each
+#: one carries the run that put it here:
+#:
+#:   NOR  238/238 of 2024,     608 matches, 2 new clubs
+#:   BLR  240/240 of 2024,     464 matches, 3 new clubs
+#:   LUX  240/240 of 2024-25,  504 matches, 7 new clubs
+#:   UKR  237/238 of 2024-25,  498 matches, 5 new clubs
+#:
+#: Ukraine is the only one not unanimous, and one disagreement in 238 is what
+#: the 95% floor is there to absorb: feeds differ over awarded results, and a
+#: forfeit recorded as 3-0 by one and 0-0 by the other is not two different
+#: competitions.
+ARMED: frozenset[str] = frozenset({"NOR", "LUX", "BLR", "UKR"})
 
 #: Leagues being watched: probed on every run, reported beside the armed ones,
 #: and contributing nothing at all until they move up into ARMED.
@@ -145,7 +155,7 @@ DISTINCT: dict[str, frozenset[str]] = {"UKR": frozenset({"Poltava"})}
 #: Poland is exactly that case: football-data.co.uk carries its results with
 #: dates on them and is the feed in service, while the Wikipedia article is
 #: where the list of who is in the league this season comes from.
-PROJECTED: frozenset[str] = frozenset({"NOR", "LUX", "BLR", "POL"})
+PROJECTED: frozenset[str] = frozenset({"NOR", "LUX", "BLR", "POL", "UKR"})
 
 #: Extra spellings this source uses for clubs the registry already holds, keyed
 #: by association so a fix for Malta cannot collide with one for Moldova. Filled

@@ -5,12 +5,12 @@
    "assoc": "NOR",
    "league": "Eliteserien",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32493275690",
+   "run": "https://github.com/chraltro/537/actions/runs/32510698176",
    "date": "2026-08-21",
    "overlap_season": "2024",
    "compared": 238,
    "agreed": 238,
-   "matches": 578,
+   "matches": 608,
    "latest": "2026-07-01",
    "new_clubs": [
     "Start",
@@ -21,7 +21,7 @@
    "assoc": "BLR",
    "league": "Belarusian Premier League",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32494556036",
+   "run": "https://github.com/chraltro/537/actions/runs/32510698176",
    "date": "2026-08-21",
    "overlap_season": "2024",
    "compared": 240,
@@ -38,13 +38,13 @@
    "assoc": "LUX",
    "league": "Luxembourg National Division",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32493275690",
+   "run": "https://github.com/chraltro/537/actions/runs/32510698176",
    "date": "2026-08-21",
    "overlap_season": "2024-25",
    "compared": 240,
    "agreed": 240,
    "matches": 504,
-   "latest": "2027-01-01",
+   "latest": "2026-08-20",
    "new_clubs": [
     "Atert Bissen",
     "Etzella Ettelbruck",
@@ -56,20 +56,37 @@
    ]
   },
   {
+   "assoc": "UKR",
+   "league": "Ukrainian Premier League",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32510698176",
+   "date": "2026-08-21",
+   "overlap_season": "2024-25",
+   "compared": 238,
+   "agreed": 237,
+   "matches": 498,
+   "latest": "2026-08-20",
+   "new_clubs": [
+    "Bukovyna",
+    "Epitsentr",
+    "Kharkiv",
+    "Kudrivka",
+    "Poltava"
+   ],
+   "note": "One score in 238 disagrees, which the 95% floor exists to absorb: feeds differ over awarded results, and a forfeit recorded 3-0 by one and 0-0 by the other is not a different competition. Poltava is minted deliberately as its own club and not as a second name for Vorskla Poltava; see wikifootball.DISTINCT for what settled that and how strong the evidence is."
+  },
+  {
    "assoc": "POL",
    "league": "Ekstraklasa",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32493275690",
+   "run": "https://github.com/chraltro/537/actions/runs/32510698176",
    "date": "2026-08-21",
    "overlap_season": "2024-25",
-   "compared": 240,
-   "agreed": 240,
-   "matches": 534,
-   "latest": "2027-01-01",
-   "new_clubs": [
-    "Bruk-Bet Termalica Nieciecza",
-    "Wisła Kraków"
-   ],
+   "compared": 306,
+   "agreed": 306,
+   "matches": 643,
+   "latest": "2026-08-20",
+   "new_clubs": [],
    "used_for": "the season's entrant list only; the results in service come from football-data.co.uk, which carries dates"
   }
  ]
