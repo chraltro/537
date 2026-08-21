@@ -1161,7 +1161,13 @@ def build_projections(_ready: set[str]) -> list[str]:
                 season=season, source="wikipedia", clubs=clubs, played=played)
             out = projection.run(proj, fit)
         except Exception as exc:                       # noqa: BLE001
-            print(f"  ! {slug}: no projection ({exc})")
+            # With the club list, always. Every failure this has produced was a
+            # club under two spellings, and the list is the only thing that says
+            # which one -- a runner is where this is read and there is no second
+            # chance to ask it a question.
+            said = locals().get("names") or []
+            print(f"  ! {slug}: no projection ({exc})"
+                  + (f"; the grid lists {sorted(said)}" if said else ""))
             continue
         out["generated"] = dt.datetime.now(dt.timezone.utc).isoformat(
             timespec="seconds")
