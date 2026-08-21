@@ -770,3 +770,24 @@ def test_a_result_already_played_is_never_dated_in_the_future():
 
     assert wikifootball.season_midpoint("2026-27", today) < today, (
         "a result on the board must be inside the window the fit reads")
+
+
+def test_two_feeds_for_one_league_agree_about_a_new_club_s_name():
+    """Where two verified feeds cover one league they have to agree about the
+    clubs, and a club that arrived after the GitHub feed stopped is the one
+    place they cannot be checked against it. Poland: the results say "Wisla",
+    the entrant list says "Wisła Kraków", and left alone that is one club with
+    two ids, a season with it in twice and another club missing."""
+    from model.parse import normalise
+    for assoc, table in footballdata.CROSS_FEED.items():
+        assert assoc in footballdata.FILES, assoc
+        for src_name, held in table.items():
+            assert normalise(src_name) != normalise(held), (
+                f"{assoc}: {src_name!r} -> {held!r} changes nothing")
+            assert src_name not in footballdata.ALIASES.get(assoc, {}), (
+                f"{assoc}: {src_name!r} is in both tables")
+
+    header = "Country,League,Season,Date,Time,Home,Away,HG,AG,Res"
+    rows = _read(f"{header}\nPOL,x,2026/2027,10/08/2026,18:00,Wisla,Legia,2,1,H\n",
+                 "POL")
+    assert rows[0][1] == "Wisła Kraków", rows[0][1]

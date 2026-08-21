@@ -108,6 +108,31 @@ ALIASES: dict[str, dict[str, str]] = {
 }
 
 
+#: Spellings for clubs that arrived after the GitHub feed stopped publishing,
+#: which is why they are here and not in ALIASES: the test that checks an alias
+#: target against the openfootball season it came from cannot check these,
+#: because the club was never in one.
+#:
+#: They matter where two verified feeds cover one league and disagree about a
+#: new club's name. Poland is the case: the results come from this publisher,
+#: which writes "Wisla" for the club promoted this summer, and the season's
+#: entrant list comes from the Wikipedia grid, which writes "Wisła Kraków". Two
+#: ids for one club, and the projection refused the league rather than run a
+#: season with a club in it twice and another missing.
+#:
+#: A wrong entry here is not silent. It either makes a club play itself, which
+#: the probe refuses, or leaves the league a club short against last season's
+#: count, which the projection refuses and prints both lists for.
+CROSS_FEED: dict[str, dict[str, str]] = {
+    "POL": {
+        # Established by the runner on 2026-08-21: the grid's eighteen entrants
+        # matched this publisher's on every club but this one.
+        "Wisla": "Wisła Kraków",
+        "Termalica B-B.": "Bruk-Bet Termalica Nieciecza",
+    },
+}
+
+
 class FormatError(RuntimeError):
     """The file came back but is not the file we were promised. Raised rather
     than worked around: a reader that guesses at an unexpected header is how a
@@ -169,7 +194,7 @@ def load(assoc: str, reg: TeamRegistry,
             raise FormatError(
                 f"{url(assoc)} has no {label} column; saw {sorted(head)[:12]}")
 
-    alias = ALIASES.get(assoc, {})
+    alias = {**ALIASES.get(assoc, {}), **CROSS_FEED.get(assoc, {})}
     out: list[tuple[Match, str, str]] = []
     for row in rows:
         home, away = _pick(row, _HOME), _pick(row, _AWAY)
