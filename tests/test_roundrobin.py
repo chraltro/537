@@ -150,3 +150,18 @@ def test_a_team_code_with_no_name_beside_it_is_not_a_club():
             "|name_AAA=Alpha\n|name_BBB=Beta\n|name_CCC=Gamma\n|name_DDD=Delta\n"
             "|match_AAA_BBB=1–0\n")
     assert wikifootball.grid_clubs(text) == ["Alpha", "Beta", "Gamma", "Delta"]
+
+
+def test_a_club_code_that_is_not_ascii_is_still_a_club():
+    """Codes are the article editor's own abbreviations and not all of them are
+    ASCII. A class of [A-Za-z0-9_] matched neither the entrant list nor the name
+    lines for those, their cells were then dropped as belonging to some other
+    grid, and the league quietly ran a club short: one in Norway's 2025 season,
+    three in Poland's 2026-27."""
+    from model import wikifootball
+    text = ("|team1=ŚLĄ|team2=BBB|team3=CCC|team4=DDD\n"
+            "|name_ŚLĄ=[[Śląsk Wrocław|Śląsk]]\n|name_BBB=Beta\n"
+            "|name_CCC=Gamma\n|name_DDD=Delta\n"
+            "|match_ŚLĄ_BBB=2–1\n")
+    assert wikifootball.grid_clubs(text) == ["Śląsk", "Beta", "Gamma", "Delta"]
+    assert wikifootball.parse_grid(text) == [("Śląsk", "Beta", 2, 1)]

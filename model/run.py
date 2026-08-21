@@ -245,6 +245,25 @@ def global_trajectory() -> dict[str, list]:
     return _TRAJECTORY[0]
 
 
+#: The pooled fit at the reference date, which two of the cross-competition
+#: steps want and which costs a full optimisation. Fitted once and handed to
+#: both, the same way `_TRAJECTORY` is: the projections and the global ranking
+#: reading the same numbers is also the only way they can agree.
+_POOLED: list = []
+
+
+def pooled_now():
+    """One Dixon-Coles fit over the whole corpus, as of the reference date."""
+    if not _POOLED:
+        corpus = shared_corpus()
+        hist = corpus.before(RANK_REF)
+        pool = sorted({m.home for m in hist} | {m.away for m in hist})
+        _POOLED.append(ratings.fit_pooled(
+            hist, pool, RANK_REF, group_of=corpus.group_of,
+            club_league=corpus.club_leagues(), default_group=europe.EUROPE))
+    return _POOLED[0]
+
+
 def pooled_fit_for(ds: Dataset, ref: dt.date, *, league: leagues.League,
                    quiet: bool = True) -> tuple[ratings.Fit, europe.Corpus]:
     """One Dixon-Coles fit over this league plus the whole European corpus.
@@ -1097,10 +1116,7 @@ def build_projections(_ready: set[str]) -> list[str]:
         return []
     corpus = shared_corpus()
     reg = corpus.reg
-    hist = corpus.before(RANK_REF)
-    pool = sorted({m.home for m in hist} | {m.away for m in hist})
-    fit = ratings.fit_pooled(hist, pool, RANK_REF, group_of=corpus.group_of,
-                             club_league=corpus.club_leagues())
+    fit = pooled_now()
     done: list[str] = []
     for assoc in live:
         src = europe.BY_ASSOC[assoc]
@@ -1128,11 +1144,16 @@ def build_projections(_ready: set[str]) -> list[str]:
                 if m.comp == src.group and m.played and m.season < season:
                     sizes.setdefault(m.season, set()).update((m.home, m.away))
             if sizes:
-                was = len(sizes[max(sizes)])
-                if len(clubs) != was:
+                prev = max(sizes)
+                if len(clubs) != len(sizes[prev]):
+                    # Both lists, because the useful thing is which club is
+                    # missing from which, and the answer is a spelling every
+                    # time. Nothing else in the build can say it.
                     raise roundrobin.ShapeError(
                         f"the {season} grid lists {len(clubs)} clubs and "
-                        f"{max(sizes)} had {was}")
+                        f"{prev} had {len(sizes[prev])}: "
+                        f"{season} = {sorted(reg.display(c) for c in clubs)}, "
+                        f"{prev} = {sorted(reg.display(c) for c in sizes[prev])}")
             played = [m for m in corpus.matches
                       if m.comp == src.group and m.season == season and m.played]
             proj = projection.Projection(
@@ -1169,7 +1190,7 @@ def build_rankings(ready: set[str]) -> None:
         except (OSError, ValueError, KeyError):
             continue
     corpus = shared_corpus(quiet=False)
-    payload = rankings.build(corpus, RANK_REF, featured=featured)
+    payload = rankings.build(corpus, RANK_REF, featured=featured, fit=pooled_now())
     json.dump(payload, open(os.path.join(OUT, "global.json"), "w"),
               separators=(",", ":"))
     print(f"  → global.json ({payload['n_clubs']} clubs across "

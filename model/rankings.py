@@ -234,15 +234,21 @@ def trajectory(corpus: europe.Corpus, ref_date: dt.date | None = None,
 
 
 def build(corpus: europe.Corpus, ref_date: dt.date | None = None, *,
-          featured: set[str] | None = None) -> dict:
-    """Fit the pooled model and turn it into the global ranking payload."""
+          featured: set[str] | None = None, fit=None) -> dict:
+    """Fit the pooled model and turn it into the global ranking payload.
+
+    `fit` lets a caller hand in a fit it has already paid for over the same
+    corpus and the same date. There is one other step that wants this exact
+    model, and fitting it twice costs a full optimisation and risks the two
+    disagreeing by however much the optimiser wanders.
+    """
     ref = ref_date or max(dt.date.today(), dt.date(2026, 8, 1))
     hist = corpus.before(ref)
     pool = sorted({m.home for m in hist} | {m.away for m in hist})
     club_league = corpus.club_leagues()
-    fit = ratings.fit_pooled(hist, pool, ref, group_of=corpus.group_of,
-                             club_league=club_league,
-                             default_group=europe.EUROPE)
+    fit = fit or ratings.fit_pooled(hist, pool, ref, group_of=corpus.group_of,
+                                    club_league=club_league,
+                                    default_group=europe.EUROPE)
 
     # Counts and recency, from the same match list the fit saw.
     played: dict[str, int] = {}

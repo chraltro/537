@@ -760,7 +760,13 @@ def test_a_result_already_played_is_never_dated_in_the_future():
     promoted this summer would have no matches at all, no rating, and no place
     in its own league's projection."""
     today = dt.date(2026, 8, 21)
-    assert wikifootball.season_midpoint("2026-27", today) == today
+    # Yesterday, not today: the fit keeps what happened strictly before its
+    # reference date, and that date is today.
+    yesterday = dt.date(2026, 8, 20)
+    assert wikifootball.season_midpoint("2026-27", today) == yesterday
     assert wikifootball.season_midpoint("2025-26", today) == dt.date(2026, 1, 1)
     assert wikifootball.season_midpoint("2026", today) == dt.date(2026, 7, 1)
-    assert wikifootball.season_midpoint("2027", today) == today
+    assert wikifootball.season_midpoint("2027", today) == yesterday
+
+    assert wikifootball.season_midpoint("2026-27", today) < today, (
+        "a result on the board must be inside the window the fit reads")

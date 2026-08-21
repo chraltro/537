@@ -212,27 +212,37 @@ def season_midpoint(season: str, today: dt.date | None = None) -> dt.date:
     of the later year is both the arithmetic midpoint and the obvious one. A
     summer season labelled 2025 runs roughly April to October, so 1 July.
 
-    Never later than today, which matters for the season being played right now:
-    in August the midpoint of 2026-27 is next January, and a match dated next
-    January is a match the rating fit cannot see -- `corpus.before(today)` drops
-    it -- so a club promoted this summer had no matches at all, was not in the
-    fit, and the projection fell over looking for its rating. A result already
-    on the board did not happen in the future.
+    Never later than yesterday, which matters for the season being played right
+    now: in August the midpoint of 2026-27 is next January, and a match dated
+    next January is a match the rating fit cannot see, so a club promoted this
+    summer had no matches at all, no rating, and no place in its own league's
+    projection. Yesterday and not today because the fit's cutoff is exclusive --
+    `corpus.before(ref)` keeps what happened strictly before it, and with the
+    reference date being today, a match dated today is still invisible.
     """
     mid = (dt.date(int(season.split("-")[0]) + 1, 1, 1) if "-" in season
            else dt.date(int(season), 7, 1))
-    return min(mid, today or dt.date.today())
+    return min(mid, (today or dt.date.today()) - dt.timedelta(days=1))
 
 
-_MATCH = re.compile(r"\|\s*match_([A-Za-z0-9_]+)_([A-Za-z0-9_]+)\s*=\s*"
+#: A club's short code, as the template writes it. Not `[A-Za-z0-9_]`: the codes
+#: are the article editor's own abbreviations and they are not all ASCII, so
+#: that class silently dropped a club from Norway's 2025 grid and three from
+#: Poland's 2026-27 one. A code with an accented letter in it was matched by
+#: neither the entrant list nor the name lines, its cells were then filtered out
+#: as belonging to some other grid, and the league quietly ran a club short.
+_CODE = r"[^\s=|}\]]+"
+
+_MATCH = re.compile(r"\|\s*match_(" + _CODE + r")_(" + _CODE + r")\s*=\s*"
                     r"(\d+)\s*[–—-]\s*(\d+)")
 #: A club's display name. The value is a wiki link about half the time --
 #: `|name_BRE=[[FC Dynamo Brest|Dynamo Brest]]` -- and stopping at the first
 #: pipe reads that as "[[FC Dynamo Brest", which resolves to nothing and blocked
 #: five leagues on the first probe. So a link is matched whole and taken apart
 #: below; anything else stops at the pipe as before.
-_NAME = re.compile(r"\|\s*name_([A-Za-z0-9_]+)\s*=\s*(\[\[[^\]\n]*\]\]|[^\n|}]+)")
-_TEAM = re.compile(r"\|\s*team\d+\s*=\s*([A-Za-z0-9_]+)")
+_NAME = re.compile(r"\|\s*name_(" + _CODE + r")\s*=\s*"
+                   r"(\[\[[^\]\n]*\]\]|[^\n|}]+)")
+_TEAM = re.compile(r"\|\s*team\d+\s*=\s*(" + _CODE + r")")
 
 
 def name_variants(raw: str) -> tuple[str, ...]:
