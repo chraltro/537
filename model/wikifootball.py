@@ -361,6 +361,23 @@ _MATCH = re.compile(r"\|\s*match_(" + _CODE + r")_(" + _CODE + r")\s*=\s*"
 _NAME = re.compile(r"\|\s*name_(" + _CODE + r")\s*=\s*"
                    r"(\{\{[^\n]*?\}\}|\[\[[^\]\n]*\]\]|[^\n|}]+)")
 _TEAM = re.compile(r"\|\s*team\d+\s*=\s*(" + _CODE + r")")
+#: The other way the same module is told who is in the league. Seven of the
+#: eleven articles that looked gridless list their entrants as one comma
+#: separated line instead of one parameter each, and a reader that only knew
+#: `team1=` saw a league with nobody in it.
+_TEAM_ORDER = re.compile(r"\|\s*team_order\s*=\s*([^\n|}]+)")
+#: A result cell in the style those eleven use: `matches_style=FBR`, where the
+#: cell is named after the pair and nothing else. `|BOR_ZRI=2–1` rather than
+#: `|match_BOR_ZRI=2–1`. Both are accepted; which one an article uses is the
+#: editor's choice and neither is more correct than the other.
+#:
+#: The codes may not contain an underscore, because the pair is split on one:
+#: without that rule `name_BOR` reads as the pair (name, BOR). What actually
+#: keeps this honest is the same filter the other cells go through -- both
+#: halves must be codes the article itself declared.
+_BARE = r"[^\s=|}\[\]_]+"
+_PAIR = re.compile(r"\|\s*(" + _BARE + r")_(" + _BARE + r")\s*=\s*"
+                   r"(\d+)\s*[–—-]\s*(\d+)")
 #: An article's section headings, for the failure message.
 _HEADING = re.compile(r"^=+\s*([^=\n]{1,60}?)\s*=+\s*$", re.M)
 #: Just the name of each template the article uses, for the failure message.
@@ -396,6 +413,12 @@ def name_variants(raw: str) -> tuple[str, ...]:
     return tuple(dict.fromkeys(x for x in (shown, target) if x))
 
 
+def _order(text: str) -> list[str]:
+    """The entrant list, when it is written as one comma separated line."""
+    m = _TEAM_ORDER.search(text)
+    return [c.strip() for c in m.group(1).split(",") if c.strip()] if m else []
+
+
 def grid_names(text: str) -> dict[str, tuple[str, ...]]:
     """Every club code in the grid, with the spellings its name line offers."""
     out: dict[str, tuple[str, ...]] = {}
@@ -416,10 +439,15 @@ def parse_grid(text: str) -> list[tuple[str, str, int, int]]:
     """
     variants = grid_names(text)
     names = {code: v[0] for code, v in variants.items()}
-    codes = set(_TEAM.findall(text)) | set(names)
+    codes = set(_TEAM.findall(text)) | set(_order(text)) | set(names)
     cells = _MATCH.findall(text)
     if not cells:
-        raise GridError("no match_X_Y cells found")
+        # The other cell style, where the pair names the parameter on its own.
+        # Filtered against the declared codes below like every other cell, which
+        # is what stops `name_BOR` or `gf_ZRI` being read as a result.
+        cells = [c for c in _PAIR.findall(text) if c[0] in codes and c[1] in codes]
+    if not cells:
+        raise GridError("no result cells found in either style")
 
     out: list[tuple[str, str, int, int]] = []
     for home, away, hg, ag in cells:
@@ -443,7 +471,7 @@ def grid_clubs(text: str) -> list[str]:
     because a club missing from it loses every one of its fixtures silently.
     """
     names = {code: v[0] for code, v in grid_names(text).items()}
-    order = [c for c in _TEAM.findall(text) if c in names]
+    order = [c for c in (_TEAM.findall(text) or _order(text)) if c in names]
     # A `teamN=` code with no `name_` line beside it is not a club this article
     # is naming, it is a code from another template on the same page: Poland's
     # season article carries a league table whose entrant list uses its own

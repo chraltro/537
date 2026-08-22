@@ -183,3 +183,48 @@ def test_a_club_wrapped_in_a_presentation_template_is_still_a_club():
             "|match_SHE_ZIM=2–1\n")
     assert wikifootball.grid_clubs(text)[:2] == ["Sheriff", "Zimbru Chișinău"]
     assert wikifootball.parse_grid(text) == [("Sheriff", "Zimbru Chișinău", 2, 1)]
+
+
+#: The shape eleven leagues actually use, taken from what the runner printed of
+#: Andorra's and Bosnia's articles. Two differences from the style this reader
+#: was written against, and either one on its own is enough to lose the league:
+#: the entrants are one comma separated line rather than a parameter each, and
+#: a result cell is named after the pair with no `match_` in front of it.
+FBR = """{{#invoke:sports results|main |source=[x] |update=complete
+|matches_style=FBR |solid_cell=grey |legs=2 |a_note=yes
+|team_order=BOR, GOŠ, IGM, POS
+|name_BOR = [[FK Borac Banja Luka|Borac]]
+|name_GOŠ = [[NK GOŠK Gabela|GOŠK]]
+|name_IGM = [[FK Igman Konjic|Igman]]
+|name_POS = [[HŠK Posušje|Posušje]]
+|win_BOR=9 |draw_BOR=2 |loss_BOR=1 |gf_BOR=24 |ga_BOR=8
+|BOR_GOŠ=2–1
+|GOŠ_BOR=0–0
+|IGM_POS=3–1
+}}"""
+
+
+def test_the_other_cell_style_is_read_and_the_table_beside_it_is_not():
+    """Eleven leagues reported no results grid while carrying one.
+
+    The trap is that the same article also runs a league table whose parameters
+    look exactly like result cells: `win_BOR`, `gf_BOR`, `ga_BOR`. What keeps
+    those out is the rule every cell goes through, that both halves of the pair
+    must be codes the article itself declared as entrants.
+    """
+    from model import wikifootball
+    assert wikifootball.grid_clubs(FBR) == ["Borac", "GOŠK", "Igman", "Posušje"]
+    got = wikifootball.parse_grid(FBR)
+    assert ("Borac", "GOŠK", 2, 1) in got
+    assert ("GOŠK", "Borac", 0, 0) in got
+    assert ("Igman", "Posušje", 3, 1) in got
+    assert len(got) == 3, "a table parameter is not a result"
+    assert not any("BOR" == h or "win" in h for h, _, _, _ in got)
+
+
+def test_a_comma_separated_entrant_list_still_gives_every_club():
+    """A club missing from the entrant list loses every one of its fixtures
+    silently, so the two ways of writing that list both have to be read."""
+    from model import wikifootball
+    assert wikifootball._order(FBR) == ["BOR", "GOŠ", "IGM", "POS"]
+    assert wikifootball._order("|team1=AAA|team2=BBB") == []

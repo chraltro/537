@@ -365,7 +365,7 @@ def test_the_wikipedia_reader_reads_a_results_grid():
 
 
 def test_a_page_with_no_grid_says_so_rather_than_returning_an_empty_season():
-    with pytest.raises(wikifootball.GridError, match="no match_X_Y cells"):
+    with pytest.raises(wikifootball.GridError, match="no result cells"):
         wikifootball.parse_grid("== Results ==\nThe season was played.\n")
 
 
