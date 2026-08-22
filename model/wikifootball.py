@@ -218,7 +218,8 @@ ALIASES: dict[str, dict[str, str]] = {
     # against, so they are lookups and not guesses.
     "DEN": {"AGF": "Aarhus GF", "AaB": "Aalborg BK"},
     "FIN": {"KuPS": "Kuopion PS", "VPS": "Vaasan PS"},
-    "SMR": {"Academy U22": "San Marino Academy"},
+    "SMR": {"Academy U22": "San Marino Academy",
+            "San Marino Academy U22": "San Marino Academy"},
     # And the ones the twin check stopped. All of these turn up only in seasons
     # after the overlap, where there is no roster to match them against, and
     # each is the only club of that name in its own league.
@@ -360,6 +361,8 @@ _MATCH = re.compile(r"\|\s*match_(" + _CODE + r")_(" + _CODE + r")\s*=\s*"
 _NAME = re.compile(r"\|\s*name_(" + _CODE + r")\s*=\s*"
                    r"(\{\{[^\n]*?\}\}|\[\[[^\]\n]*\]\]|[^\n|}]+)")
 _TEAM = re.compile(r"\|\s*team\d+\s*=\s*(" + _CODE + r")")
+#: An article's section headings, for the failure message.
+_HEADING = re.compile(r"^=+\s*([^=\n]{1,60}?)\s*=+\s*$", re.M)
 #: Just the name of each template the article uses, for the failure message.
 _TEMPLATE = re.compile(r"\{\{\s*#?([A-Za-z][A-Za-z0-9 _-]{1,28})")
 
@@ -508,6 +511,22 @@ def read(assoc: str, reg: TeamRegistry, season: str):
                 m.strip().lower() for m in _TEMPLATE.findall(got))
             top = ", ".join(f"{k} x{n}" for k, n in kinds.most_common(6))
             why += f" (templates: {top})" if top else " (no templates at all)"
+            # And where the results live, if anywhere. Eleven leagues fail this
+            # way and each needs a reader written against whatever they use
+            # instead; the section headings say which section to read and the
+            # first line under it says what shape it is. Headings and one line
+            # of table markup, which is structure rather than anybody's prose.
+            heads = [h.strip() for h in _HEADING.findall(got)]
+            want = [h for h in heads
+                    if re.search(r"result|round|fixture|match", h, re.I)]
+            if want:
+                why += f" [sections: {'; '.join(want[:4])}]"
+                first = re.search(r"==+\s*" + re.escape(want[0])
+                                  + r"\s*==+\s*\n(.{0,220})", got, re.S)
+                if first:
+                    why += " [starts: " + " ".join(first.group(1).split())[:180] + "]"
+            elif heads:
+                why += f" [sections: {'; '.join(heads[:6])}]"
         _WHY[(assoc, season)] = why
         return None
     _WHY.pop((assoc, season), None)

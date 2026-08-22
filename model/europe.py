@@ -287,14 +287,23 @@ def seasons_held_in_full(domestic: list[Match] | None, group: str,
     So the anchor is the newest season with a real season's worth of matches in
     it, and every season after that one, thin file or no file, is asked for.
     """
-    from .external import MIN_OVERLAP_MATCHES
     if domestic is None:
         return tuple(listed)
     n: dict[str, int] = {}
     for m in domestic:
         if m.comp == group and m.played:
             n[m.season] = n.get(m.season, 0) + 1
-    full = tuple(sorted(s for s, c in n.items() if c >= MIN_OVERLAP_MATCHES))
+    if not n:
+        return tuple(listed)
+    # Against this league's own biggest season rather than a fixed number,
+    # because "a season's worth" is 56 matches in Moldova and 380 in England.
+    # A fixed floor gets one of them wrong whichever number is chosen: at sixty
+    # it refused Moldova's complete season for being small, and at fifty it
+    # accepted the fifty-odd matches of Sweden's abandoned 2025 file as though
+    # they were a season, anchored the overlap there, and lost a league that had
+    # been arming cleanly on 2024.
+    most = max(n.values())
+    full = tuple(sorted(s for s, c in n.items() if c >= 0.8 * most))
     return full or tuple(listed)
 
 
