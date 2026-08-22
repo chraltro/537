@@ -47,6 +47,23 @@
    "matched_to_roster": 1
   },
   {
+   "assoc": "AZE",
+   "league": "Azerbaijan Premier League",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32559006580",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 144,
+   "agreed": 143,
+   "matches": 378,
+   "latest": "2026-01-01",
+   "new_clubs": [
+    "Gabala",
+    "Imishli",
+    "Karvan"
+   ]
+  },
+  {
    "assoc": "BIH",
    "league": "Premier League of BiH",
    "source": "wikipedia",
@@ -370,6 +387,24 @@
     "Grobiņa",
     "Ogre United"
    ]
+  },
+  {
+   "assoc": "MKD",
+   "league": "Macedonian First League",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32559006580",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 195,
+   "agreed": 194,
+   "matches": 407,
+   "latest": "2026-08-21",
+   "new_clubs": [
+    "Arsimi",
+    "Bashkimi",
+    "Makedonija G.P."
+   ],
+   "matched_to_roster": 4
   },
   {
    "assoc": "MLT",

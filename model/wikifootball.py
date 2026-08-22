@@ -81,8 +81,14 @@ TITLES: dict[str, tuple[str, ...]] = {
     "MKD": ("{a}–{bb} Macedonian First Football League",),
     # Renamed: the article is under "Moldovan Liga" now, and the Super Liga
     # title stops at 2024-25.
-    "MDA": ("{a}–{bb} Moldovan Liga", "{a}–{bb} Moldovan Liga 1",
-            "{a}–{bb} Moldovan Super Liga"),
+    # Super Liga first, and the bare "Moldovan Liga" only as a fallback. Under
+    # that name the 2024-25 article is the division BELOW: it came back with
+    # FCM Ungheni, Fălești and Iskra Rîbnița, none of whom play in the league
+    # this is meant to be, and the club check refused it. The name moved up a
+    # tier at some point between the two seasons, so trying the older name
+    # first gets the right division for the season being checked against and
+    # falls through to the newer one for the seasons after it.
+    "MDA": ("{a}–{bb} Moldovan Super Liga", "{a}–{bb} Moldovan Liga"),
     "KOS": ("{a}–{bb} Football Superleague of Kosovo",),
     "MNE": ("{a}–{bb} Montenegrin First League",),
     "MLT": ("{a}–{bb} Maltese Premier League",),
@@ -142,11 +148,11 @@ TITLES: dict[str, tuple[str, ...]] = {
 #: forfeit recorded as 3-0 by one and 0-0 by the other is not two different
 #: competitions.
 ARMED: frozenset[str] = frozenset({
-    "AND", "ARM", "AUT", "BIH", "BLR", "BUL", "CRO", "CYP",
-    "CZE", "DEN", "EST", "FIN", "GEO", "GIB", "GRE", "HUN",
-    "IRL", "ISL", "KOS", "LTU", "LUX", "LVA", "MLT", "MNE",
-    "NIR", "NOR", "SCO", "SMR", "SRB", "SVK", "SVN", "SWE",
-    "TUR", "UKR", "WAL",
+    "AND", "ARM", "AUT", "AZE", "BIH", "BLR", "BUL", "CRO",
+    "CYP", "CZE", "DEN", "EST", "FIN", "GEO", "GIB", "GRE",
+    "HUN", "IRL", "ISL", "KOS", "LTU", "LUX", "LVA", "MKD",
+    "MLT", "MNE", "NIR", "NOR", "SCO", "SMR", "SRB", "SVK",
+    "SVN", "SWE", "TUR", "UKR", "WAL",
 })
 
 #: Leagues being watched: probed on every run, reported beside the armed ones,
