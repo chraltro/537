@@ -62,7 +62,15 @@ TITLES: dict[str, tuple[str, ...]] = {
     "SUI": ("{a}–{bb} Swiss Super League",),
     "SRB": ("{a}–{bb} Serbian SuperLiga",),
     "UKR": ("{a}–{bb} Ukrainian Premier League",),
-    "CRO": ("{a}–{bb} First Football League (Croatia)",),
+    # Not "First Football League (Croatia)", which is the SECOND division: that
+    # title returned Cibalia, Dubrava, Jarun and eight more clubs of the Prva
+    # NL, and the gate refused it because none of them play in the league this
+    # is meant to be. Exactly the failure the club check exists for -- a file of
+    # the right shape and the wrong division -- caught by a feed that could not
+    # name a single club we hold.
+    "CRO": ("{a}–{bb} Croatian Football League",
+            "{a}–{bb} Croatian First Football League",
+            "{a}–{bb} Prva HNL"),
     "BUL": ("{a}–{bb} First Professional Football League (Bulgaria)",),
     "SVK": ("{a}–{bb} Slovak First Football League",),
     "SVN": ("{a}–{bb} Slovenian PrvaLiga",),
@@ -226,6 +234,9 @@ ALIASES: dict[str, dict[str, str]] = {
     "GIB": {"FC Magpies": "FCB Magpies"},
     "BUL": {"Septemvri": "Septemvri Sofia", "Slavia": "Slavia Sofia"},
     "SRB": {"Mladost": "Mladost Lučani", "Napredak": "FK Napredak"},
+    # Three clubs in the league are from Tirana, so the roster cannot tell which
+    # one a bare "Tirana" is. It is the one that carries the city as its name.
+    "ALB": {"Tirana": "KF Tiranë"},
     "NOR": {
         "KFUM": "KFUM Oslo",
         "KFUM-Kameratene Oslo": "KFUM Oslo",
@@ -561,6 +572,14 @@ def read(assoc: str, reg: TeamRegistry, season: str):
             # they meet once does. So: the parameters, straight from the invoke.
             inv = got.find("#invoke:sports results")
             if inv >= 0:
+                # Past the club names to where the cells are. The window keeps
+                # landing in the middle of twelve name_ definitions, and what is
+                # wanted is the first thing after them, which is a result.
+                block = got[inv:inv + 30000]
+                last = block.rfind("|name_")
+                if last > 0:
+                    why += (" [after the names: "
+                            + " ".join(block[last:last + 320].split()) + "]")
                 # With the citation links taken out first. They are hundreds of
                 # characters of URL and they ate the whole window last time,
                 # leaving the parameter names -- the only thing being asked
