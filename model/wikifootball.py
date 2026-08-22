@@ -43,6 +43,7 @@ thing to do and costs a sentence.
 """
 from __future__ import annotations
 
+import collections
 import datetime as dt
 import re
 import urllib.parse
@@ -125,7 +126,13 @@ TITLES: dict[str, tuple[str, ...]] = {
 #: the 95% floor is there to absorb: feeds differ over awarded results, and a
 #: forfeit recorded as 3-0 by one and 0-0 by the other is not two different
 #: competitions.
-ARMED: frozenset[str] = frozenset({"NOR", "LUX", "BLR", "UKR"})
+ARMED: frozenset[str] = frozenset({
+    "NOR", "LUX", "BLR", "UKR",
+    # Armed on the run of 2026-08-22, each having reproduced a season this site
+    # already holds. Receipts, with the agreement each managed, in
+    # data/armed.json.
+    "AUT", "CZE", "GEO", "ISL", "MLT", "SVK", "SWE", "TUR", "WAL",
+})
 
 #: Leagues being watched: probed on every run, reported beside the armed ones,
 #: and contributing nothing at all until they move up into ARMED.
@@ -205,6 +212,19 @@ PROJECTED: frozenset[str] = frozenset({"NOR", "LUX", "BLR", "POL", "UKR"})
 #: two transliterate the same Cyrillic differently: Dynamo and Dinamo, Zorya
 #: Luhansk and Zorya Lugansk, Chornomorets Odesa and Chernomorets Odessa.
 ALIASES: dict[str, dict[str, str]] = {
+    # Initials against a full name, which is the one gap the roster match cannot
+    # cross: the two spellings share no word at all, so nothing links them.
+    # Every target here was read off the openfootball season the probe compares
+    # against, so they are lookups and not guesses.
+    "DEN": {"AGF": "Aarhus GF", "AaB": "Aalborg BK"},
+    "FIN": {"KuPS": "Kuopion PS", "VPS": "Vaasan PS"},
+    "SMR": {"Academy U22": "San Marino Academy"},
+    # And the ones the twin check stopped. All of these turn up only in seasons
+    # after the overlap, where there is no roster to match them against, and
+    # each is the only club of that name in its own league.
+    "GIB": {"FC Magpies": "FCB Magpies"},
+    "BUL": {"Septemvri": "Septemvri Sofia", "Slavia": "Slavia Sofia"},
+    "SRB": {"Mladost": "Mladost Lučani", "Napredak": "FK Napredak"},
     "NOR": {
         "KFUM": "KFUM Oslo",
         "KFUM-Kameratene Oslo": "KFUM Oslo",
@@ -340,6 +360,8 @@ _MATCH = re.compile(r"\|\s*match_(" + _CODE + r")_(" + _CODE + r")\s*=\s*"
 _NAME = re.compile(r"\|\s*name_(" + _CODE + r")\s*=\s*"
                    r"(\{\{[^\n]*?\}\}|\[\[[^\]\n]*\]\]|[^\n|}]+)")
 _TEAM = re.compile(r"\|\s*team\d+\s*=\s*(" + _CODE + r")")
+#: Just the name of each template the article uses, for the failure message.
+_TEMPLATE = re.compile(r"\{\{\s*#?([A-Za-z][A-Za-z0-9 _-]{1,28})")
 
 
 def name_variants(raw: str) -> tuple[str, ...]:
@@ -475,8 +497,18 @@ def read(assoc: str, reg: TeamRegistry, season: str):
         # an article that is not there means the title is wrong, and an article
         # that is there with no grid in it means the league writes its results
         # some other way and no title will help.
-        _WHY[(assoc, season)] = ("article has no results grid" if seen
-                                 else "no article under that title")
+        # With a sketch of what the article does carry, when it carries
+        # something. Eleven leagues fail this way and the fix depends entirely
+        # on which template they write their results in, which is a thing only a
+        # machine that can reach the article can find out. Template names only:
+        # enough to write a reader against, and none of the article's prose.
+        why = "article has no results grid" if seen else "no article under that title"
+        if seen and got:
+            kinds = collections.Counter(
+                m.strip().lower() for m in _TEMPLATE.findall(got))
+            top = ", ".join(f"{k} x{n}" for k, n in kinds.most_common(6))
+            why += f" (templates: {top})" if top else " (no templates at all)"
+        _WHY[(assoc, season)] = why
         return None
     _WHY.pop((assoc, season), None)
     alias = ALIASES.get(assoc, {})

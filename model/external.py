@@ -64,10 +64,13 @@ from .parse import Match, TeamRegistry, normalise, normalise
 #: Well below this and the two files are not describing the same competition.
 MIN_AGREEMENT = 0.95
 
-#: And enough fixtures to make that ratio mean something. A 12-club league plays
-#: 132, a 20-club league 380, so sixty is a comfortable floor that still refuses
-#: a season the source only half carries.
-MIN_OVERLAP_MATCHES = 60
+#: And enough fixtures to make that ratio mean something. Fifty, because the
+#: smallest leagues here are genuinely small: Moldova's eight clubs meeting home
+#: and away is fifty-six matches, a complete round of a real competition, and a
+#: floor of sixty refused it for being the size it is. Fifty comparisons still
+#: makes a 95% agreement mean something and still refuses a feed that carries a
+#: handful of a season.
+MIN_OVERLAP_MATCHES = 50
 
 #: A feed that parses but carries nothing recent is a working parser pointed at
 #: an abandoned file. Loose enough for a summer league between seasons, tight
