@@ -1,11 +1,42 @@
 {
- "note": "Second feeds off GitHub that are in service, and the runner verdict that put them there. Nothing in this repository can reach Wikipedia or football-data.co.uk: the development sandbox allows GitHub and denies everything else, so a feed is armed on evidence produced by an Actions runner and this file is where that evidence is copied. Each row is a line from the probe step of the run it names, and can be read back against it.",
+ "note": "Second feeds off GitHub that are in service, and the runner verdict that put them there. Nothing in this repository can reach Wikipedia or football-data.co.uk: the development sandbox allows GitHub and denies everything else, so a feed is armed on evidence produced by an Actions runner and this file is where that evidence is copied. Each row is a line from the probe step of the run it names, and can be read back against it. 'matched_to_roster' counts the spellings the probe worked out from the clubs that played the overlap season rather than from an alias written by hand; those are checked by the score comparison in the same row.",
  "probes": [
+  {
+   "assoc": "AND",
+   "league": "Primera Divisió",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 134,
+   "agreed": 131,
+   "matches": 244,
+   "latest": "2026-01-01",
+   "new_clubs": [],
+   "matched_to_roster": 1
+  },
+  {
+   "assoc": "ARM",
+   "league": "Armenian Premier League",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 165,
+   "agreed": 162,
+   "matches": 320,
+   "latest": "2026-08-21",
+   "new_clubs": [
+    "Sardarapat",
+    "Syunik"
+   ],
+   "matched_to_roster": 2
+  },
   {
    "assoc": "AUT",
    "league": "Austrian Bundesliga",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32552465556",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
    "date": "2026-08-22",
    "overlap_season": "2025-26",
    "compared": 190,
@@ -13,19 +44,36 @@
    "matches": 206,
    "latest": "2026-08-21",
    "new_clubs": [],
-   "matched_to_roster": 1,
-   "note": "1 spelling(s) worked out from the 2025-26 roster rather than written by hand, and then checked by the score comparison like the rest of the feed."
+   "matched_to_roster": 1
+  },
+  {
+   "assoc": "BIH",
+   "league": "Premier League of BiH",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 192,
+   "agreed": 191,
+   "matches": 373,
+   "latest": "2026-08-21",
+   "new_clubs": [
+    "BSK",
+    "Rudar",
+    "Čelik"
+   ],
+   "matched_to_roster": 7
   },
   {
    "assoc": "BLR",
    "league": "Belarusian Premier League",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32510698176",
-   "date": "2026-08-21",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
    "overlap_season": "2024",
    "compared": 240,
    "agreed": 240,
-   "matches": 464,
+   "matches": 465,
    "latest": "2026-07-01",
    "new_clubs": [
     "Baranovichi",
@@ -34,10 +82,62 @@
    ]
   },
   {
+   "assoc": "BUL",
+   "league": "First Professional League",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 275,
+   "agreed": 275,
+   "matches": 586,
+   "latest": "2026-08-21",
+   "new_clubs": [
+    "Dobrudzha",
+    "Dunav",
+    "Montana"
+   ],
+   "matched_to_roster": 3
+  },
+  {
+   "assoc": "CRO",
+   "league": "HNL",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 168,
+   "agreed": 167,
+   "matches": 349,
+   "latest": "2026-08-21",
+   "new_clubs": [
+    "Vukovar 1991"
+   ],
+   "matched_to_roster": 2
+  },
+  {
+   "assoc": "CYP",
+   "league": "Cypriot First Division",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 239,
+   "agreed": 239,
+   "matches": 471,
+   "latest": "2026-01-01",
+   "new_clubs": [
+    "Akritas Chlorakas",
+    "Krasava",
+    "Olympiakos Nicosia"
+   ],
+   "matched_to_roster": 2
+  },
+  {
    "assoc": "CZE",
    "league": "Czech First League",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32552465556",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
    "date": "2026-08-22",
    "overlap_season": "2024-25",
    "compared": 267,
@@ -47,14 +147,63 @@
    "new_clubs": [
     "Artis Brno"
    ],
-   "matched_to_roster": 3,
-   "note": "3 spelling(s) worked out from the 2024-25 roster rather than written by hand, and then checked by the score comparison like the rest of the feed."
+   "matched_to_roster": 3
+  },
+  {
+   "assoc": "DEN",
+   "league": "Superliga",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 186,
+   "agreed": 184,
+   "matches": 396,
+   "latest": "2026-08-21",
+   "new_clubs": [
+    "Fredericia",
+    "Horsens",
+    "OB"
+   ],
+   "matched_to_roster": 2
+  },
+  {
+   "assoc": "EST",
+   "league": "Meistriliiga",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024",
+   "compared": 180,
+   "agreed": 180,
+   "matches": 472,
+   "latest": "2026-07-01",
+   "new_clubs": [
+    "Harju"
+   ],
+   "matched_to_roster": 2
+  },
+  {
+   "assoc": "FIN",
+   "league": "Veikkausliiga",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024",
+   "compared": 162,
+   "agreed": 162,
+   "matches": 460,
+   "latest": "2026-07-01",
+   "new_clubs": [
+    "TPS"
+   ],
+   "matched_to_roster": 4
   },
   {
    "assoc": "GEO",
    "league": "Erovnuli Liga",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32552465556",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
    "date": "2026-08-22",
    "overlap_season": "2024",
    "compared": 180,
@@ -66,14 +215,79 @@
     "Rustavi",
     "Spaeri"
    ],
-   "matched_to_roster": 2,
-   "note": "2 spelling(s) worked out from the 2024 roster rather than written by hand, and then checked by the score comparison like the rest of the feed."
+   "matched_to_roster": 2
+  },
+  {
+   "assoc": "GIB",
+   "league": "Gibraltar Football League",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 125,
+   "agreed": 125,
+   "matches": 273,
+   "latest": "2026-08-21",
+   "new_clubs": [
+    "Hound Dogs"
+   ]
+  },
+  {
+   "assoc": "GRE",
+   "league": "Super League Greece",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 210,
+   "agreed": 210,
+   "matches": 420,
+   "latest": "2026-01-01",
+   "new_clubs": [
+    "A.E. Kifisia",
+    "AEL"
+   ],
+   "matched_to_roster": 4
+  },
+  {
+   "assoc": "HUN",
+   "league": "Nemzeti Bajnokság I",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 192,
+   "agreed": 191,
+   "matches": 408,
+   "latest": "2026-08-21",
+   "new_clubs": [
+    "Debrecen",
+    "ETO Győr",
+    "Kazincbarcika",
+    "Kispest Honvéd",
+    "Vasas"
+   ],
+   "matched_to_roster": 2
+  },
+  {
+   "assoc": "IRL",
+   "league": "League of Ireland",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024",
+   "compared": 180,
+   "agreed": 180,
+   "matches": 445,
+   "latest": "2026-07-01",
+   "new_clubs": [],
+   "matched_to_roster": 1
   },
   {
    "assoc": "ISL",
-   "league": "Besta deild karla",
+   "league": "Besta deild",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32552465556",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
    "date": "2026-08-22",
    "overlap_season": "2024",
    "compared": 162,
@@ -84,22 +298,53 @@
     "Afturelding",
     "Keflavík",
     "ÍBV",
-    "Þór"
+    "Þór Akureyri"
    ],
-   "matched_to_roster": 10,
-   "note": "10 spelling(s) worked out from the 2024 roster rather than written by hand, and then checked by the score comparison like the rest of the feed."
+   "matched_to_roster": 10
+  },
+  {
+   "assoc": "KOS",
+   "league": "Football Superleague of Kosovo",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 176,
+   "agreed": 174,
+   "matches": 358,
+   "latest": "2026-08-21",
+   "new_clubs": [
+    "Drenica",
+    "Prishtina e Re",
+    "Vushtrria"
+   ],
+   "matched_to_roster": 5
+  },
+  {
+   "assoc": "LTU",
+   "league": "A Lyga",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024",
+   "compared": 180,
+   "agreed": 180,
+   "matches": 464,
+   "latest": "2026-07-01",
+   "new_clubs": [],
+   "matched_to_roster": 1
   },
   {
    "assoc": "LUX",
    "league": "Luxembourg National Division",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32510698176",
-   "date": "2026-08-21",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
    "overlap_season": "2024-25",
    "compared": 240,
    "agreed": 240,
    "matches": 504,
-   "latest": "2026-08-20",
+   "latest": "2026-08-21",
    "new_clubs": [
     "Atert Bissen",
     "Etzella Ettelbruck",
@@ -111,10 +356,26 @@
    ]
   },
   {
+   "assoc": "LVA",
+   "league": "Virsliga",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024",
+   "compared": 180,
+   "agreed": 180,
+   "matches": 488,
+   "latest": "2026-07-01",
+   "new_clubs": [
+    "Grobiņa",
+    "Ogre United"
+   ]
+  },
+  {
    "assoc": "MLT",
    "league": "Maltese Premier League",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32552465556",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
    "date": "2026-08-22",
    "overlap_season": "2024-25",
    "compared": 192,
@@ -124,15 +385,45 @@
    "new_clubs": [
     "Tarxien Rainbows"
    ],
-   "matched_to_roster": 2,
-   "note": "2 spelling(s) worked out from the 2024-25 roster rather than written by hand, and then checked by the score comparison like the rest of the feed."
+   "matched_to_roster": 2
+  },
+  {
+   "assoc": "MNE",
+   "league": "Montenegrin First League",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 175,
+   "agreed": 175,
+   "matches": 351,
+   "latest": "2026-01-01",
+   "new_clubs": [
+    "Mladost Donja Gorica"
+   ],
+   "matched_to_roster": 4
+  },
+  {
+   "assoc": "NIR",
+   "league": "NIFL Premiership",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 221,
+   "agreed": 221,
+   "matches": 442,
+   "latest": "2026-01-01",
+   "new_clubs": [
+    "Bangor"
+   ]
   },
   {
    "assoc": "NOR",
    "league": "Eliteserien",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32510698176",
-   "date": "2026-08-21",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
    "overlap_season": "2024",
    "compared": 238,
    "agreed": 238,
@@ -147,21 +438,65 @@
    "assoc": "POL",
    "league": "Ekstraklasa",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32510698176",
-   "date": "2026-08-21",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
    "overlap_season": "2024-25",
    "compared": 306,
    "agreed": 306,
    "matches": 643,
-   "latest": "2026-08-20",
+   "latest": "2026-08-21",
    "new_clubs": [],
    "used_for": "the season's entrant list only; the results in service come from football-data.co.uk, which carries dates"
   },
   {
-   "assoc": "SVK",
-   "league": "Slovak First Football League",
+   "assoc": "SCO",
+   "league": "Scottish Premiership",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32552465556",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 203,
+   "agreed": 202,
+   "matches": 421,
+   "latest": "2026-08-21",
+   "new_clubs": []
+  },
+  {
+   "assoc": "SMR",
+   "league": "Campionato Sammarinese",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 240,
+   "agreed": 239,
+   "matches": 480,
+   "latest": "2026-01-01",
+   "new_clubs": [],
+   "matched_to_roster": 5
+  },
+  {
+   "assoc": "SRB",
+   "league": "Serbian SuperLiga",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 294,
+   "agreed": 294,
+   "matches": 587,
+   "latest": "2026-01-01",
+   "new_clubs": [
+    "Javor-Matis",
+    "Radnik"
+   ],
+   "matched_to_roster": 4
+  },
+  {
+   "assoc": "SVK",
+   "league": "Slovak Super Liga",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
    "date": "2026-08-22",
    "overlap_season": "2024-25",
    "compared": 188,
@@ -171,14 +506,27 @@
    "new_clubs": [
     "Tatran Prešov"
    ],
-   "matched_to_roster": 1,
-   "note": "1 spelling(s) worked out from the 2024-25 roster rather than written by hand, and then checked by the score comparison like the rest of the feed."
+   "matched_to_roster": 1
+  },
+  {
+   "assoc": "SVN",
+   "league": "Slovenian PrvaLiga",
+   "source": "wikipedia",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
+   "overlap_season": "2024-25",
+   "compared": 176,
+   "agreed": 176,
+   "matches": 338,
+   "latest": "2026-01-01",
+   "new_clubs": [],
+   "matched_to_roster": 1
   },
   {
    "assoc": "SWE",
    "league": "Allsvenskan",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32552465556",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
    "date": "2026-08-22",
    "overlap_season": "2024",
    "compared": 225,
@@ -188,53 +536,50 @@
    "new_clubs": [
     "Örgryte IS"
    ],
-   "matched_to_roster": 2,
-   "note": "2 spelling(s) worked out from the 2024 roster rather than written by hand, and then checked by the score comparison like the rest of the feed."
+   "matched_to_roster": 2
   },
   {
    "assoc": "TUR",
    "league": "Süper Lig",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32552465556",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
    "date": "2026-08-22",
-   "overlap_season": "2025-26",
-   "compared": 97,
-   "agreed": 97,
-   "matches": 310,
+   "overlap_season": "2024-25",
+   "compared": 332,
+   "agreed": 331,
+   "matches": 646,
    "latest": "2026-08-21",
    "new_clubs": [
     "Amedspor",
     "Erzurumspor",
     "Çorum"
    ],
-   "matched_to_roster": 3,
-   "note": "3 spelling(s) worked out from the 2025-26 roster rather than written by hand, and then checked by the score comparison like the rest of the feed."
+   "matched_to_roster": 4
   },
   {
    "assoc": "UKR",
    "league": "Ukrainian Premier League",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32510698176",
-   "date": "2026-08-21",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
+   "date": "2026-08-22",
    "overlap_season": "2024-25",
    "compared": 238,
    "agreed": 237,
    "matches": 498,
-   "latest": "2026-08-20",
+   "latest": "2026-08-21",
    "new_clubs": [
     "Bukovyna",
     "Epitsentr",
     "Kharkiv",
     "Kudrivka",
     "Poltava"
-   ],
-   "note": "One score in 238 disagrees, which the 95% floor exists to absorb: feeds differ over awarded results, and a forfeit recorded 3-0 by one and 0-0 by the other is not a different competition. Poltava is minted deliberately as its own club and not as a second name for Vorskla Poltava; see wikifootball.DISTINCT for what settled that and how strong the evidence is."
+   ]
   },
   {
    "assoc": "WAL",
    "league": "Cymru Premier",
    "source": "wikipedia",
-   "run": "https://github.com/chraltro/537/actions/runs/32552465556",
+   "run": "https://github.com/chraltro/537/actions/runs/32557569684",
    "date": "2026-08-22",
    "overlap_season": "2024-25",
    "compared": 192,
@@ -243,10 +588,15 @@
    "latest": "2026-08-21",
    "new_clubs": [
     "Airbus UK Broughton",
-    "Ammanford"
+    "Ammanford",
+    "Cambrian United",
+    "Cardiff Met",
+    "Holywell Town",
+    "Llandudno",
+    "Llanelli Town",
+    "Trefelin BGC"
    ],
-   "matched_to_roster": 1,
-   "note": "1 spelling(s) worked out from the 2024-25 roster rather than written by hand, and then checked by the score comparison like the rest of the feed."
+   "matched_to_roster": 1
   }
  ]
 }

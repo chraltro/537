@@ -135,11 +135,11 @@ TITLES: dict[str, tuple[str, ...]] = {
 #: forfeit recorded as 3-0 by one and 0-0 by the other is not two different
 #: competitions.
 ARMED: frozenset[str] = frozenset({
-    "NOR", "LUX", "BLR", "UKR",
-    # Armed on the run of 2026-08-22, each having reproduced a season this site
-    # already holds. Receipts, with the agreement each managed, in
-    # data/armed.json.
-    "AUT", "CZE", "GEO", "ISL", "MLT", "SVK", "SWE", "TUR", "WAL",
+    "AND", "ARM", "AUT", "BIH", "BLR", "BUL", "CRO", "CYP",
+    "CZE", "DEN", "EST", "FIN", "GEO", "GIB", "GRE", "HUN",
+    "IRL", "ISL", "KOS", "LTU", "LUX", "LVA", "MLT", "MNE",
+    "NIR", "NOR", "SCO", "SMR", "SRB", "SVK", "SVN", "SWE",
+    "TUR", "UKR", "WAL",
 })
 
 #: Leagues being watched: probed on every run, reported beside the armed ones,
@@ -237,6 +237,11 @@ ALIASES: dict[str, dict[str, str]] = {
     # Three clubs in the league are from Tirana, so the roster cannot tell which
     # one a bare "Tirana" is. It is the one that carries the city as its name.
     "ALB": {"Tirana": "KF Tiranë"},
+    # The last three the roster could not reach, each because the two feeds
+    # write the same club in different alphabets or different languages.
+    "AZE": {"Sabail": "Səbail FK", "Shamakhi": "Şamaxı FK"},
+    "FRO": {"Havnar Bóltfelag": "HB Tórshavn"},
+    "MKD": {"Brera": "FK AP Brera Strumica"},
     "NOR": {
         "KFUM": "KFUM Oslo",
         "KFUM-Kameratene Oslo": "KFUM Oslo",
