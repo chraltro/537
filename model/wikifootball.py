@@ -357,7 +357,12 @@ def season_midpoint(season: str, today: dt.date | None = None) -> dt.date:
 #: as belonging to some other grid, and the league quietly ran a club short.
 _CODE = r"[^\s=|}\]]+"
 
-_MATCH = re.compile(r"\|\s*match_(" + _CODE + r")_(" + _CODE + r")\s*=\s*"
+#: A result cell. The number between "match" and the pair is the round, which
+#: articles for leagues that meet more than twice must have and articles for
+#: leagues that meet twice mostly leave out: `match1_ACE_ESP=5–1` in Andorra,
+#: `match_LIN_EUR=3–0` in Gibraltar. Requiring the bare form lost eleven
+#: leagues, every one of which was carrying a full grid the whole time.
+_MATCH = re.compile(r"\|\s*match\d*_(" + _CODE + r")_(" + _CODE + r")\s*=\s*"
                     r"(\d+)\s*[–—-]\s*(\d+)")
 #: A club's display name. The value is a wiki link about half the time --
 #: `|name_BRE=[[FC Dynamo Brest|Dynamo Brest]]` -- and stopping at the first

@@ -228,3 +228,36 @@ def test_a_comma_separated_entrant_list_still_gives_every_club():
     from model import wikifootball
     assert wikifootball._order(FBR) == ["BOR", "GOŠ", "IGM", "POS"]
     assert wikifootball._order("|team1=AAA|team2=BBB") == []
+
+
+#: Andorra's own markup. Ten clubs meeting three times, so every cell carries
+#: the round it belongs to, and a pair appears once per round.
+ROUNDS = """{{#invoke:sports results|main |matches_style=FBR |legs=2
+|team_order=ACE, ESP, INT, MAS
+|name_ACE=[[Atlètic Club d'Escaldes]]
+|name_ESP=[[CF Esperança d'Andorra|Esperança]]
+|name_INT=[[Inter Club d'Escaldes]]
+|name_MAS=[[FS La Massana|La Massana]]
+|match1_ACE_ESP=5–1 |match1_ACE_INT=3–1 |match1_ESP_ACE=0–5
+|match2_ACE_ESP=1–1
+| match1_MAS_INT = 0–3
+}}"""
+
+
+def test_a_cell_numbered_by_its_round_is_still_a_result():
+    """Eleven leagues reported no results grid while carrying a full one.
+
+    A league whose clubs meet three or four times cannot name a cell after the
+    pair alone, because several cells would share the name, so the round goes
+    in: match1_ACE_ESP rather than match_ACE_ESP. A reader that insisted on the
+    bare form found nothing in any of them.
+    """
+    from model import wikifootball
+    got = wikifootball.parse_grid(ROUNDS)
+    assert ("Atlètic Club d'Escaldes", "Esperança", 5, 1) in got
+    assert ("Esperança", "Atlètic Club d'Escaldes", 0, 5) in got
+    assert ("La Massana", "Inter Club d'Escaldes", 0, 3) in got, "spaces around ="
+    # The same pair in a later round is a different match, not a duplicate.
+    assert got.count(("Atlètic Club d'Escaldes", "Esperança", 5, 1)) == 1
+    assert ("Atlètic Club d'Escaldes", "Esperança", 1, 1) in got
+    assert len(got) == 5
