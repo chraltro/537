@@ -516,17 +516,20 @@ def read(assoc: str, reg: TeamRegistry, season: str):
             # instead; the section headings say which section to read and the
             # first line under it says what shape it is. Headings and one line
             # of table markup, which is structure rather than anybody's prose.
-            heads = [h.strip() for h in _HEADING.findall(got)]
-            want = [h for h in heads
-                    if re.search(r"result|round|fixture|match", h, re.I)]
-            if want:
-                why += f" [sections: {'; '.join(want[:4])}]"
-                first = re.search(r"==+\s*" + re.escape(want[0])
-                                  + r"\s*==+\s*\n(.{0,220})", got, re.S)
-                if first:
-                    why += " [starts: " + " ".join(first.group(1).split())[:180] + "]"
-            elif heads:
-                why += f" [sections: {'; '.join(heads[:6])}]"
+            # Every one of these articles turned out to invoke the same results
+            # module this reader is written against, so the question is not
+            # where the results are but what the cells are called. These leagues
+            # play each other three and four times, and a grid where a pair
+            # meets more than twice cannot name its cells the way a grid where
+            # they meet once does. So: the parameters, straight from the invoke.
+            inv = got.find("#invoke:sports results")
+            if inv >= 0:
+                head = " ".join(got[inv:inv + 700].split())
+                why += f" [invoke: {head[:300]}]"
+            params = collections.Counter(re.findall(r"\|\s*([a-z_]{3,14}?)_?[A-Z0-9]", got))
+            if params:
+                why += " [params: " + ", ".join(
+                    f"{k} x{n}" for k, n in params.most_common(8)) + "]"
         _WHY[(assoc, season)] = why
         return None
     _WHY.pop((assoc, season), None)
