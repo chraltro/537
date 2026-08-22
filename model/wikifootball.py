@@ -524,14 +524,17 @@ def read(assoc: str, reg: TeamRegistry, season: str):
             # they meet once does. So: the parameters, straight from the invoke.
             inv = got.find("#invoke:sports results")
             if inv >= 0:
-                head = " ".join(got[inv:inv + 700].split())
-                why += f" [invoke: {head[:300]}]"
+                # With the citation links taken out first. They are hundreds of
+                # characters of URL and they ate the whole window last time,
+                # leaving the parameter names -- the only thing being asked
+                # for -- just past the end of it.
+                head = re.sub(r"\[https?://[^\]]*\]", "[url]", got[inv:inv + 2500])
+                head = " ".join(head.split())
+                why += f" [invoke: {head[:420]}]"
             # The counts said these articles are full of match parameters while
             # the check that rejected them says they hold no "match_" at all,
             # and both cannot be true. So: the text itself, at the first one.
-            k = got.find("match")
-            why += (f" [match_ x{got.count('match_')}; at first 'match': "
-                    + " ".join(got[k:k + 150].split()) + "]") if k >= 0 else ""
+            why += f" [match_ x{got.count('match_')}]"
         _WHY[(assoc, season)] = why
         return None
     _WHY.pop((assoc, season), None)
