@@ -442,9 +442,16 @@ def probe(src: ExternalSource, reg: TeamRegistry, existing: list[Match],
             left[key] -= 1                         # each result matched once only
             v.agreed += 1
     if v.compared < MIN_OVERLAP_MATCHES:
+        # With both sides counted. Too few lining up has three quite different
+        # causes -- the feed carries part of a season, we carry part of one, or
+        # the two describe different competitions -- and the counts tell them
+        # apart where the ratio alone cannot.
+        theirs_n = len(theirs_by_season[season])
+        ours_n = sum(1 for k in our_fixtures if k[0] == season)
         v.reason = (f"only {v.compared} fixture(s) of {season} line up against the "
                     f"feed we already trust, below the {MIN_OVERLAP_MATCHES} needed "
-                    "to call it the same competition")
+                    f"to call it the same competition (they list {theirs_n}, we hold "
+                    f"{ours_n})")
         src.verdict = v
         return v
     if v.agreement < MIN_AGREEMENT:

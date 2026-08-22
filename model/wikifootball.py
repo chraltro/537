@@ -79,7 +79,10 @@ TITLES: dict[str, tuple[str, ...]] = {
     "ALB": ("{a}–{bb} Kategoria Superiore",),
     "ARM": ("{a}–{bb} Armenian Premier League",),
     "MKD": ("{a}–{bb} Macedonian First Football League",),
-    "MDA": ("{a}–{bb} Moldovan Super Liga",),
+    # Renamed: the article is under "Moldovan Liga" now, and the Super Liga
+    # title stops at 2024-25.
+    "MDA": ("{a}–{bb} Moldovan Liga", "{a}–{bb} Moldovan Liga 1",
+            "{a}–{bb} Moldovan Super Liga"),
     "KOS": ("{a}–{bb} Football Superleague of Kosovo",),
     "MNE": ("{a}–{bb} Montenegrin First League",),
     "MLT": ("{a}–{bb} Maltese Premier League",),
@@ -117,7 +120,11 @@ TITLES: dict[str, tuple[str, ...]] = {
     "ISL": ("{a} Besta deild karla", "{a} Úrvalsdeild karla"),
     "IRL": ("{a} League of Ireland Premier Division",),
     "LVA": ("{a} Latvian Higher League", "{a} Virsliga"),
-    "FRO": ("{a} Betri deildin", "{a} Faroe Islands Premier League"),
+    # Renamed again for 2026, from Betri deildin to Meistaradeildin, so the
+    # season being read and the season it is checked against are under
+    # different names.
+    "FRO": ("{a} Meistaradeildin menn", "{a} Meistaradeildin",
+            "{a} Betri deildin", "{a} Faroe Islands Premier League"),
 }
 
 #: Leagues whose grid has been probed on a runner, whose clubs all resolve, and
