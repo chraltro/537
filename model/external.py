@@ -356,10 +356,20 @@ def probe(src: ExternalSource, reg: TeamRegistry, existing: list[Match],
     # into that season as a misspelling of a club we hold -- because the rule
     # that makes an unresolved name a misspelling is that we know who played
     # that season, and in a stub we do not.
+    #
+    # Measured against this league's own biggest season rather than a fixed
+    # number, because a season's worth is 56 matches in Moldova and 380 in
+    # England. A flat floor of fifty let Sweden's abandoned 2025 file through as
+    # though it were a season: forty-nine fixtures lined up, which is under the
+    # floor, and a league that had been arming cleanly on a complete 2024 was
+    # lost. The feed's own side of the season has to be worth comparing too.
     counts: dict[str, int] = {}
     for key, n in ours.items():
         counts[key[0]] = counts.get(key[0], 0) + n
-    full = [s for s in shared if counts.get(s, 0) >= MIN_OVERLAP_MATCHES]
+    most = max(counts.values(), default=0)
+    full = [s for s in shared
+            if counts.get(s, 0) >= max(MIN_OVERLAP_MATCHES, 0.8 * most)
+            and len(theirs_by_season[s]) >= MIN_OVERLAP_MATCHES]
     season = full[0] if full else shared[0]
     v.overlap_season = season
 

@@ -514,15 +514,24 @@ def read(assoc: str, reg: TeamRegistry, season: str):
     clubs that happen to appear in a filled cell, because a season two weeks old
     has clubs with no result yet and they still have a full fixture list.
     """
+    # Try to read each candidate title, rather than sniffing for a string first.
+    # The sniff was for "match_", which is one of the two ways these articles
+    # name a result cell, so the eleven that use the other way were turned away
+    # before the reader that understands them ever ran.
     text = None
     seen = False
+    got = None
     for i in range(len(TITLES[assoc])):
         got = fetch.get(url(assoc, season, i), required=False, tries=2)
-        if got:
-            seen = True
-        if got and "match_" in got:
-            text = got
-            break
+        if not got:
+            continue
+        seen = True
+        try:
+            parse_grid(got)
+        except GridError:
+            continue
+        text = got
+        break
     if text is None:
         # Two failures wear one message otherwise, and they need opposite fixes:
         # an article that is not there means the title is wrong, and an article
