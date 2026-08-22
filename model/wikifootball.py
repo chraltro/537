@@ -55,35 +55,60 @@ API = "https://en.wikipedia.org/w/index.php"
 #: Season-article titles, one template per association. The en dash is
 #: Wikipedia's, not a typo: '2025–26 Ekstraklasa' is the real title and
 #: '2025-26 Ekstraklasa' is a redirect at best.
-TITLES: dict[str, str] = {
-    "POL": "{a}–{bb} Ekstraklasa",
-    "ROU": "{a}–{bb} Liga I",
-    "SUI": "{a}–{bb} Swiss Super League",
-    "SRB": "{a}–{bb} Serbian SuperLiga",
-    "UKR": "{a}–{bb} Ukrainian Premier League",
-    "CRO": "{a}–{bb} First Football League (Croatia)",
-    "BUL": "{a}–{bb} First Professional Football League (Bulgaria)",
-    "SVK": "{a}–{bb} Slovak First Football League",
-    "SVN": "{a}–{bb} Slovenian PrvaLiga",
-    "HUN": "{a}–{bb} Nemzeti Bajnokság I",
-    "BIH": "{a}–{bb} Premier League of Bosnia and Herzegovina",
-    "ALB": "{a}–{bb} Kategoria Superiore",
-    "ARM": "{a}–{bb} Armenian Premier League",
-    "MKD": "{a}–{bb} Macedonian First Football League",
-    "MDA": "{a}–{bb} Moldovan Super Liga",
-    "KOS": "{a}–{bb} Football Superleague of Kosovo",
-    "MNE": "{a}–{bb} Montenegrin First League",
-    "MLT": "{a}–{bb} Maltese Premier League",
-    "LUX": "{a}–{bb} Luxembourg National Division",
+TITLES: dict[str, tuple[str, ...]] = {
+    "POL": ("{a}–{bb} Ekstraklasa",),
+    "ROU": ("{a}–{bb} Liga I",),
+    "SUI": ("{a}–{bb} Swiss Super League",),
+    "SRB": ("{a}–{bb} Serbian SuperLiga",),
+    "UKR": ("{a}–{bb} Ukrainian Premier League",),
+    "CRO": ("{a}–{bb} First Football League (Croatia)",),
+    "BUL": ("{a}–{bb} First Professional Football League (Bulgaria)",),
+    "SVK": ("{a}–{bb} Slovak First Football League",),
+    "SVN": ("{a}–{bb} Slovenian PrvaLiga",),
+    "HUN": ("{a}–{bb} Nemzeti Bajnokság I",),
+    "BIH": ("{a}–{bb} Premier League of Bosnia and Herzegovina",),
+    "ALB": ("{a}–{bb} Kategoria Superiore",),
+    "ARM": ("{a}–{bb} Armenian Premier League",),
+    "MKD": ("{a}–{bb} Macedonian First Football League",),
+    "MDA": ("{a}–{bb} Moldovan Super Liga",),
+    "KOS": ("{a}–{bb} Football Superleague of Kosovo",),
+    "MNE": ("{a}–{bb} Montenegrin First League",),
+    "MLT": ("{a}–{bb} Maltese Premier League",),
+    "LUX": ("{a}–{bb} Luxembourg National Division",),
     # Two summer leagues, whose articles are titled by the bare year. The
     # template still takes {bb}; `title` passes an empty string and strips it.
-    "NOR": "{a} Eliteserien",
-    "BLR": "{a} Belarusian Premier League",
-    "GIB": "{a}–{bb} Gibraltar Football League",
-    "AND": "{a}–{bb} Primera Divisió",
-    "SMR": "{a}–{bb} Campionato Sammarinese di Calcio",
-    "WAL": "{a}–{bb} Cymru Premier",
-    "NIR": "{a}–{bb} NIFL Premiership",
+    "NOR": ("{a} Eliteserien",),
+    "BLR": ("{a} Belarusian Premier League",),
+    "GIB": ("{a}–{bb} Gibraltar Football League",),
+    "AND": ("{a}–{bb} Primera Divisió",),
+    "SMR": ("{a}–{bb} Campionato Sammarinese di Calcio",),
+    "WAL": ("{a}–{bb} Cymru Premier",),
+    "NIR": ("{a}–{bb} NIFL Premiership",),
+    # The rest of the associations whose GitHub feed has no current season.
+    # Winter leagues first, then the summer ones, whose articles are titled
+    # with the bare year. Where a league has been renamed or its article
+    # disambiguated, every spelling worth trying is here and the first that
+    # comes back with a grid wins; a title that is simply wrong 404s and the
+    # league reports as unreachable, which costs nothing but a round trip.
+    "CYP": ("{a}–{bb} Cypriot First Division",),
+    "CZE": ("{a}–{bb} Czech First League",),
+    "DEN": ("{a}–{bb} Danish Superliga",),
+    "AZE": ("{a}–{bb} Azerbaijan Premier League",),
+    "SCO": ("{a}–{bb} Scottish Premiership",),
+    "GRE": ("{a}–{bb} Super League Greece",),
+    "TUR": ("{a}–{bb} Süper Lig",),
+    "AUT": ("{a}–{bb} Austrian Football Bundesliga",),
+    # Lithuania's A Lyga became the TOPLYGA in 2026, so the overlap season and
+    # the season being read are under different names.
+    "LTU": ("{a} TOPLYGA", "{a} A Lyga"),
+    "EST": ("{a} Meistriliiga",),
+    "GEO": ("{a} Erovnuli Liga",),
+    "SWE": ("{a} Allsvenskan",),
+    "FIN": ("{a} Veikkausliiga",),
+    "ISL": ("{a} Besta deild karla", "{a} Úrvalsdeild karla"),
+    "IRL": ("{a} League of Ireland Premier Division",),
+    "LVA": ("{a} Latvian Higher League", "{a} Virsliga"),
+    "FRO": ("{a} Betri deildin", "{a} Faroe Islands Premier League"),
 }
 
 #: Leagues whose grid has been probed on a runner, whose clubs all resolve, and
@@ -116,7 +141,17 @@ ARMED: frozenset[str] = frozenset({"NOR", "LUX", "BLR", "UKR"})
 #: Measured, not assumed: each one's last complete openfootball season has
 #: exactly n(n-1) matches and no ordered pair twice -- Norway 16/240, Belarus
 #: 16/240, Luxembourg 16/240, Ukraine 16/240, Poland 18/306.
-CANDIDATES: frozenset[str] = frozenset({"NOR", "BLR", "LUX", "UKR", "POL"})
+#: Everything with an article title that is not already in service. A candidate
+#: is fetched, parsed and judged exactly like an armed feed and then contributes
+#: nothing, so the cost of listing one that turns out not to work is a line in
+#: the build log. The cost of not listing it is a league whose ratings stay
+#: frozen at the last season its GitHub feed published, which for most of these
+#: was May 2025.
+#:
+#: Poland stays on the list rather than being armed: its results come from
+#: football-data.co.uk, which carries dates, and the grid is read only for the
+#: season's entrant list.
+CANDIDATES: frozenset[str] = frozenset(TITLES) - frozenset({"ROU", "SUI"})
 
 #: Names the twin check flags as looking like a club we already hold, which are
 #: genuinely their own club.
@@ -223,17 +258,37 @@ class GridError(RuntimeError):
     """The article came back and does not contain a readable results grid."""
 
 
+def titles(assoc: str, season: str) -> list[str]:
+    """Every article title this league's season might be under, best first.
+
+    '2025-26' becomes the article's own '2025–26'; a summer league's '2025' is
+    passed through, since its articles are titled with the bare year.
+
+    A list and not a name, because leagues get renamed and the article follows
+    them: Lithuania's A Lyga became the TOPLYGA in 2026, so the season this site
+    needs for its overlap check is under one name and the season it wants the
+    results from is under another. Sponsors move these names about constantly
+    and no single spelling survives them. Each is tried in turn and the first
+    that comes back with a grid in it wins.
+    """
+    out = []
+    for tpl in TITLES[assoc]:
+        if "-" in season:
+            a, b = season.split("-", 1)
+            out.append(tpl.format(a=a, bb=b[-2:]))
+        else:
+            out.append(tpl.format(a=season, bb="").rstrip("– "))
+    return out
+
+
 def title(assoc: str, season: str) -> str:
-    """'2025-26' becomes the article's own '2025–26'; a summer league's '2025'
-    is passed through, since its articles are titled with the bare year."""
-    if "-" in season:
-        a, b = season.split("-", 1)
-        return TITLES[assoc].format(a=a, bb=b[-2:])
-    return TITLES[assoc].format(a=season, bb="").rstrip("– ")
+    """The likeliest title, for a message or a link."""
+    return titles(assoc, season)[0]
 
 
-def url(assoc: str, season: str) -> str:
-    q = urllib.parse.urlencode({"title": title(assoc, season), "action": "raw"})
+def url(assoc: str, season: str, which: int = 0) -> str:
+    q = urllib.parse.urlencode({"title": titles(assoc, season)[which],
+                                "action": "raw"})
     return f"{API}?{q}"
 
 
@@ -387,8 +442,13 @@ def read(assoc: str, reg: TeamRegistry, season: str):
     clubs that happen to appear in a filled cell, because a season two weeks old
     has clubs with no result yet and they still have a full fixture list.
     """
-    text = fetch.get(url(assoc, season), required=False, tries=2)
-    if not text or "match_" not in text:
+    text = None
+    for i in range(len(TITLES[assoc])):
+        got = fetch.get(url(assoc, season, i), required=False, tries=2)
+        if got and "match_" in got:
+            text = got
+            break
+    if text is None:
         return None
     alias = ALIASES.get(assoc, {})
     best = _chosen(text, reg, alias)
