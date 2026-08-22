@@ -165,3 +165,21 @@ def test_a_club_code_that_is_not_ascii_is_still_a_club():
             "|match_ŚLĄ_BBB=2–1\n")
     assert wikifootball.grid_clubs(text) == ["Śląsk", "Beta", "Gamma", "Delta"]
     assert wikifootball.parse_grid(text) == [("Śląsk", "Beta", 2, 1)]
+
+
+def test_a_club_wrapped_in_a_presentation_template_is_still_a_club():
+    """Moldova, Scotland, San Marino and Wales all write
+    `|name_X={{nowrap|[[Real Club|Club]]}}`, and a reader that stops at the
+    first pipe calls that club "{{nowrap". All four reported it as an
+    unresolved club name and none of them armed."""
+    from model import wikifootball
+    assert wikifootball.name_variants("{{nowrap|[[Sheriff Tiraspol|Sheriff]]}}") == (
+        "Sheriff", "Sheriff Tiraspol")
+    assert wikifootball.name_variants("{{nowrap|Zimbru Chișinău}}") == ("Zimbru Chișinău",)
+    text = ("|team1=SHE|team2=ZIM|team3=CCC|team4=DDD\n"
+            "|name_SHE={{nowrap|[[Sheriff Tiraspol|Sheriff]]}}\n"
+            "|name_ZIM={{nowrap|Zimbru Chișinău}}\n"
+            "|name_CCC=Gamma\n|name_DDD=Delta\n"
+            "|match_SHE_ZIM=2–1\n")
+    assert wikifootball.grid_clubs(text)[:2] == ["Sheriff", "Zimbru Chișinău"]
+    assert wikifootball.parse_grid(text) == [("Sheriff", "Zimbru Chișinău", 2, 1)]

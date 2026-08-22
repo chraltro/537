@@ -133,18 +133,70 @@ def test_the_same_score_cannot_be_matched_twice():
 
 
 # ------------------------------------------------------------------ the refusals
-def test_a_second_spelling_in_the_overlap_blocks_the_league():
+def test_a_second_spelling_is_matched_against_the_roster_that_played():
     """`Rakow` is not a new club, it is `Raków Częstochowa` written by someone
-    without a keyboard for it. Minting an id would put a duplicate in the global
-    ranking with half a record, so the league waits for an alias instead."""
+    without a keyboard for it, and minting an id would put a duplicate in the
+    global ranking with half a record.
+
+    It does not have to wait for someone to write an alias, because the season
+    it turns up in is one we hold in full: it is one of these twelve clubs or
+    it is nothing, and only one of the twelve fits. The scores then prove it.
+    """
     reg = TeamRegistry()
     have = trusted(reg)
     theirs = ["Rakow" if c.startswith("Raków") else c for c in CLUBS]
     src = make(second(clubs=theirs))
-    v = external.probe(src, reg, have, today=TODAY)
+    v = external.probe(src, reg, have, today=dt.date(2025, 6, 1))
+    assert v.ok, v.reason
+    assert v.learned == {"Rakow": "Raków Częstochowa"}
+    assert v.agreed == v.compared == 132
+    assert not v.new_clubs, "a spelling is not a new club"
+
+
+def test_a_spelling_that_could_be_two_clubs_is_not_decided_by_guessing():
+    """The roster settles a name only when one club fits it.
+
+    Two Dynamos, and a feed that writes 'Dynamo' for one of them, is a question
+    the roster cannot answer -- and answering it anyway is how a club ends up
+    with a season of somebody else's results. Note what does not happen here:
+    with only ONE of them written short, the roster does settle it, because the
+    other is named in full and has already claimed its place. That is the whole
+    idea. It is only when nothing distinguishes them that the league waits.
+    """
+    clubs = ["Dynamo Kyiv", "Dynamo Brest"] + CLUBS[2:]
+    reg = TeamRegistry()
+    have = trusted(reg, clubs=clubs)
+    src = make(second(clubs=["Dynamo", "Dinamo"] + clubs[2:]))
+    v = external.probe(src, reg, have, today=dt.date(2025, 6, 1))
     assert not v.ok
-    assert v.unresolved == ("Rakow",)
+    assert "Dynamo" in v.unresolved, v.unresolved
     assert "spellings rather than new clubs" in v.reason
+
+    # The other half of the idea: one written short, the other in full.
+    reg2 = TeamRegistry()
+    have2 = trusted(reg2, clubs=clubs)
+    ok = external.probe(make(second(clubs=["Dynamo"] + clubs[1:])), reg2, have2,
+                        today=dt.date(2025, 6, 1))
+    assert ok.ok, ok.reason
+    assert ok.learned == {"Dynamo": "Dynamo Kyiv"}
+
+
+def test_a_roster_match_that_is_wrong_is_caught_by_the_scores():
+    """The whole reason matching against a roster is allowed at all.
+
+    Here both spellings resolve to a club, and to the wrong one: the feed calls
+    Legia's matches 'Rakow' and Raków's matches 'Legia'. Every name lines up and
+    every result lands on the wrong club, which is precisely what the score
+    comparison is for, and it collapses.
+    """
+    reg = TeamRegistry()
+    have = trusted(reg)
+    swap = {"Raków Częstochowa": "Legia", "Legia Warszawa": "Rakow"}
+    rows = [(m, swap.get(h, h), swap.get(a, a)) for m, h, a in second()]
+    src = make(rows)
+    v = external.probe(src, reg, have, today=dt.date(2025, 6, 1))
+    assert not v.ok, v.learned
+    assert "not the competition it claims to be" in v.reason
 
 
 def test_the_right_shape_of_the_wrong_competition_is_refused():

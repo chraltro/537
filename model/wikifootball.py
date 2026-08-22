@@ -254,6 +254,11 @@ ALIASES: dict[str, dict[str, str]] = {
 }
 
 
+#: Why one season's article produced nothing, keyed by (assoc, season). Only
+#: ever read to build a failure message.
+_WHY: dict[tuple[str, str], str] = {}
+
+
 class GridError(RuntimeError):
     """The article came back and does not contain a readable results grid."""
 
@@ -327,8 +332,13 @@ _MATCH = re.compile(r"\|\s*match_(" + _CODE + r")_(" + _CODE + r")\s*=\s*"
 #: pipe reads that as "[[FC Dynamo Brest", which resolves to nothing and blocked
 #: five leagues on the first probe. So a link is matched whole and taken apart
 #: below; anything else stops at the pipe as before.
+#:
+#: A template wrapper is the same trap one layer out. Moldova, Scotland, San
+#: Marino and Wales all write `|name_X={{nowrap|[[Real Club|Club]]}}`, and
+#: stopping at the pipe reads the club's name as "{{nowrap" -- which is what
+#: those four leagues reported as an unresolved club.
 _NAME = re.compile(r"\|\s*name_(" + _CODE + r")\s*=\s*"
-                   r"(\[\[[^\]\n]*\]\]|[^\n|}]+)")
+                   r"(\{\{[^\n]*?\}\}|\[\[[^\]\n]*\]\]|[^\n|}]+)")
 _TEAM = re.compile(r"\|\s*team\d+\s*=\s*(" + _CODE + r")")
 
 
@@ -344,6 +354,15 @@ def name_variants(raw: str) -> tuple[str, ...]:
     the same club.
     """
     v = " ".join(raw.split()).strip()
+    # Unwrap presentation templates -- {{nowrap|...}}, {{sortname|...}} -- until
+    # what is left is the club. The last argument is the one that carries it.
+    for _ in range(3):
+        t = re.match(r"^\{\{\s*[A-Za-z ]+\s*\|(.*)\}\}$", v)
+        if not t:
+            break
+        v = t.group(1).strip()
+        if v.endswith("|"):
+            v = v[:-1].strip()
     m = re.match(r"^\[\[([^\]|]+)(?:\|([^\]]*))?\]\]$", v)
     if not m:
         return (v,) if v else ()
@@ -443,13 +462,23 @@ def read(assoc: str, reg: TeamRegistry, season: str):
     has clubs with no result yet and they still have a full fixture list.
     """
     text = None
+    seen = False
     for i in range(len(TITLES[assoc])):
         got = fetch.get(url(assoc, season, i), required=False, tries=2)
+        if got:
+            seen = True
         if got and "match_" in got:
             text = got
             break
     if text is None:
+        # Two failures wear one message otherwise, and they need opposite fixes:
+        # an article that is not there means the title is wrong, and an article
+        # that is there with no grid in it means the league writes its results
+        # some other way and no title will help.
+        _WHY[(assoc, season)] = ("article has no results grid" if seen
+                                 else "no article under that title")
         return None
+    _WHY.pop((assoc, season), None)
     alias = ALIASES.get(assoc, {})
     best = _chosen(text, reg, alias)
     pick = lambda n: best.get(n, alias.get(n, n))          # noqa: E731
@@ -480,7 +509,9 @@ def load(assoc: str, reg: TeamRegistry,
                       extra={"date_approx": True, "source": "wikipedia"})
             out.append((m, home, away))
     if not reached:
-        raise GridError(f"no article reachable for {assoc} in {list(seasons)}")
+        why = "; ".join(f"{title(assoc, s)}: {_WHY.get((assoc, s), 'not fetched')}"
+                        for s in seasons)
+        raise GridError(f"no grid for {assoc} -- {why}")
     return out
 
 

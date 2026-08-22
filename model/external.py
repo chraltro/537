@@ -56,7 +56,7 @@ import datetime as dt
 import difflib
 from dataclasses import dataclass, field
 
-from .parse import Match, TeamRegistry, normalise
+from .parse import Match, TeamRegistry, normalise, normalise
 
 #: How much of the overlap season the two feeds must agree on. Not 1.0: feeds
 #: disagree about awarded forfeits and about the occasional abandoned match
@@ -94,6 +94,10 @@ class Verdict:
     agreed: int = 0
     unresolved: tuple[str, ...] = ()      # blocks: a second spelling of a club we hold
     new_clubs: tuple[str, ...] = ()       # allowed: promoted since the old feed stopped
+    #: Spellings matched against the overlap season's roster rather than written
+    #: by hand. Published, because a name this site decided for itself is
+    #: exactly the kind of thing a reader should be able to check.
+    learned: dict = field(default_factory=dict)
 
     @property
     def agreement(self) -> float:
@@ -115,9 +119,12 @@ class Verdict:
         if self.ok:
             mark = "·" if self.watching else "✓"
             what = "would arm -- " if self.watching else ""
+            learned = (f", {len(self.learned)} spelling(s) matched to the "
+                       f"{self.overlap_season} roster") if self.learned else ""
             return (f"  {mark} {self.source}/{self.assoc}: {what}{self.matches} "
                     f"matches to {self.latest}, agrees on {self.agreed}/"
-                    f"{self.compared} of {self.overlap_season}{self._new()}")
+                    f"{self.compared} of {self.overlap_season}"
+                    f"{learned}{self._new()}")
         bits = [self.reason]
         if self.unresolved:
             # Every one of them, not the first few. This line is the only thing
@@ -136,7 +143,7 @@ class Verdict:
                 "clubs": self.clubs, "overlap_season": self.overlap_season,
                 "compared": self.compared, "agreed": self.agreed,
                 "unresolved": list(self.unresolved), "new_clubs": list(self.new_clubs),
-                "watching": self.watching}
+                "learned": dict(self.learned), "watching": self.watching}
 
 
 @dataclass
@@ -154,6 +161,10 @@ class ExternalSource:
     group: str                  # competition group id, must match europe.py's
     load: object                # callable(reg) -> list[tuple[Match, str, str]]
     note: str = ""              # what the source does and does not carry
+    #: Called with the spellings the probe worked out, so the reader can apply
+    #: them everywhere else it is used -- the projections read the same articles
+    #: through a different door and would otherwise not know.
+    learn: object = None
     #: False for a source being watched rather than used. A candidate is
     #: fetched, parsed and judged exactly like any other -- the runner prints
     #: its verdict beside the rest -- and then contributes nothing whatever it
@@ -233,6 +244,61 @@ def _twin(name: str, held: set[str], reg: TeamRegistry) -> str | None:
     return best if score >= TWIN_RATIO else None
 
 
+#: Tokens that identify nothing on their own. Half the clubs in Europe share
+#: them, so a match resting on one of these is not evidence of anything.
+_COMMON = frozenset({
+    "fc", "sc", "ac", "cf", "cd", "ca", "fk", "sk", "nk", "hk", "bk", "ik", "if",
+    "us", "as", "ss", "ssd", "asd", "kf", "ks", "ks", "sv", "vf", "vfb", "vfl",
+    "club", "clube", "united", "city", "town", "sport", "sports", "sporting",
+    "athletic", "atletico", "atletic", "football", "futbol", "fotball", "calcio",
+    "de", "la", "le", "el", "al", "and", "the", "real", "royal", "association",
+    "team", "academy", "university", "college", "sportclub", "sportklub",
+})
+
+
+def _tokens(name: str) -> set[str]:
+    return {t for t in normalise(name).split() if t not in _COMMON}
+
+
+def roster_match(unknown: list[str], roster: list[str]) -> dict[str, str]:
+    """Line a feed's spellings up against the clubs that actually played.
+
+    This is not name-guessing, and the difference is the roster. The season
+    being matched on is one the trusted feed carries in full, so the clubs are
+    known: sixteen of them, no more and no fewer, each of which must be exactly
+    one of the sixteen the new feed names. That turns "what club might 'AGF'
+    be?" -- unanswerable -- into "which of these sixteen is it?", and a name is
+    only accepted when exactly one of them fits and nothing else claims it.
+
+    Two kinds of fit, strongest first. One name containing the other whole
+    ("Sheriff" in "Sheriff Tiraspol"), and one distinctive word in common
+    ("Dukla Prague" and "Dukla Praha"), with words half of Europe shares thrown
+    out first so nothing rests on "FC" or "United".
+
+    Nothing here is trusted on its own. What comes back is checked by the same
+    thing that checks the rest of the feed: the two sources are then compared
+    score by score across the whole season, and a club matched to the wrong club
+    puts its results against the wrong name and the agreement collapses. A
+    matching that survives 240 results is not a lucky guess.
+    """
+    left = list(roster)
+    out: dict[str, str] = {}
+    for rule in ("contains", "token"):
+        for name in list(unknown):
+            if name in out:
+                continue
+            key, toks = normalise(name), _tokens(name)
+            if rule == "contains":
+                fits = [h for h in left
+                        if key and (key in normalise(h) or normalise(h) in key)]
+            else:
+                fits = [h for h in left if toks and (toks & _tokens(h))]
+            if len(fits) == 1:
+                out[name] = fits[0]
+                left.remove(fits[0])
+    return out
+
+
 def probe(src: ExternalSource, reg: TeamRegistry, existing: list[Match],
           *, today: dt.date | None = None) -> Verdict:
     """Fetch, parse, line up against a season we already know, judge.
@@ -297,6 +363,32 @@ def probe(src: ExternalSource, reg: TeamRegistry, existing: list[Match],
     # -- 2. names in the overlap must all be clubs we already hold ----------
     overlap_names = {n for _, h, a in theirs_by_season[season] for n in (h, a)}
     blocking = sorted(n for n in overlap_names if reg.known(n) is None)
+    if blocking:
+        # Before refusing, line them up against the clubs that actually played
+        # that season. The roster is known -- this is a season the trusted feed
+        # carries in full -- so an unresolved name is one of a fixed, small set
+        # of clubs rather than any club in Europe. What survives is then checked
+        # by the score comparison below like everything else.
+        roster = sorted({reg.display(t) for m in existing if m.season == season
+                         for t in (m.home, m.away)})
+        taken = {reg.known(n) for n in overlap_names} - {None}
+        free = [h for h in roster if reg.known(h) not in taken]
+        learned = roster_match(blocking, free)
+        if learned:
+            v.learned = dict(learned)
+            if src.learn:
+                src.learn(learned)                 # type: ignore[operator]
+            for name, held in learned.items():
+                for rowset in theirs_by_season.values():
+                    for i, (m, h, a) in enumerate(rowset):
+                        if h == name or a == name:
+                            rowset[i] = (m, held if h == name else h,
+                                         held if a == name else a)
+            overlap_names = {n for _, h, a in theirs_by_season[season] for n in (h, a)}
+            names = {n for rowset in theirs_by_season.values()
+                     for _, h, a in rowset for n in (h, a)}
+            v.clubs = len(names)
+            blocking = sorted(n for n in overlap_names if reg.known(n) is None)
     if blocking:
         v.unresolved = tuple(blocking)
         v.reason = (f"{len(blocking)} club name(s) in {season} do not resolve, and "
