@@ -526,10 +526,12 @@ def read(assoc: str, reg: TeamRegistry, season: str):
             if inv >= 0:
                 head = " ".join(got[inv:inv + 700].split())
                 why += f" [invoke: {head[:300]}]"
-            params = collections.Counter(re.findall(r"\|\s*([a-z_]{3,14}?)_?[A-Z0-9]", got))
-            if params:
-                why += " [params: " + ", ".join(
-                    f"{k} x{n}" for k, n in params.most_common(8)) + "]"
+            # The counts said these articles are full of match parameters while
+            # the check that rejected them says they hold no "match_" at all,
+            # and both cannot be true. So: the text itself, at the first one.
+            k = got.find("match")
+            why += (f" [match_ x{got.count('match_')}; at first 'match': "
+                    + " ".join(got[k:k + 150].split()) + "]") if k >= 0 else ""
         _WHY[(assoc, season)] = why
         return None
     _WHY.pop((assoc, season), None)
