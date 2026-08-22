@@ -35,6 +35,7 @@ import datetime as dt
 import json
 import math
 import os
+import re
 import time
 
 import numpy as np
@@ -1098,6 +1099,102 @@ def _projection_season(src) -> str:
     return config.SEASON.split("-")[0]
 
 
+#: The page slug for every league that has no forecast of its own. A slug and
+#: not a filter value, because a league needs somewhere to be rather than a
+#: query parameter on somebody else's page.
+def league_slug(src) -> str:
+    base = re.sub(r"[^a-z0-9]+", "-", (src.name or "").lower()).strip("-")
+    return PROJECTION_SLUG.get(src.assoc, base or src.assoc.lower())
+
+
+def _table_from(matches: list, reg) -> list[dict]:
+    """The league table as the results we hold leave it."""
+    rows: dict[str, dict] = {}
+    for m in matches:
+        for t, gf, ga in ((m.home, m.hg, m.ag), (m.away, m.ag, m.hg)):
+            r = rows.setdefault(t, {"id": t, "name": reg.display(t), "pld": 0,
+                                    "w": 0, "d": 0, "l": 0, "gf": 0, "ga": 0,
+                                    "pts": 0})
+            r["pld"] += 1
+            r["gf"] += gf
+            r["ga"] += ga
+            if gf > ga:
+                r["w"] += 1
+                r["pts"] += 3
+            elif gf == ga:
+                r["d"] += 1
+                r["pts"] += 1
+            else:
+                r["l"] += 1
+    out = sorted(rows.values(),
+                 key=lambda r: (-r["pts"], -(r["gf"] - r["ga"]), -r["gf"], r["name"]))
+    for i, r in enumerate(out, 1):
+        r["pos"] = i
+        r["gd"] = r["gf"] - r["ga"]
+    return out
+
+
+def build_league_pages(_ready: set[str]) -> None:
+    """A page's worth of data for every league this site rates and does not forecast.
+
+    Until now the league picker sent these to the global ranking with a filter
+    on it. The filter worked and the page was still called "Global club
+    rankings", every competition tab beside it was dead, and nothing on it said
+    you were looking at the league you had just chosen -- so choosing a league
+    read as doing nothing at all. Forty of them now carry a current season, and
+    a season deserves a table.
+
+    What goes out is what this site actually holds: the table as the results
+    leave it, and each club's rating from the pooled fit, which is the same
+    number the ranking prints. No fixtures, because these are the leagues with
+    no fixture list anywhere; no projected finish, except where a projection
+    was built, which the page loads separately.
+    """
+    corpus = shared_corpus()
+    reg = corpus.reg
+    rated = {c["id"]: c for c in _global_clubs()}
+    forecast = {lg.slug for lg in leagues.LEAGUES + leagues.EUROPEAN}
+    out_dir = os.path.join(OUT, "league")
+    os.makedirs(out_dir, exist_ok=True)
+    n = 0
+    for src in europe.DOMESTIC:
+        slug = league_slug(src)
+        if slug in forecast:
+            continue
+        mine = [m for m in corpus.matches if m.comp == src.group and m.played]
+        if not mine:
+            continue
+        season = max(m.season for m in mine)
+        played = [m for m in mine if m.season == season]
+        table = _table_from(played, reg)
+        for r in table:
+            c = rated.get(r["id"], {})
+            r["spi"] = c.get("spi")
+            r["att"] = c.get("att_r")
+            r["def"] = c.get("def_r")
+            r["primary"] = c.get("primary")
+        approx = any(m.extra.get("date_approx") for m in played if m.extra)
+        latest = max(m.date for m in played)
+        json.dump({"slug": slug, "name": src.name,
+                   "country": src.country or src.assoc, "season": season,
+                   "played": len(played), "clubs": len(table),
+                   "results_to": latest.isoformat(), "date_approx": approx,
+                   "generated": dt.datetime.now(dt.timezone.utc)
+                   .isoformat(timespec="seconds"),
+                   "table": table},
+                  open(os.path.join(out_dir, f"{slug}.json"), "w"), indent=1)
+        n += 1
+    print(f"  → league/ ({n} league pages)")
+
+
+def _global_clubs() -> list[dict]:
+    try:
+        with open(os.path.join(OUT, "global.json"), encoding="utf-8") as fh:
+            return json.load(fh)["clubs"]
+    except (OSError, ValueError, KeyError):
+        return []
+
+
 def build_projections(_ready: set[str]) -> list[str]:
     """A projected final table for every league whose grid armed.
 
@@ -1697,7 +1794,9 @@ def _rated_only(projected: list[dict] | None = None) -> list[dict]:
             continue                       # a competition with its own page
         key = (c["league"], c.get("country") or "")
         counts[key] = counts.get(key, 0) + 1
-    return [{"name": name, "country": country, "n": n}
+    slugs = {src.name: league_slug(src) for src in europe.DOMESTIC}
+    return [{"name": name, "country": country, "n": n,
+             "slug": slugs.get(name, "")}
             for (name, country), n in sorted(counts.items(), key=lambda kv: -kv[1])]
 
 
@@ -1846,7 +1945,12 @@ def main(argv: list[str] | None = None) -> None:
     # Each is optional: a failure here must not cost the forecasts that already
     # landed, so it is reported and the run carries on.
     for name, fn in (("projections", build_projections),
-                     ("global rankings", build_rankings), ("feeds", build_feeds),
+                     ("global rankings", build_rankings),
+                     # After the ranking, not before it: the league pages print
+                     # each club's rating and the ranking is what writes them.
+                     # Ahead of it they would have read the previous run's
+                     # global.json, or none at all on a fresh checkout.
+                     ("league pages", build_league_pages), ("feeds", build_feeds),
                      ("coverage", build_coverage),
                      ("second feeds", build_sources),
                      ("club register", build_clubs),

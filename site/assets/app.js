@@ -404,7 +404,7 @@ export const PAGES = [
   { id: 'review',   label: 'Season review',   short: 'Review',              long: 'How wrong were we?',   file: 'review.html',    group: 'league' },
   { id: 'rankings', label: 'Global rankings', short: 'Rankings',            long: 'Global club rankings', file: 'rankings.html',  group: 'europe', site: true },
   { id: 'compare',  label: 'Compare clubs',   short: 'Compare',             long: 'Compare two clubs',    file: 'compare.html',   group: 'europe', site: true },
-  { id: 'projection', label: 'Projected leagues', short: 'Projected',         long: 'Projected leagues',    file: 'projection.html', group: 'europe', site: true },
+  { id: 'projection', label: 'Other leagues', short: 'Leagues', long: 'Every other league', file: 'projection.html', group: 'europe', site: true },
   { id: 'method',   label: 'Method',          long: 'Method and accuracy',  file: 'method.html',    group: 'about' },
 ];
 
@@ -474,9 +474,12 @@ export function initChrome(page) {
      go to the ranking filtered to that league. The value is prefixed, because a
      league name is not a slug and the change handler has to tell them apart. */
   const rated = (MANIFEST.rated || []);
+  /* By slug, because these now have a page of their own. They used to go to the
+     global ranking with a filter on it, which showed the right clubs under the
+     wrong heading with every competition tab dead beside it. */
   const ratedOpts = rated.length ? `<optgroup label="Rated, not forecast">${
-    rated.map((l) => `<option value="rated:${esc(l.name)}">${esc(l.name)} (${l.n})</option>`)
-      .join('')}</optgroup>` : '';
+    rated.map((l) => `<option value="rated:${esc(l.slug || l.name)}">${
+      esc(l.name)} (${l.n})</option>`).join('')}</optgroup>` : '';
   /* A third state, between the two. These leagues have no fixture list anywhere,
      so they cannot have a fixture page or a matchweek; what they do have is a
      results grid, which is enough to project the final table. They go to the
@@ -498,21 +501,23 @@ export function initChrome(page) {
   const P = new URLSearchParams(location.search);
   const asked = (P.get('league') || '').trim();
   const projByslug = new Map(projected.map((l) => [l.slug, l]));
-  const ratedByName = new Map(rated.map((l) => [l.name, l]));
   let choice = '', awayName = '', awayKind = '';
   if (page === 'projection') {
     /* No `?league=` means the page picks the first one itself, and the box has
-       to say the same thing the page does. */
-    const l = projByslug.get(asked) || projected[0];
+       to say the same thing the page does. The page hosts both kinds now: a
+       league with a projected finish and a league with only a table. */
+    const r = rated.find((l) => l.slug === asked);
+    const l = projByslug.get(asked) || (r ? null : projected[0]);
     if (l) { choice = `proj:${l.slug}`; awayName = l.name; awayKind = 'proj'; }
+    else if (r) { choice = `rated:${r.slug}`; awayName = r.name; awayKind = 'rated'; }
   } else if (page === 'rankings' && asked) {
     /* The ranking filtered to one league is that league, as far as the picker
-       is concerned. A projected league reached this way still points its table
-       tab at its projection, which is the page that has one. */
+       is concerned. */
     const pl = projected.find((l) => l.name === asked);
+    const rl = rated.find((l) => l.name === asked);
     if (pl) { choice = `proj:${pl.slug}`; awayName = pl.name; awayKind = 'proj'; }
-    else if (ratedByName.has(asked)) {
-      choice = `rated:${asked}`; awayName = asked; awayKind = 'rated';
+    else if (rl) {
+      choice = `rated:${rl.slug || rl.name}`; awayName = rl.name; awayKind = 'rated';
     }
   }
   /* A league-scoped tab means nothing for these two, because the pages behind
@@ -543,9 +548,11 @@ export function initChrome(page) {
             return `<a class="np" href="${pageHref(p)}"${
               page === p.id ? ' aria-current="page"' : ''}>${esc(p.label)}</a>`;
           }
-          if (awayKind === 'proj' && p.id === 'table') {
+          if (p.id === 'table') {
+            /* Both kinds have a table of their own on that page, so the tab
+               that means "the table" points at it rather than going dead. */
             return `<a class="np" href="${ROOT}projection.html?league=${
-              encodeURIComponent(choice.slice(5))}" aria-current="page">${
+              encodeURIComponent(choice.split(':')[1])}" aria-current="page">${
               esc(p.label)}</a>`;
           }
           return `<span class="np off" title="${esc(offWhy)}" aria-disabled="true">${
@@ -613,10 +620,9 @@ export function initChrome(page) {
       return;
     }
     if (v.startsWith('rated:')) {
-      /* No forecast to switch to, so this is a jump rather than a switch: the
-         ranking, filtered to that league, which is the only page that has
-         anything to say about it. */
-      location.href = url('rankings.html') + `?league=${encodeURIComponent(v.slice(6))}`;
+      /* No forecast to switch to, so this is a jump rather than a switch: to
+         that league's own page, which carries its table and its ratings. */
+      location.href = `${ROOT}projection.html?league=${encodeURIComponent(v.slice(6))}`;
       return;
     }
     const u = new URL(location.href);

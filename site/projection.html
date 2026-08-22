@@ -50,16 +50,7 @@
     <p class="sub" id="tablesub"></p>
     <div class="scroller">
       <table id="tbl">
-        <thead><tr>
-          <th class="l">Club</th>
-          <th title="Matches played so far">Pl</th>
-          <th class="p2">W</th><th class="p2">D</th><th class="p2">L</th>
-          <th class="p2" title="Goal difference">GD</th>
-          <th title="Points on the board now">Pts</th>
-          <th title="Points at the end of the season, on average across the simulations">Projected</th>
-          <th title="Chance of finishing first">Win</th>
-          <th class="pos p2" title="How often the club finished in each position, first on the left">Where it finishes<span class="vh"> (first on the left)</span></th>
-        </tr></thead>
+        <thead id="thead"></thead>
         <tbody id="tbody"></tbody>
       </table>
     </div>
@@ -85,14 +76,95 @@ initChrome('projection');
 
 const manifest = await siteData('leagues');
 const list = manifest.projected || [];
+/* Every league this site rates and does not forecast has a page here, not just
+   the ones it can project. Sending the rest to the global ranking with a filter
+   on it meant that choosing a league left you on a page headed "Global club
+   rankings" with every competition tab dead beside it, which reads as the
+   choice having done nothing at all. */
+const rated = (manifest.rated || []).filter((l) => l.slug);
 const asked = new URLSearchParams(location.search).get('league');
-const here = list.find((l) => l.slug === asked) || list[0] || null;
+const here = list.find((l) => l.slug === asked)
+  || rated.find((l) => l.slug === asked) || list[0] || null;
+const projected = !!(here && list.some((l) => l.slug === here.slug));
 
-document.getElementById('lgpick').innerHTML = list.map((l) => `
+/* The chip row is the shortlist of leagues with a projected finish. On one of
+   the other fifty it would be five names, none of them this one, so it goes. */
+document.getElementById('lgpick').innerHTML = !projected ? '' : list.map((l) => `
   <a href="projection.html?league=${esc(l.slug)}"${
     here && l.slug === here.slug ? ' aria-current="page"' : ''}>${esc(l.name)}</a>`).join('');
 
-if (!here) {
+const TH = {
+  projected: `<tr>
+    <th class="l">Club</th>
+    <th title="Matches played so far">Pl</th>
+    <th class="p2">W</th><th class="p2">D</th><th class="p2">L</th>
+    <th class="p2" title="Goal difference">GD</th>
+    <th title="Points on the board now">Pts</th>
+    <th title="Points at the end of the season, on average across the simulations">Projected</th>
+    <th title="Chance of finishing first">Win</th>
+    <th class="pos p2" title="How often the club finished in each position, first on the left">Where it finishes<span class="vh"> (first on the left)</span></th>
+  </tr>`,
+  table: `<tr>
+    <th class="l">Club</th>
+    <th title="Matches played so far">Pl</th>
+    <th class="p2">W</th><th class="p2">D</th><th class="p2">L</th>
+    <th class="p2">GF</th><th class="p2">GA</th>
+    <th class="p2" title="Goal difference">GD</th>
+    <th title="Points">Pts</th>
+    <th title="Expected share of the points against an average club of the big five">SPI</th>
+    <th class="p2" title="Attack, on the same scale as every club on this site">Att</th>
+    <th class="p2" title="Defence, on the same scale as every club on this site">Def</th>
+  </tr>`,
+};
+
+if (here && !projected) {
+  const L = await (await fetch(`${ROOT}data/league/${here.slug}.json`,
+                               { cache: 'no-cache' })).json();
+  setMeta({
+    title: `${L.name} ${L.season}: table and ratings`,
+    description: `The ${L.name} ${L.season} table as it stands, from the `
+      + `${L.played} results this site holds, with every club's rating.`,
+  });
+  document.getElementById('h1').textContent = `${L.name} ${L.season}`;
+  document.getElementById('lede').innerHTML =
+    `This site rates ${L.clubs} clubs in the ${esc(L.name)} but does not forecast it:
+     there is no fixture list for it anywhere that does not want a subscription, so
+     there is a table and there are ratings, and there is no projected finish.`;
+  document.getElementById('stamp').innerHTML = `
+    <span>Season <b>${esc(L.season)}</b></span>
+    <span><b>${L.played}</b> matches played</span>
+    <span><b>${L.clubs}</b> clubs</span>
+    <span>Results to <b>${esc(L.results_to)}</b>${
+      L.date_approx ? ' <span class="hint">(dated by season, not by match)</span>' : ''}</span>`;
+  document.getElementById('tabletitle').textContent = `Table, ${L.season}`;
+  document.getElementById('tablesub').textContent =
+    'As the results this site holds leave it. The rating columns are the pooled '
+    + 'ones, so they compare with any club on the site.';
+  document.getElementById('thead').innerHTML = TH.table;
+  initPalette(L.table.map((t) => ({ id: t.id, name: t.name })));
+  document.getElementById('tbody').innerHTML = L.table.map((t) => `
+    <tr>
+      <td class="l"><span class="club">
+        <span class="chip" style="background:${chipColor(t.primary)}"></span>
+        <span class="nm">${esc(t.name)}</span>
+      </span></td>
+      <td>${t.pld}</td>
+      <td class="p2">${t.w}</td><td class="p2">${t.d}</td><td class="p2">${t.l}</td>
+      <td class="p2">${t.gf}</td><td class="p2">${t.ga}</td>
+      <td class="p2">${t.gd > 0 ? '+' : ''}${t.gd}</td>
+      <td><b>${t.pts}</b></td>
+      <td>${t.spi == null ? '<span class="hint">n/a</span>' : t.spi.toFixed(1)}</td>
+      <td class="p2">${t.att ?? '<span class="hint">n/a</span>'}</td>
+      <td class="p2">${t.def ?? '<span class="hint">n/a</span>'}</td>
+    </tr>`).join('');
+  document.getElementById('tablecard').hidden = false;
+  window.addEventListener('themechange', () => {
+    document.querySelectorAll('#tbody tr').forEach((tr, i) => {
+      const el = tr.querySelector('.chip');
+      if (el) el.style.background = chipColor(L.table[i].primary);
+    });
+  });
+} else if (!here) {
   document.getElementById('lede').textContent =
     'No league is being projected at the moment.';
   document.getElementById('nonesub').innerHTML =
@@ -123,6 +195,7 @@ if (!here) {
     <span><b>${p.matches_played}</b> of ${p.matches_total} matches played</span>
     <span><b>${left}</b> still to play</span>
     <span><b>${p.n_sims.toLocaleString()}</b> simulated seasons</span>`;
+  document.getElementById('thead').innerHTML = TH.projected;
   document.getElementById('tabletitle').textContent = `Projected table, ${p.season}`;
   document.getElementById('tablesub').innerHTML =
     `Ordered by projected points. The last column runs from first place on the left to
