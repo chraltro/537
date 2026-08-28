@@ -359,9 +359,12 @@ def test_a_replay_build_is_never_marked_ready():
 
 
 def test_participants_file_resolves_and_is_internally_consistent():
+    """Valid in either calendar state: 'provisional' before the draw (clubs +
+    playoff ties + an `unfilled` count), 'final' after it (exactly 36 clubs,
+    every pot full, nothing left open)."""
     path = europe.participants_path("2026-27")
     doc = json.load(open(path))
-    assert doc["status"] == "provisional"
+    assert doc["status"] in ("provisional", "final")
     r = TeamRegistry()
     ids = [c["id"] for c in doc["clubs"]]
     assert len(ids) == len(set(ids)), "duplicate club in the participant list"
@@ -369,14 +372,19 @@ def test_participants_file_resolves_and_is_internally_consistent():
         assert c["id"] in r.meta, f"{c['id']} has no team_meta entry"
         assert not r.meta[c["id"]].get("auto"), f"{c['id']} is auto-registered"
         assert c["pot"] in (1, 2, 3, 4)
-    for tie in doc["playoff"]["ties"]:
+    for tie in doc.get("playoff", {}).get("ties", []):
         for side in tie:
             assert side["id"] in r.meta and not r.meta[side["id"]].get("auto")
     pots = collections.Counter(c["pot"] for c in doc["clubs"])
     assert pots[1] == 9, "pot 1 is always full: nine clubs including the holder"
     for p in (1, 2, 3, 4):
         assert pots[p] <= 9, f"pot {p} has {pots[p]} clubs"
-    assert len(doc["clubs"]) + doc["unfilled"] == leagues.CHAMPIONS_LEAGUE.n_teams
+    if doc["status"] == "final":
+        assert len(doc["clubs"]) == leagues.CHAMPIONS_LEAGUE.n_teams
+        assert all(pots[p] == 9 for p in (1, 2, 3, 4)), "a drawn field fills every pot"
+        assert "unfilled" not in doc and "playoff" not in doc
+    else:
+        assert len(doc["clubs"]) + doc["unfilled"] == leagues.CHAMPIONS_LEAGUE.n_teams
     # No association may exceed the places its league actually has.
     per = collections.Counter(c["assoc"] for c in doc["clubs"])
     for assoc, slug in (("ENG", "premier-league"), ("ESP", "la-liga"),

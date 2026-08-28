@@ -3414,6 +3414,18 @@
    "Vicenza Calcio"
   ]
  },
+ "viking": {
+  "id": "viking",
+  "name": "Viking",
+  "short": "VIK",
+  "primary": "#00246B",
+  "secondary": "#FFFFFF",
+  "aliases": [
+   "Viking FK",
+   "Viking Stavanger",
+   "Viking Fotballklubb"
+  ]
+ },
  "viktoria-plzen": {
   "id": "viktoria-plzen",
   "name": "Viktoria Plzen",

@@ -1,11 +1,13 @@
 {
- "status": "provisional",
- "asof": "2026-08-19",
- "note": "Populated by the model pipeline agent. The 21 big-five qualifiers are read off OUR OWN final 2025-26 tables (model.data, football-data mirror) at each league's ucl_places line, and every one of them matches the published qualified lists. The non-big-five entrants and all pot allocations are from press reporting of the confirmed pots (see sources); UEFA confirms the pots on 26 Aug 2026 and draws the pairings on 27 Aug, so this file stays 'provisional' until the lead replaces it. Eight of the 36 places are still open: the play-off ties below decide four of them and the remaining places follow the qualifying rounds.",
+ "status": "final",
+ "asof": "2026-08-28",
+ "note": "The confirmed 36-club league-phase field and the four pots exactly as UEFA seeded them for the draw at the Grimaldi Forum, Monaco, on Thursday 27 August 2026, 18:00 CET. The qualifying play-off round finished on 26 August and produced seven league-phase entrants (AEK Athens, Bodø/Glimt, Fenerbahçe, LASK, Sabah, Slovan Bratislava, Viking); Slavia Praha took the eighth of the previously open places directly, the Europa League holders' place having cascaded down the access list because the holders, Aston Villa, had already qualified through the Premier League. All 28 clubs carried over from the provisional file kept the pot this file gave them, and the pots of the eight late entrants are as reported in the confirmed-pots coverage below, not inferred. The 144 pairings that came out of this draw are in fixtures-2026-27.txt; that file's pairings are final, its matchday grouping is not.",
  "sources": [
-  "big-five qualifiers: this repository's own 2025-26 final tables, cross-checked against the qualified lists reported in August 2026",
-  "pots 1-4 and non-big-five entrants: si.com 2026-27 Champions League projected pots; futbolmundial.com pots 1 and 2 sorted for the 2026/27 UCL league phase; sports.yahoo.com Champions League has 29 of 36 teams set",
-  "format and draw date: docs/european-competitions-plan.md section 2"
+  "confirmed pots 1-4 (all 36 clubs): si.com '2026-27 Champions League Draw: Confirmed League Phase Pots'; uefa.com 'Champions League: League phase draw pots confirmed'",
+  "qualifying play-off results: uefa.com play-off second-leg round-ups of 25 and 26 Aug 2026 (Sabah, LASK, Bodø/Glimt; then Fenerbahçe, AEK Athens, Viking, Slovan Bratislava); en.wikipedia.org '2026-27 UEFA Champions League qualifying'",
+  "big-five qualifiers and their finishing positions: this repository's own 2025-26 final tables, unchanged from the provisional file and consistent with the published qualified lists",
+  "draw pairings, cross-checked club by club: gamereactor.eu all-36 league-phase list; arsenal.com; mancity.com; liverpoolfc.com; fcbayern.com; fcbarcelona.com / barcauniversal.com; realmadrid.com; en.atleticodemadrid.com; fcporto.pt / ojogo.pt / observador.pt; ligaportugal.pt / zerozero.pt (Sporting); bundesliga.com / stuttgarter-zeitung.de / bulinews.com (Bayern, Dortmund, Leipzig, Stuttgart); espn.com and sports.yahoo.com (Aston Villa, Man Utd); feyenoord.com; cnews.fr (PSG, Lens, Lille); elmira.es / euronews.es / elpespunte.es (Betis, Villarreal); calcionapoli24.it / sport.sky.it (Napoli, Como); galatasaray.org / milliyet.com.tr; livesport.cz / denik.cz (Slavia); sportnet.sme.sk / ta3.com (Slovan); lask.at / skysportaustria.at; greekcitytimes.com (AEK); report.az (Sabah)",
+  "format, calendar windows and knockout structure: docs/european-competitions-plan.md section 2"
  ],
  "pot_basis": "UEFA club coefficient, title holder placed in pot 1",
  "clubs": [
@@ -22,7 +24,7 @@
   {"id": "dortmund", "name": "Borussia Dortmund", "assoc": "GER", "pot": 2, "how": "Bundesliga 2nd"},
   {"id": "roma", "name": "Roma", "assoc": "ITA", "pot": 2, "how": "Serie A 3rd"},
   {"id": "sporting-cp", "name": "Sporting CP", "assoc": "POR", "pot": 2, "how": "Primeira Liga 2nd"},
-  {"id": "aston-villa", "name": "Aston Villa", "assoc": "ENG", "pot": 2, "how": "Premier League 4th"},
+  {"id": "aston-villa", "name": "Aston Villa", "assoc": "ENG", "pot": 2, "how": "Premier League 4th + Europa League holders"},
   {"id": "porto", "name": "Porto", "assoc": "POR", "pot": 2, "how": "Primeira Liga champions"},
   {"id": "man-united", "name": "Manchester United", "assoc": "ENG", "pot": 2, "how": "Premier League 3rd"},
   {"id": "club-brugge", "name": "Club Brugge", "assoc": "BEL", "pot": 2, "how": "Belgian Pro League champions"},
@@ -31,24 +33,22 @@
 
   {"id": "feyenoord", "name": "Feyenoord", "assoc": "NED", "pot": 3, "how": "Eredivisie 2nd"},
   {"id": "lille", "name": "Lille", "assoc": "FRA", "pot": 3, "how": "Ligue 1 3rd"},
+  {"id": "bodo-glimt", "name": "Bodo/Glimt", "assoc": "NOR", "pot": 3, "how": "Eliteserien champions, via qualifying play-off (6-1 agg v N.E.C.)"},
   {"id": "napoli", "name": "Napoli", "assoc": "ITA", "pot": 3, "how": "Serie A 2nd"},
   {"id": "rb-leipzig", "name": "RB Leipzig", "assoc": "GER", "pot": 3, "how": "Bundesliga 3rd"},
   {"id": "villarreal", "name": "Villarreal", "assoc": "ESP", "pot": 3, "how": "La Liga 3rd"},
+  {"id": "fenerbahce", "name": "Fenerbahce", "assoc": "TUR", "pot": 3, "how": "Super Lig 2nd, via qualifying play-off (3-2 agg)"},
   {"id": "shakhtar-donetsk", "name": "Shakhtar Donetsk", "assoc": "UKR", "pot": 3, "how": "Ukrainian Premier League champions"},
   {"id": "galatasaray", "name": "Galatasaray", "assoc": "TUR", "pot": 3, "how": "Super Lig champions"},
 
+  {"id": "slavia-praha", "name": "Slavia Praha", "assoc": "CZE", "pot": 4, "how": "Czech First League champions, direct league-phase place"},
+  {"id": "slovan-bratislava", "name": "Slovan Bratislava", "assoc": "SVK", "pot": 4, "how": "Slovak champions, via qualifying play-off (3-2 agg v Celje)"},
   {"id": "stuttgart", "name": "VfB Stuttgart", "assoc": "GER", "pot": 4, "how": "Bundesliga 4th"},
+  {"id": "aek-athens", "name": "AEK Athens", "assoc": "GRE", "pot": 4, "how": "Greek champions, via qualifying play-off (4-0 agg v Levski Sofia)"},
+  {"id": "lask", "name": "LASK", "assoc": "AUT", "pot": 4, "how": "Austrian champions, via qualifying play-off (5-4 agg v Celtic)"},
   {"id": "como", "name": "Como", "assoc": "ITA", "pot": 4, "how": "Serie A 4th"},
-  {"id": "lens", "name": "Lens", "assoc": "FRA", "pot": 4, "how": "Ligue 1 2nd"}
- ],
- "playoff": {
-  "note": "Second legs 25-26 August 2026; winners take four of the eight remaining places and are seeded into pots 3 and 4.",
-  "ties": [
-   [{"id": "levski-sofia", "assoc": "BUL"}, {"id": "aek-athens", "assoc": "GRE"}],
-   [{"id": "celtic", "assoc": "SCO"}, {"id": "lask", "assoc": "AUT"}],
-   [{"id": "slovan-bratislava", "assoc": "SVK"}, {"id": "celje", "assoc": "SVN"}],
-   [{"id": "hapoel-beer-sheva", "assoc": "ISR"}, {"id": "sabah", "assoc": "AZE"}]
-  ]
- },
- "unfilled": 8
+  {"id": "lens", "name": "RC Lens", "assoc": "FRA", "pot": 4, "how": "Ligue 1 2nd"},
+  {"id": "viking", "name": "Viking", "assoc": "NOR", "pot": 4, "how": "Eliteserien 2nd, via qualifying play-off (5-3 agg)"},
+  {"id": "sabah", "name": "Sabah", "assoc": "AZE", "pot": 4, "how": "Azerbaijani champions, via qualifying play-off (6-4 agg v Hapoel Beer-Sheva)"}
+ ]
 }
