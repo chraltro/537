@@ -399,18 +399,18 @@
  "calibration_priors": {
   "version": 3,
   "continuing": {
-   "slope": 0.8915695119562207,
-   "intercept": 0.013319678960549291,
+   "slope": 0.895319997687019,
+   "intercept": 0.012855187984370253,
    "n": 304,
    "source": "ligue-1",
-   "measured_slope": 0.8916
+   "measured_slope": 0.8953
   },
   "promoted": {
-   "slope": 0.24773239898434923,
-   "intercept": -0.21727727148735043,
+   "slope": 0.24898082568610302,
+   "intercept": -0.21320446965758064,
    "n": 43,
    "source": "ligue-1",
-   "measured_slope": 0.2477
+   "measured_slope": 0.249
   },
   "relegated": {
    "slope": 0.9053,
@@ -420,7 +420,7 @@
    "reason": "too few pairs"
   },
   "league": "ligue-1",
-  "generated": "2026-08-20"
+  "generated": "2026-08-28"
  },
  "league": "ligue-1",
  "table": {

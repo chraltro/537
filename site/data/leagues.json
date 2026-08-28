@@ -1,6 +1,6 @@
 {
  "default": "premier-league",
- "generated": "2026-08-21T12:21:00+00:00",
+ "generated": "2026-08-28T07:17:22+00:00",
  "leagues": [
   {
    "slug": "premier-league",
@@ -107,7 +107,7 @@
    "slug": "champions-league",
    "name": "Champions League",
    "country": "Europe",
-   "ready": false,
+   "ready": true,
    "kind": "cup",
    "n_teams": 36,
    "ucl_places": 8,
@@ -123,257 +123,309 @@
   {
    "name": "England, third tier",
    "country": "England",
-   "n": 31
+   "n": 31,
+   "slug": ""
   },
   {
    "name": "Italy, second tier",
    "country": "Italy",
-   "n": 28
+   "n": 28,
+   "slug": ""
   },
   {
    "name": "Spain, second tier",
    "country": "Spain",
-   "n": 26
+   "n": 26,
+   "slug": ""
   },
   {
    "name": "S\u00fcper Lig",
    "country": "Turkey",
-   "n": 24
-  },
-  {
-   "name": "Ekstraklasa",
-   "country": "Poland",
-   "n": 21
-  },
-  {
-   "name": "Germany, second tier",
-   "country": "Germany",
-   "n": 21
+   "n": 24,
+   "slug": "s-per-lig"
   },
   {
    "name": "France, second tier",
    "country": "France",
-   "n": 21
+   "n": 24,
+   "slug": ""
+  },
+  {
+   "name": "Ekstraklasa",
+   "country": "Poland",
+   "n": 21,
+   "slug": "ekstraklasa"
+  },
+  {
+   "name": "Germany, second tier",
+   "country": "Germany",
+   "n": 21,
+   "slug": ""
   },
   {
    "name": "Eliteserien",
    "country": "Norway",
-   "n": 19
+   "n": 19,
+   "slug": "eliteserien"
   },
   {
    "name": "Serbian SuperLiga",
    "country": "Serbia",
-   "n": 19
+   "n": 19,
+   "slug": "serbian-superliga"
   },
   {
    "name": "Ukrainian Premier League",
    "country": "Ukraine",
-   "n": 19
+   "n": 19,
+   "slug": "ukrainian-premier-league"
   },
   {
    "name": "Luxembourg National Division",
    "country": "Luxembourg",
-   "n": 19
+   "n": 19,
+   "slug": "luxembourg-national-division"
   },
   {
    "name": "Allsvenskan",
    "country": "Sweden",
-   "n": 18
+   "n": 18,
+   "slug": "allsvenskan"
   },
   {
    "name": "Liga I",
    "country": "Romania",
-   "n": 18
+   "n": 18,
+   "slug": "liga-i"
   },
   {
    "name": "First Professional League",
    "country": "Bulgaria",
-   "n": 18
+   "n": 18,
+   "slug": "first-professional-league"
   },
   {
    "name": "Portugal, second tier",
    "country": "Portugal",
-   "n": 18
+   "n": 18,
+   "slug": ""
   },
   {
    "name": "Belarusian Premier League",
    "country": "Belarus",
-   "n": 18
+   "n": 18,
+   "slug": "belarusian-premier-league"
   },
   {
    "name": "Super League Greece",
    "country": "Greece",
-   "n": 17
+   "n": 17,
+   "slug": "super-league-greece"
   },
   {
    "name": "Czech First League",
    "country": "Czech Republic",
-   "n": 17
+   "n": 17,
+   "slug": "czech-first-league"
   },
   {
    "name": "Cypriot First Division",
    "country": "Cyprus",
-   "n": 17
+   "n": 17,
+   "slug": "cypriot-first-division"
   },
   {
    "name": "Netherlands, second tier",
    "country": "Netherlands",
-   "n": 17
+   "n": 17,
+   "slug": ""
   },
   {
    "name": "Maltese Premier League",
    "country": "Malta",
-   "n": 16
+   "n": 16,
+   "slug": "maltese-premier-league"
   },
   {
    "name": "Campionato Sammarinese",
    "country": "San Marino",
-   "n": 16
+   "n": 16,
+   "slug": "campionato-sammarinese"
   },
   {
    "name": "Superliga",
    "country": "Denmark",
-   "n": 14
+   "n": 14,
+   "slug": "superliga"
   },
   {
    "name": "Austrian Bundesliga",
    "country": "Austria",
-   "n": 14
+   "n": 14,
+   "slug": "austrian-bundesliga"
   },
   {
    "name": "Swiss Super League",
    "country": "Switzerland",
-   "n": 14
+   "n": 14,
+   "slug": "swiss-super-league"
   },
   {
    "name": "Nemzeti Bajnoks\u00e1g I",
    "country": "Hungary",
-   "n": 14
+   "n": 14,
+   "slug": "nemzeti-bajnoks-g-i"
   },
   {
    "name": "Besta deild",
    "country": "Iceland",
-   "n": 14
-  },
-  {
-   "name": "Premier League of BiH",
-   "country": "Bosnia and Herzegovina",
-   "n": 14
+   "n": 14,
+   "slug": "besta-deild"
   },
   {
    "name": "Veikkausliiga",
    "country": "Finland",
-   "n": 14
+   "n": 14,
+   "slug": "veikkausliiga"
+  },
+  {
+   "name": "Premier League of BiH",
+   "country": "Bosnia and Herzegovina",
+   "n": 14,
+   "slug": "premier-league-of-bih"
   },
   {
    "name": "Macedonian First League",
    "country": "North Macedonia",
-   "n": 14
+   "n": 14,
+   "slug": "macedonian-first-league"
   },
   {
    "name": "Cymru Premier",
    "country": "Wales",
-   "n": 14
+   "n": 14,
+   "slug": "cymru-premier"
   },
   {
    "name": "Scottish Premiership",
    "country": "Scotland",
-   "n": 13
+   "n": 13,
+   "slug": "scottish-premiership"
   },
   {
    "name": "Slovak Super Liga",
    "country": "Slovakia",
-   "n": 13
+   "n": 13,
+   "slug": "slovak-super-liga"
   },
   {
    "name": "NIFL Premiership",
    "country": "Northern Ireland",
-   "n": 13
+   "n": 13,
+   "slug": "nifl-premiership"
   },
   {
    "name": "Azerbaijan Premier League",
    "country": "Azerbaijan",
-   "n": 12
+   "n": 12,
+   "slug": "azerbaijan-premier-league"
   },
   {
    "name": "Slovenian PrvaLiga",
    "country": "Slovenia",
-   "n": 12
+   "n": 12,
+   "slug": "slovenian-prvaliga"
   },
   {
    "name": "League of Ireland",
    "country": "Ireland",
-   "n": 12
+   "n": 12,
+   "slug": "league-of-ireland"
   },
   {
    "name": "Betri deildin",
    "country": "Faroe Islands",
-   "n": 12
+   "n": 12,
+   "slug": "betri-deildin"
   },
   {
    "name": "Kategoria Superiore",
    "country": "Albania",
-   "n": 12
+   "n": 12,
+   "slug": "kategoria-superiore"
   },
   {
    "name": "Erovnuli Liga",
    "country": "Georgia",
-   "n": 12
+   "n": 12,
+   "slug": "erovnuli-liga"
   },
   {
    "name": "Montenegrin First League",
    "country": "Montenegro",
-   "n": 12
+   "n": 12,
+   "slug": "montenegrin-first-league"
   },
   {
    "name": "Football Superleague of Kosovo",
    "country": "Kosovo",
-   "n": 12
+   "n": 12,
+   "slug": "football-superleague-of-kosovo"
   },
   {
    "name": "Primera Divisi\u00f3",
    "country": "Andorra",
-   "n": 12
+   "n": 12,
+   "slug": "primera-divisi"
   },
   {
    "name": "HNL",
    "country": "Croatia",
-   "n": 11
+   "n": 11,
+   "slug": "hnl"
   },
   {
    "name": "Virsliga",
    "country": "Latvia",
-   "n": 11
+   "n": 11,
+   "slug": "virsliga"
   },
   {
    "name": "Armenian Premier League",
    "country": "Armenia",
-   "n": 11
+   "n": 11,
+   "slug": "armenian-premier-league"
   },
   {
    "name": "Meistriliiga",
    "country": "Estonia",
-   "n": 11
+   "n": 11,
+   "slug": "meistriliiga"
   },
   {
    "name": "Gibraltar Football League",
    "country": "Gibraltar",
-   "n": 11
+   "n": 11,
+   "slug": "gibraltar-football-league"
   },
   {
    "name": "A Lyga",
    "country": "Lithuania",
-   "n": 11
+   "n": 11,
+   "slug": "a-lyga"
   },
   {
    "name": "Moldovan Super Liga",
    "country": "Moldova",
-   "n": 8
+   "n": 8,
+   "slug": "moldovan-super-liga"
   },
   {
    "name": "No domestic feed",
    "country": "",
-   "n": 5
+   "n": 5,
+   "slug": ""
   }
- ]
+ ],
+ "projected": []
 }

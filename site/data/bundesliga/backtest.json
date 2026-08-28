@@ -399,18 +399,18 @@
  "calibration_priors": {
   "version": 3,
   "continuing": {
-   "slope": 0.9449251063798404,
-   "intercept": 0.005142919271221001,
+   "slope": 0.9463570153920954,
+   "intercept": 0.0047813498964606885,
    "n": 299,
    "source": "bundesliga",
-   "measured_slope": 0.9449
+   "measured_slope": 0.9464
   },
   "promoted": {
-   "slope": 0.3291485281517504,
-   "intercept": -0.20872151776660455,
+   "slope": 0.31823459212530625,
+   "intercept": -0.20854108111978265,
    "n": 38,
    "source": "bundesliga",
-   "measured_slope": 0.3291
+   "measured_slope": 0.3182
   },
   "relegated": {
    "slope": 0.9053,
@@ -420,7 +420,7 @@
    "reason": "too few pairs"
   },
   "league": "bundesliga",
-  "generated": "2026-08-20"
+  "generated": "2026-08-28"
  },
  "league": "bundesliga",
  "table": {

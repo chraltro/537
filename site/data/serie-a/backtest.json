@@ -399,18 +399,18 @@
  "calibration_priors": {
   "version": 3,
   "continuing": {
-   "slope": 0.969473862139213,
-   "intercept": 0.008591296408233732,
+   "slope": 0.9707672479133314,
+   "intercept": 0.008246818923222548,
    "n": 323,
    "source": "serie-a",
-   "measured_slope": 0.9695
+   "measured_slope": 0.9708
   },
   "promoted": {
-   "slope": 0.6852061558588062,
-   "intercept": -0.10908676839942787,
+   "slope": 0.6797935291767312,
+   "intercept": -0.10939182130838056,
    "n": 52,
    "source": "serie-a",
-   "measured_slope": 0.6852
+   "measured_slope": 0.6798
   },
   "relegated": {
    "slope": 0.9053,
@@ -420,7 +420,7 @@
    "reason": "too few pairs"
   },
   "league": "serie-a",
-  "generated": "2026-08-20"
+  "generated": "2026-08-28"
  },
  "league": "serie-a",
  "table": {

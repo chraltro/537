@@ -255,29 +255,29 @@
  "calibration_priors": {
   "version": 3,
   "continuing": {
-   "slope": 0.8260996409105278,
-   "intercept": -0.01253032113130442,
-   "n": 252,
+   "slope": 0.8471612359032323,
+   "intercept": -0.015383612020231264,
+   "n": 342,
    "source": "championship",
-   "measured_slope": 0.8261
+   "measured_slope": 0.8472
   },
   "promoted": {
-   "slope": 0.5415243430552981,
-   "intercept": -0.09409602224044132,
-   "n": 42,
+   "slope": 0.5246328283599349,
+   "intercept": -0.10455279464960585,
+   "n": 57,
    "source": "championship",
-   "measured_slope": 0.5415
+   "measured_slope": 0.5246
   },
   "relegated": {
    "slope": 1.0,
-   "intercept": 0.11026747605491607,
-   "n": 42,
+   "intercept": 0.13161319052469497,
+   "n": 57,
    "source": "championship",
-   "measured_slope": 1.2579,
-   "reason": "measured slope 1.26 clamped to 1.0"
+   "measured_slope": 1.2102,
+   "reason": "measured slope 1.21 clamped to 1.0"
   },
   "league": "championship",
-  "generated": "2026-08-20"
+  "generated": "2026-08-28"
  },
  "league": "championship",
  "table": {

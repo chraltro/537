@@ -1,0 +1,47 @@
+{
+ "slug": "belgian-pro-league",
+ "name": "Belgian Pro League",
+ "country": "Belgium",
+ "season": "2026-27",
+ "played": 1,
+ "clubs": 2,
+ "results_to": "2026-08-07",
+ "date_approx": false,
+ "generated": "2026-08-28T07:17:21+00:00",
+ "table": [
+  {
+   "id": "club-brugge",
+   "name": "Club Brugge",
+   "pld": 1,
+   "w": 1,
+   "d": 0,
+   "l": 0,
+   "gf": 3,
+   "ga": 0,
+   "pts": 3,
+   "pos": 1,
+   "gd": 3,
+   "spi": 47.9,
+   "att": 67,
+   "def": 64,
+   "primary": "#0A50A1"
+  },
+  {
+   "id": "kv-kortrijk",
+   "name": "KV Kortrijk",
+   "pld": 1,
+   "w": 0,
+   "d": 0,
+   "l": 1,
+   "gf": 0,
+   "ga": 3,
+   "pts": 0,
+   "pos": 2,
+   "gd": -3,
+   "spi": 13.0,
+   "att": 52,
+   "def": 52,
+   "primary": "#C8102E"
+  }
+ ]
+}
