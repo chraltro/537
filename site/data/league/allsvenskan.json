@@ -7,7 +7,7 @@
  "clubs": 16,
  "results_to": "2026-05-04",
  "date_approx": false,
- "generated": "2026-08-28T07:17:21+00:00",
+ "generated": "2026-08-29T17:28:31+00:00",
  "table": [
   {
    "id": "mjallby-aif",
@@ -276,7 +276,7 @@
    "pts": 0,
    "pos": 16,
    "gd": -9,
-   "spi": 10.2,
+   "spi": 10.1,
    "att": 50,
    "def": 51,
    "primary": "#7A8290"

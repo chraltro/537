@@ -240,7 +240,10 @@ def global_trajectory() -> dict[str, list]:
     if not _TRAJECTORY:
         print("Rating trajectories, on the European scale…")
         t0 = time.perf_counter()
-        tr = rankings.trajectory(shared_corpus(), RANK_REF)
+        # Hand it the ranking's own fit for the newest point, so the end of a
+        # club's line and the SPI its page quotes are one number by identity
+        # rather than two optimisations agreeing by luck.
+        tr = rankings.trajectory(shared_corpus(), RANK_REF, live_fit=pooled_now())
         print(f"  · {len(tr)} clubs, {time.perf_counter() - t0:.0f}s")
         _TRAJECTORY.append(tr)
     return _TRAJECTORY[0]
@@ -1913,8 +1916,13 @@ def main(argv: list[str] | None = None) -> None:
                          f"{bad} second feed(s) did not arm")
 
     try:
+        # Cups are in the default run. They were not, once the draw landed that
+        # meant the scheduled rebuild never refreshed the Champions League: the
+        # site served whatever the last hand push contained, forever. Before a
+        # cup's draw exists build_cup declines politely, so including it costs
+        # an awaiting-draw line and nothing else.
         todo = ([leagues.get(s) for s in args.league] if args.league
-                else list(leagues.LEAGUES))
+                else list(leagues.LEAGUES + leagues.EUROPEAN))
     except KeyError as exc:
         raise SystemExit(str(exc).strip('"')) from None
     skip = args.skip_backtest or os.environ.get("SKIP_BACKTEST") == "1"

@@ -7,7 +7,7 @@
  "clubs": 18,
  "results_to": "2025-05-24",
  "date_approx": false,
- "generated": "2026-08-28T07:17:21+00:00",
+ "generated": "2026-08-29T17:28:31+00:00",
  "table": [
   {
    "id": "lech-poznan",
@@ -157,7 +157,7 @@
    "pts": 47,
    "pos": 9,
    "gd": 4,
-   "spi": 21.9,
+   "spi": 22.0,
    "att": 53,
    "def": 58,
    "primary": "#7A8290"

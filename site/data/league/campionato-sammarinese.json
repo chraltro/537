@@ -7,7 +7,7 @@
  "clubs": 16,
  "results_to": "2025-05-17",
  "date_approx": false,
- "generated": "2026-08-28T07:17:21+00:00",
+ "generated": "2026-08-29T17:28:32+00:00",
  "table": [
   {
    "id": "sp-la-fiorita",
@@ -38,7 +38,7 @@
    "pts": 77,
    "pos": 2,
    "gd": 48,
-   "spi": 1.3,
+   "spi": 1.2,
    "att": 42,
    "def": 44,
    "primary": "#7A8290"

@@ -7,7 +7,7 @@
  "clubs": 12,
  "results_to": "2025-05-23",
  "date_approx": false,
- "generated": "2026-08-28T07:17:21+00:00",
+ "generated": "2026-08-29T17:28:31+00:00",
  "table": [
   {
    "id": "slovan-bratislava",
@@ -72,7 +72,7 @@
    "pts": 52,
    "pos": 4,
    "gd": 12,
-   "spi": 13.1,
+   "spi": 13.0,
    "att": 51,
    "def": 53,
    "primary": "#7A8290"
@@ -107,7 +107,7 @@
    "pos": 6,
    "gd": -9,
    "spi": 3.3,
-   "att": 50,
+   "att": 49,
    "def": 45,
    "primary": "#7A8290"
   },

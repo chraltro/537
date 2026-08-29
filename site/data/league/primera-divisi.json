@@ -7,7 +7,7 @@
  "clubs": 10,
  "results_to": "2025-05-18",
  "date_approx": false,
- "generated": "2026-08-28T07:17:21+00:00",
+ "generated": "2026-08-29T17:28:32+00:00",
  "table": [
   {
    "id": "inter-club-d-escaldes",
@@ -72,7 +72,7 @@
    "pts": 49,
    "pos": 4,
    "gd": 32,
-   "spi": 3.8,
+   "spi": 3.7,
    "att": 45,
    "def": 47,
    "primary": "#7A8290"

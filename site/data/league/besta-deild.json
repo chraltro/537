@@ -7,7 +7,7 @@
  "clubs": 12,
  "results_to": "2026-05-04",
  "date_approx": false,
- "generated": "2026-08-28T07:17:21+00:00",
+ "generated": "2026-08-29T17:28:32+00:00",
  "table": [
   {
    "id": "if-vestri",
@@ -157,7 +157,7 @@
    "pts": 6,
    "pos": 9,
    "gd": -4,
-   "spi": 4.4,
+   "spi": 4.3,
    "att": 47,
    "def": 47,
    "primary": "#7A8290"
@@ -174,7 +174,7 @@
    "pts": 4,
    "pos": 10,
    "gd": 0,
-   "spi": 4.5,
+   "spi": 4.4,
    "att": 49,
    "def": 46,
    "primary": "#7A8290"

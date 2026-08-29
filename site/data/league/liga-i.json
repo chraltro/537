@@ -7,7 +7,7 @@
  "clubs": 16,
  "results_to": "2025-05-24",
  "date_approx": false,
- "generated": "2026-08-28T07:17:21+00:00",
+ "generated": "2026-08-29T17:28:31+00:00",
  "table": [
   {
    "id": "fcsb",
@@ -21,7 +21,7 @@
    "pts": 80,
    "pos": 1,
    "gd": 28,
-   "spi": 25.3,
+   "spi": 25.2,
    "att": 56,
    "def": 59,
    "primary": "#D0021B"
@@ -191,7 +191,7 @@
    "pts": 48,
    "pos": 11,
    "gd": -9,
-   "spi": 8.3,
+   "spi": 8.2,
    "att": 48,
    "def": 50,
    "primary": "#7A8290"
@@ -276,7 +276,7 @@
    "pts": 27,
    "pos": 16,
    "gd": -36,
-   "spi": 3.0,
+   "spi": 2.9,
    "att": 43,
    "def": 46,
    "primary": "#7A8290"

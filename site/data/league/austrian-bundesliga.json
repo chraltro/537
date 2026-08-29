@@ -7,7 +7,7 @@
  "clubs": 12,
  "results_to": "2026-05-25",
  "date_approx": false,
- "generated": "2026-08-28T07:17:21+00:00",
+ "generated": "2026-08-29T17:28:30+00:00",
  "table": [
   {
    "id": "lask",
@@ -89,7 +89,7 @@
    "pts": 47,
    "pos": 5,
    "gd": -3,
-   "spi": 19.9,
+   "spi": 19.8,
    "att": 55,
    "def": 56,
    "primary": "#008E51"
@@ -140,7 +140,7 @@
    "pts": 42,
    "pos": 8,
    "gd": -3,
-   "spi": 14.5,
+   "spi": 14.4,
    "att": 50,
    "def": 54,
    "primary": "#7A8290"

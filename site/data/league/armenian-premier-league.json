@@ -7,7 +7,7 @@
  "clubs": 11,
  "results_to": "2025-05-28",
  "date_approx": false,
- "generated": "2026-08-28T07:17:21+00:00",
+ "generated": "2026-08-29T17:28:31+00:00",
  "table": [
   {
    "id": "noah",
@@ -38,7 +38,7 @@
    "pts": 66,
    "pos": 2,
    "gd": 47,
-   "spi": 9.6,
+   "spi": 9.5,
    "att": 51,
    "def": 50,
    "primary": "#7A8290"

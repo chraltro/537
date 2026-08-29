@@ -156,7 +156,7 @@ FIRST_BRIDGED_SEASON = "2012-13"
 
 
 def trajectory(corpus: europe.Corpus, ref_date: dt.date | None = None,
-               *, quiet: bool = True) -> dict[str, list]:
+               *, live_fit=None, quiet: bool = True) -> dict[str, list]:
     """Every club's SPI at the start of every season, on one scale.
 
     The club pages used to draw this from each league's own fit, which made the
@@ -205,9 +205,17 @@ def trajectory(corpus: europe.Corpus, ref_date: dt.date | None = None,
                     domestic[t] = domestic.get(t, 0) + 1
                 if t not in last or m.date > last[t]:
                     last[t] = m.date
-        fit = ratings.fit_pooled(past, pool, ref, group_of=corpus.group_of,
-                                 club_league=corpus.club_leagues(),
-                                 default_group=europe.EUROPE)
+        # The live point must be THE fit the ranking quotes, not a twin of it.
+        # Two optimisations of the same model land within tolerance of each
+        # other, and tolerance is enough to flip a 0.1 rounding: Stuttgart's
+        # line once ended at 53.6 under a page quoting 53.7 because this fitted
+        # its own copy of the fit `build` was handed.
+        if year == live and live_fit is not None:
+            fit = live_fit
+        else:
+            fit = ratings.fit_pooled(past, pool, ref, group_of=corpus.group_of,
+                                     club_league=corpus.club_leagues(),
+                                     default_group=europe.EUROPE)
         a_bar, d_bar, _ = _recentre(fit, pool, corpus.club_leagues(),
                                     played, last, ref)
         home = fit.home_advantage(europe.EUROPE)

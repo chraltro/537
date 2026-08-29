@@ -7,7 +7,7 @@
  "clubs": 16,
  "results_to": "2025-05-25",
  "date_approx": false,
- "generated": "2026-08-28T07:17:21+00:00",
+ "generated": "2026-08-29T17:28:30+00:00",
  "table": [
   {
    "id": "slavia-praha",
@@ -106,7 +106,7 @@
    "pts": 49,
    "pos": 6,
    "gd": 8,
-   "spi": 17.3,
+   "spi": 17.4,
    "att": 50,
    "def": 57,
    "primary": "#7A8290"
