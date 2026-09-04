@@ -49,7 +49,7 @@ HOME = "https://chraltro.github.io/537/"
 LEAGUE_PAGES = ("index.html", "matches.html", "team.html", "races.html",
                 "simulator.html", "review.html", "method.html")
 #: Pages that are not scoped to a competition at all.
-SITE_PAGES = ("rankings.html", "compare.html", "projection.html")
+SITE_PAGES = ("rankings.html", "compare.html", "projection.html", "week.html")
 
 #: How far ahead a fixture gets its own page. Two weeks is one international
 #: break's worth of fixtures: far enough that a link shared today still resolves

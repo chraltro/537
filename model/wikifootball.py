@@ -556,7 +556,10 @@ def read(assoc: str, reg: TeamRegistry, season: str):
     seen = False
     got = None
     for i in range(len(TITLES[assoc])):
-        got = fetch.get(url(assoc, season, i), required=False, tries=2)
+        # One attempt, per the note in `fetch.get`: 41 leagues x several
+        # candidate article titles is ~150 URLs, and the second attempt on
+        # each of them was the single largest cost in the whole build.
+        got = fetch.get(url(assoc, season, i), required=False, tries=1)
         if not got:
             continue
         seen = True

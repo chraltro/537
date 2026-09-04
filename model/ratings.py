@@ -168,12 +168,13 @@ def _fit_core(n, hi, ai, y_h, y_a, w, ridge, x0=None):
         nll += ridge * float(np.sum(att ** 2) + np.sum(dfn ** 2))
         rh = w * (y_h - lh)
         ra = w * (y_a - la)
-        g_att = np.zeros(n)
-        g_dfn = np.zeros(n)
-        np.add.at(g_att, hi, -rh)
-        np.add.at(g_att, ai, -ra)
-        np.add.at(g_dfn, ai, rh)
-        np.add.at(g_dfn, hi, ra)
+        # `np.bincount`, not `np.add.at`: the same scatter-add, 5-20x faster,
+        # and the profile put 21s of a single-league build in `np.add.at`
+        # across 55,090 calls to these two gradients.
+        g_att = -(np.bincount(hi, weights=rh, minlength=n)
+                  + np.bincount(ai, weights=ra, minlength=n))
+        g_dfn = (np.bincount(ai, weights=rh, minlength=n)
+                 + np.bincount(hi, weights=ra, minlength=n))
         g_att += 2 * ridge * att
         g_dfn += 2 * ridge * dfn
         grad = np.concatenate([g_att, g_dfn, [-np.sum(rh) - np.sum(ra)], [-np.sum(rh)]])
@@ -187,10 +188,18 @@ def _fit_core(n, hi, ai, y_h, y_a, w, ridge, x0=None):
                    options={"maxiter": 500, "ftol": 1e-10})
     x = res.x
     att, dfn = x[:n], x[n:2 * n]
-    # Identifiability: attack and defence are only defined up to a shift.
-    att = att - att.mean()
-    dfn = dfn - dfn.mean()
-    return att, dfn, float(x[2 * n]), float(x[2 * n + 1])
+    # Identifiability: attack and defence are only defined up to a shift -- but
+    # only if the intercept absorbs it. lambda = exp(mu + att_i - dfn_j + home),
+    # so shifting att by -a_bar and dfn by -d_bar multiplies every lambda by
+    # exp(d_bar - a_bar) unless mu moves the other way. The ridge pulls both
+    # sets toward zero rather than toward their own means, so the shift is
+    # small but never zero: measured on the 2026-09 Premier League fit (18,768
+    # matches, 63 clubs) it was exp(d_bar - a_bar) = 1.004299, i.e. every
+    # published lambda, xG, score grid and season goal total sat 0.43% above
+    # the MLE. `_fit_pooled_core` has always done this; this one did not.
+    a_bar, d_bar = float(att.mean()), float(dfn.mean())
+    return (att - a_bar, dfn - d_bar,
+            float(x[2 * n]) + a_bar - d_bar, float(x[2 * n + 1]))
 
 
 # --------------------------------------------------------------------------
@@ -255,12 +264,10 @@ def _fit_pooled_core(n, hi, ai, y_h, y_a, w, gi, n_groups, li, n_leagues,
 
         rh = w * (y_h - lh)
         ra = w * (y_a - la)
-        g_att = np.zeros(n)
-        g_dfn = np.zeros(n)
-        np.add.at(g_att, hi, -rh)
-        np.add.at(g_att, ai, -ra)
-        np.add.at(g_dfn, ai, rh)
-        np.add.at(g_dfn, hi, ra)
+        g_att = -(np.bincount(hi, weights=rh, minlength=n)
+                  + np.bincount(ai, weights=ra, minlength=n))
+        g_dfn = (np.bincount(ai, weights=rh, minlength=n)
+                 + np.bincount(hi, weights=ra, minlength=n))
         # The league mean moves every club in that league together, so its
         # gradient is the sum of theirs -- which is also why a league with no
         # European match is free to drift: nothing outside it constrains the sum.
@@ -304,6 +311,37 @@ def fit_pooled(matches: list[Match], teams: list[str], ref_date, *,
     blending a shot-fitted rating for one fifth of the clubs would put those
     clubs on a different scale from the rest -- exactly the disease this fit is
     meant to cure.
+
+    **A measured negative result, 2026-09-04, recorded so it is not tried
+    twice.** The known anomaly in this fit is that Bodø/Glimt outranks Napoli
+    and AC Milan, and the proposed cause was circularity: thirteen associations
+    have more than half their European evidence from one club, so that club is
+    shrunk toward a league mean its own results define. The proposed fix was a
+    second ridge on the league means, weighted by the inverse Simpson index of
+    how concentrated each league's European evidence is. Both it and a
+    leave-one-out variant (a club that supplies its league's continental record
+    is coupled to that league's mean by `1 - its share` rather than by 1) were
+    implemented and fitted over the whole corpus:
+
+    * The concentration weight barely separates the leagues it was meant to
+      separate. Norway's cross-league evidence weighs 22.5 spread over an
+      effective 3.3 clubs; Serie A's weighs 111.4 over 15.5. The ratio of the
+      two penalties is 6.83 to 7.18 -- the same number.
+    * Shrinking league means toward the corpus centroid *compresses the scale*,
+      which moves a weak league UP. Bodø/Glimt went 52.3 -> 53.5 while Napoli
+      went 51.7 -> 52.1: the gap the change was meant to close widened.
+    * The leave-one-out coupling changed the ranking by less than 0.1 SPI
+      anywhere, which says the mechanism is not doing the damage: at
+      `RIDGE = 0.02` against Bodø/Glimt's ~200 weighted matches the deviation
+      ridge is not binding, so the club is not meaningfully "shrunk toward
+      itself" in the first place.
+
+    So the anomaly is not this. What is left as the live hypothesis, and what
+    the audit's own experiment 1 already pointed at, is that `RIDGE` has never
+    been searched *for the pooled fit* -- 0.02 was chosen on a single league of
+    18,768 matches, and here it is the parameter doing all the cross-league
+    work. That is a search, not a fix, and it wants its own evaluation against
+    `backtest.run_european` rather than against one hand-checked pair of clubs.
     """
     n = len(teams)
     groups = sorted({group_of(m) for m in matches})
@@ -414,9 +452,8 @@ def fit(matches: list[Match], teams: list[str], ref_date, *,
     # Only blend for clubs that actually have shot data. Championship matches
     # come from a goals-only feed, so blending a promoted club toward a rating
     # fitted on no evidence would quietly drag it to league average.
-    seen = np.zeros(n)
-    np.add.at(seen, shi, sw)
-    np.add.at(seen, sai, sw)
+    seen = (np.bincount(shi, weights=sw, minlength=n)
+            + np.bincount(sai, weights=sw, minlength=n))
     coverage = np.clip(seen / max(np.median(seen[seen > 0]) * 0.25, 1e-9), 0, 1)
     g = goals_weight + (1 - goals_weight) * (1 - coverage)
 

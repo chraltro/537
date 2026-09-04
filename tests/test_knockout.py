@@ -11,6 +11,8 @@ import datetime as dt
 import os
 import sys
 
+import math
+
 import numpy as np
 import pytest
 
@@ -50,14 +52,55 @@ def test_second_leg_at_home_is_worth_something_but_not_much():
     assert knockout.two_legged(f2, "a", "b") > 0.75
 
 
-def test_extra_time_is_shorter_and_quieter_than_ninety_minutes():
+def test_extra_time_is_a_third_of_a_match():
     w, d, l = knockout._extra_time(1.5, 1.2, 0.0)
     assert abs(w + d + l - 1) < 1e-9
     from model.simulate import outcome_probs, score_matrix
     _, d90, _ = outcome_probs(score_matrix(1.5, 1.2, 0.0))
-    # Thirty minutes at 85% tempo: many more goalless halves than a full match.
-    assert d > d90 + 0.25
-    assert knockout.ET_FRACTION * knockout.ET_TEMPO < 0.35
+    # Thirty minutes: far more of them end level than a full match does.
+    assert d > d90 + 0.20
+    # Half an hour of football, and no more than that. The tempo multiplier is
+    # a measurement now (see the next test), but it can never turn thirty
+    # minutes into more than a third of a match.
+    assert knockout.ET_FRACTION * knockout.ET_TEMPO <= 1.0 / 3 + 1e-12
+
+
+#: What the corpus says, counted over every season of
+#: `openfootball/champions-league` and all six competitions in it: 149 ties
+#: reached extra time and 70 of those went to penalties.
+ET_TIES, ET_SHOOTOUTS = 149, 70
+#: And of those 70 shootouts the second-leg host won 34 -- 0.486 against a fair
+#: coin, z = -0.24. The 50/50 assumption is a judgement call that turned out to
+#: be right, and nothing recorded that until this line.
+SHOOTOUT_HOME = 34
+
+
+def test_extra_time_tempo_matches_the_corpus():
+    """P(penalties | extra time) implied by ET_TEMPO, against 70/149 observed.
+
+    The constant used to be 0.85 on the argument that extra time is quieter
+    than open play. At a typical Champions League knockout lambda pair that
+    implies 0.535 of extra times ending level, and the corpus says 0.470 -- a
+    1.6 sd miss in the direction that hands coin flips to the underdog. Two
+    standard deviations of a 149-tie binomial is 0.082, which is the tolerance
+    here: the test is a floor on honesty, not a claim of precision.
+    """
+    obs = ET_SHOOTOUTS / ET_TIES
+    sd = math.sqrt(obs * (1 - obs) / ET_TIES)
+    for lh, la in ((1.45, 1.25), (1.5, 1.2), (1.4, 1.4)):
+        _, d, _ = knockout._extra_time(lh, la, 0.0)
+        assert abs(d - obs) < 2 * sd, (lh, la, d, obs)
+
+
+def test_shootouts_are_a_coin_flip_the_corpus_agrees_with():
+    """34 of 70 is not distinguishable from a half, so the model uses a half."""
+    p = SHOOTOUT_HOME / ET_SHOOTOUTS
+    sd = math.sqrt(0.25 / ET_SHOOTOUTS)
+    assert abs(p - 0.5) < 2 * sd
+    # And the code really does use a half: two identical clubs, level after
+    # extra time, must come out at exactly 0.5.
+    f = ratings.Fit(["a", "b"], np.zeros(2), np.zeros(2), np.log(1.35), 0.0, 0.0)
+    assert knockout.one_off(f, "a", "b", neutral=True) == pytest.approx(0.5, abs=1e-12)
 
 
 def test_no_away_goals():

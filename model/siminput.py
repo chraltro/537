@@ -39,13 +39,16 @@ def _standings(fixtures, teams: list[str]) -> dict[str, dict]:
 
 
 def write_sim_input(fit, fixtures, teams, adj, meta, path, *,
-                    league: leagues.League | None = None) -> dict:
+                    league: leagues.League | None = None,
+                    sharpen: float = 1.0) -> dict:
     """Write sim_input.json: the standing table plus every fixture's expectation.
 
     Unplayed fixtures carry the two Poisson means; played ones carry the score.
     Nothing else, because this file is fetched before the page can draw anything
     -- except the three league shape numbers, so the worker can draw the European
-    and relegation lines without a second request or a hardcoded constant.
+    and relegation lines without a second request or a hardcoded constant, and
+    the calibration exponent, without which the worker's table would disagree
+    with the published one.
     """
     lg = league or leagues.DEFAULT
     table = _standings(fixtures, teams)
@@ -77,6 +80,12 @@ def write_sim_input(fit, fixtures, teams, adj, meta, path, *,
     payload = {
         "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "rho": round(float(fit.rho), 6),
+        # The league's fitted calibration exponent (see `simulate.sharpen_probs`
+        # and `backtest.fit_sharpen`). The published forecast applies it to
+        # every match's home/draw/away probabilities, so a worker that samples
+        # straight off `lh`/`la` and ignores this will drift from the table on
+        # the page by exactly the size of the correction. 1.0 means none.
+        "sharpen": round(float(sharpen), 4),
         "ucl_places": lg.ucl_places,
         "releg_places": lg.releg_places,
         "n_teams": lg.n_teams,

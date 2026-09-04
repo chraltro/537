@@ -149,7 +149,11 @@ class League:
         if self.kind in ("cup", "promotion"):
             row["advance_direct"] = self.advance_direct
             row["advance_playoff"] = self.advance_playoff
-        if self.ready_note:
+        # Only while the league is *not* ready. It is the sentence the switcher
+        # shows in place of a forecast ("League-phase draw: 27 August"), and a
+        # ready league shipping it left a note about a draw that has already
+        # happened in published JSON that the feed and the sitemap builder read.
+        if self.ready_note and not ready:
             row["ready_note"] = self.ready_note
         return row
 

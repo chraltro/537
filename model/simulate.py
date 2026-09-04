@@ -36,9 +36,58 @@ def outcome_probs(m: np.ndarray) -> tuple[float, float, float]:
     return home, draw, away
 
 
-def match_report(fit: Fit, home: str, away: str, adj: dict[str, float] | None = None) -> dict:
+#: The three outcome classes of a score grid, as an index into the flattened
+#: (MAXG+1)x(MAXG+1) matrix: 0 home win, 1 draw, 2 away win. Precomputed
+#: because the season simulation reweights by it once per scenario.
+_GI, _GJ = np.meshgrid(np.arange(MAXG + 1), np.arange(MAXG + 1), indexing="ij")
+OUTCOME_CLASS = np.where(_GI > _GJ, 0, np.where(_GI == _GJ, 1, 2))
+
+
+def sharpen_probs(p, k: float):
+    """`p ** k`, renormalised: the one-parameter calibration of a 1X2 forecast.
+
+    k > 1 pushes probabilities away from the base rate (the model is
+    under-confident), k < 1 pulls them toward it (over-confident), k = 1 is the
+    identity. It is the only family that can fix the shape the reliability
+    curves in `backtest.calibration` actually show -- every bin above 0.5
+    under-predicted and the 0.1-0.2 bin over-predicted -- with a single number
+    that costs nothing at prediction time and is visible in the published
+    backtest rather than being a hidden thumb on the scale.
+
+    Fitted per league, on that league's own earlier seasons: the Premier League
+    wants 1.2 and the Belgian Pro League wants 0.8, so one global constant
+    would help one and hurt the other. See `backtest.fit_sharpen`.
+    """
+    if k == 1.0:
+        return p
+    q = np.asarray(p, float) ** float(k)
+    return q / q.sum(axis=-1, keepdims=True)
+
+
+def sharpen_grid(m: np.ndarray, k: float) -> np.ndarray:
+    """Reweight a score grid so its 1X2 margin is `sharpen_probs(p, k)`.
+
+    The calibration is measured on match outcomes, so it is applied to those
+    three numbers and the conditional distribution of scorelines *within* each
+    outcome is left exactly as the Dixon-Coles grid had it. That keeps the grid,
+    the top scorelines, over-2.5 and both-teams-to-score consistent with the
+    win/draw/loss probabilities printed next to them, which they would not be
+    if the three were sharpened and the grid were not.
+    """
+    if k == 1.0:
+        return m
+    cls = OUTCOME_CLASS[:m.shape[0], :m.shape[1]]
+    p = np.array([float(m[cls == c].sum()) for c in range(3)])
+    q = sharpen_probs(p, k)
+    scale = np.where(p > 1e-12, q / np.maximum(p, 1e-12), 0.0)
+    out = m * scale[cls]
+    return out / out.sum()
+
+
+def match_report(fit: Fit, home: str, away: str, adj: dict[str, float] | None = None,
+                 *, sharpen: float = 1.0) -> dict:
     lh, la = _lambdas(fit, home, away, adj)
-    m = score_matrix(lh, la, fit.rho)
+    m = sharpen_grid(score_matrix(lh, la, fit.rho), sharpen)
     ph, pd, pa = outcome_probs(m)
     flat = m.flatten()
     order = np.argsort(flat)[::-1][:6]
@@ -91,6 +140,7 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
                     leverage: bool = False,
                     events: tuple[str, ...] | None = None,
                     keep_orders: bool = False,
+                    sharpen: float = 1.0,
                     curves: bool = True) -> dict:
     """Play the rest of the season `n_sims` times.
 
@@ -102,6 +152,10 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
     freshest result is fifteen months old gets a wider interval than one playing
     every week. `events` names the three leverage events; a cup's league phase
     swings qualification rather than the title, so it passes `CUP_EVENTS`.
+
+    `sharpen` is the per-league calibration exponent (see `sharpen_probs`),
+    applied to each simulated fixture's outcome probabilities so the table the
+    simulation produces is built from the same numbers the match pages print.
 
     `curves` additionally tallies, for every club, how often each of the three
     events happened *conditional on the club's own final points total*. That is
@@ -173,6 +227,15 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
     # it finished, which is the opposite of the truth.
     orders_out = (np.empty((scenarios * per, n), dtype=np.int16)
                   if keep_orders else None)
+    # Which scenario -- which draw of "how good is everyone really" -- each
+    # simulated season came from, and the draws themselves. A knockout bracket
+    # played on top of these tables has to use the same rating shock the table
+    # was produced under, or the club that finished top because its true rating
+    # is higher goes into the last 16 at its point estimate again and four
+    # rounds compound a certainty the league phase never had.
+    scen_of = (np.empty(scenarios * per, dtype=np.int32)
+               if keep_orders else None)
+    shocks_out = (np.zeros((scenarios, n)) if keep_orders else None)
     gd_sum = np.zeros(n)
     # Conditional tallies for match importance: for every remaining fixture and
     # every possible result, how often each club ends up champion / in the top
@@ -193,11 +256,14 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
     team_off = np.arange(n) * n_pts
     kk = np.arange(MAXG + 1)
     lgam = np.array([0.0] + list(np.cumsum(np.log(np.arange(1, MAXG + 1)))))
+    cls_flat = OUTCOME_CLASS.ravel()
     cursor = 0
 
-    for _ in range(scenarios):
+    for scen in range(scenarios):
         # One draw of "how good is everyone really", held fixed for `per` seasons.
         shock = rng.normal(0.0, rating_sd, n) if any_sd else np.zeros(n)
+        if shocks_out is not None:
+            shocks_out[scen] = shock
         lh = lh0 * np.exp(shock[hi] / 2 - shock[ai] / 2)
         la = la0 * np.exp(shock[ai] / 2 - shock[hi] / 2)
 
@@ -209,6 +275,16 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
             grid *= tau(gi, gj, lh[:, None, None], la[:, None, None], fit.rho)
             flat = grid.reshape(len(remaining), -1)
             flat /= flat.sum(axis=1, keepdims=True)
+            if sharpen != 1.0:
+                # Same reweighting as `sharpen_grid`, vectorised over every
+                # remaining fixture at once: the 1X2 margin is sharpened and
+                # the scoreline distribution inside each outcome is untouched.
+                p3 = np.stack([flat[:, cls_flat == c].sum(axis=1)
+                               for c in range(3)], axis=1)
+                q3 = sharpen_probs(p3, sharpen)
+                sc = np.where(p3 > 1e-12, q3 / np.maximum(p3, 1e-12), 0.0)
+                flat = flat * sc[:, cls_flat]
+                flat /= flat.sum(axis=1, keepdims=True)
             cdf = np.cumsum(flat, axis=1)
 
             u = rng.random((per, len(remaining)))
@@ -254,13 +330,21 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
                 np.add.at(h2h, (slice(None), ai * n + hi), aw)
             h2h = h2h.reshape(per, n, n)
             same = (pts[:, :, None] == pts[:, None, :])
-            mini = (h2h * same).sum(axis=2)
+            mini_key = (h2h * same).sum(axis=2)
         else:
-            mini = 0.0
-        # A genuine tie is settled by a play-off, so break it at random here.
-        key = (pts * 1e12 + mini * 1e8 + (gd + 200) * 1e4 + gf * 1e0
-               + rng.random((per, n)) * 1e-3)
-        order = np.argsort(-key, axis=1)          # order[s, r] = team finishing r-th
+            mini_key = np.zeros((per, n))
+        # A genuine tie is settled by a play-off, so break it at random here --
+        # in a lexsort rather than in one packed float64 key. The packed key was
+        # `pts * 1e12 + ... + rng.random(...) * 1e-3`, and at 1.14e14 the ULP is
+        # 0.0156: the random term was three orders of magnitude below the
+        # smallest representable difference and was discarded entirely, so every
+        # dead-level tie went to `np.argsort`'s stable order, which is the order
+        # of `teams`, which is alphabetical by club id. Sorting on the columns
+        # themselves has no precision to lose.
+        rand = rng.random((per, n))
+        # Ascending by the last key first, so reverse for the finishing order.
+        order = np.ascontiguousarray(
+            np.lexsort((rand, gf, gd, mini_key, pts), axis=1)[:, ::-1])
         # bincount, not fancy-index +=: repeated (team, position) pairs across the
         # seasons in this scenario must accumulate, and `+= 1` would count each once.
         flat_idx = order.ravel() * n + np.tile(np.arange(n), per)
@@ -269,6 +353,7 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
         pos_pts[cursor:cursor + per] = np.take_along_axis(pts, order, axis=1)
         if orders_out is not None:
             orders_out[cursor:cursor + per] = order
+            scen_of[cursor:cursor + per] = scen
         gd_sum += gd.sum(axis=0)
         cursor += per
 
@@ -311,12 +396,27 @@ def simulate_season(fit: Fit, fixtures, teams: list[str], *,
         "europa": p[:, ucl:ucl + europa].sum(axis=1),
         "relegation": p[:, -releg:].sum(axis=1),
         "n_sims": total,
+        "events": list(events),
         "lines": _lines(pos_pts[:total], lg),
         "curves": (_curves(cur_hits, cur_n, teams, n_pts, total, events)
                    if curves else None),
         "orders": orders_out[:total] if orders_out is not None else None,
+        "scenario": scen_of[:total] if scen_of is not None else None,
+        "shocks": shocks_out,
         "leverage": (_leverage(lev_hits, lev_n, remaining, teams, events)
                      if leverage else None),
+        # The same conditional tallies the leverage score is squeezed out of,
+        # kept as probabilities: P(club c reaches event e | this match ends
+        # home / draw / away). `rooting.json` is the rest of that question --
+        # what a supporter of a club NOT playing should want to happen -- and
+        # recomputing it would mean a second set of conditional simulations.
+        "conditional": (_conditional(lev_hits, lev_n, remaining, teams, events)
+                        if leverage else None),
+        "unconditional": (p[:, :lev_top].sum(axis=1),
+                          p[:, :lev_qual].sum(axis=1),
+                          p[:, n - lev_out:].sum(axis=1)) if leverage else None,
+        "remaining": [(f.home, f.away, f.matchday, f.date.isoformat())
+                      for f in remaining] if leverage else None,
     }
 
 
@@ -375,6 +475,31 @@ def _curves(hits, counts, teams, n_pts, total, events) -> list[dict]:
             row[name] = [round(float(hits[lo + p, e_i] / cnt[p]), 4) for p in keep]
         out.append(row)
     return out
+
+
+def _conditional(hits, counts, remaining, teams, events):
+    """P(event | result) for every remaining fixture, club and event.
+
+    Shape (3, n_remaining, n_teams, 3): the first axis is the match result
+    (home win / draw / away win), the last the three events. A bin with no
+    simulated seasons in it -- a result a match essentially cannot produce --
+    comes back as `nan` and not as zero, because the honest reading of "this
+    never happened in fifty thousand seasons" is "this tells us nothing", and a
+    caller that treated it as a probability would publish a swing of the club's
+    whole title chance off an empty cell. `run.write_rooting` drops them.
+    """
+    if hits is None or not len(remaining):
+        return None
+    n = len(teams)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        probs = hits / np.maximum(counts, 1)[:, :, None]
+    probs = probs.reshape(3, len(remaining), n, len(events))
+    empty = counts <= 0
+    if empty.any():
+        for k in range(3):
+            for m in np.nonzero(empty[k])[0]:
+                probs[k, m] = np.nan
+    return probs
 
 
 #: Leverage events. Domestic leagues swing title/UCL/relegation; a cup's

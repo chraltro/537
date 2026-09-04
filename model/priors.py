@@ -46,7 +46,10 @@ PL_FALLBACK = {
 
 #: Bump when the meaning of a cached calibration changes, so a stale file is
 #: recomputed instead of being read with a key it never had.
-CAL_VERSION = 3
+#: 4: the promoted-club slope band closed to 1.0 and an out-of-band fit with
+#: fewer than CLAMP_MIN_PAIRS pairs now falls back entirely, so every cached
+#: file written under version 3 carries a correction this code would not make.
+CAL_VERSION = 4
 
 #: Earliest season pair the calibration will use. It exists because a fit needs
 #: history behind it, not because 2013 is special -- and capping every league at
@@ -106,6 +109,14 @@ def _centred_net(fit: ratings.Fit, teams: list[str]) -> dict[str, float]:
 #: preseason differences rather than regressing them, which contradicts every
 #: measurement here -- the Premier League's promoted slope is 0.36 over 53 cases.
 #:
+#: A promoted club is capped at exactly 1 for the reason the paragraph above
+#: gives and the old 1.25 ceiling contradicted: a slope above 1 says a club's
+#: second-tier edge is *amplified* by promotion, which no measurement here
+#: supports and which is the direction that hurts when it is wrong. The
+#: Primeira Liga measured 2.01 over eight pairs and 1.25 clamped it to 1.25,
+#: handing its two promoted clubs +0.60 goals a game and sixth and seventh
+#: place out of eighteen with 0.7% and 2.5% relegation risk.
+#:
 #: A relegated club is capped at exactly 1, meaning "carry the rating across
 #: unchanged". The Championship measures 1.26 over 42 cases, which is tempting
 #: and which the first version of this admitted -- and it produced a 90% chance
@@ -114,8 +125,16 @@ def _centred_net(fit: ratings.Fit, teams: list[str]) -> dict[str, float]:
 #: [0.77, 1.71]: the estimate is not distinguishable from 1, and amplification is
 #: the direction that hurts when it is wrong. So the cap is the theory's value,
 #: not the sample's, and `measured_slope` is published so the gap is visible.
-SLOPE_BAND = {"continuing": (0.02, 1.25), "promoted": (0.02, 1.25),
+SLOPE_BAND = {"continuing": (0.02, 1.25), "promoted": (0.02, 1.00),
               "relegated": (0.02, 1.00)}
+
+#: Below this many pairs, an out-of-band slope is not clamped but discarded
+#: entirely -- slope *and* intercept. Clamping keeps an intercept that was
+#: measured under the rejected slope, which for the Primeira Liga's eight pairs
+#: meant a +0.58 intercept fitted alongside a slope of 2.01 surviving next to a
+#: slope of 1.0. Eight pairs is not a measurement; twenty is at least an
+#: estimate, and above it the intercept is worth keeping.
+CLAMP_MIN_PAIRS = 20
 
 
 def regress(pairs: list[tuple[float, float]], key: str, source: str,
@@ -132,7 +151,11 @@ def regress(pairs: list[tuple[float, float]], key: str, source: str,
     slope of 2.0, and applying it would double every promoted club's rating gap
     instead of shrinking it.
     """
-    fb = PL_FALLBACK[fallback or key]
+    # `.get`, because PL_FALLBACK has no "relegated" entry: the only caller
+    # that passes that key passes `fallback="continuing"` too, and a future one
+    # that forgets should get the continuing constants rather than a KeyError
+    # in the middle of a build.
+    fb = PL_FALLBACK.get(fallback or key, PL_FALLBACK["continuing"])
     if len(pairs) < MIN_PAIRS:
         return {**fb, "n": len(pairs), "reason": "too few pairs"}
     x = np.array([p[0] for p in pairs])
@@ -147,6 +170,14 @@ def regress(pairs: list[tuple[float, float]], key: str, source: str,
                 "measured_slope": round(float(slope), 4),
                 "reason": f"measured slope {slope:.2f} below {lo}"}
     if slope > hi:
+        if len(pairs) < CLAMP_MIN_PAIRS:
+            # Too few pairs to keep anything from. The intercept was measured
+            # alongside the rejected slope, so keeping it while replacing the
+            # slope publishes a line that was never fitted to anything.
+            return {**fb, "n": len(pairs),
+                    "measured_slope": round(float(slope), 4),
+                    "reason": f"measured slope {slope:.2f} out of band on "
+                              f"{len(pairs)} pairs; fell back entirely"}
         # Clamp rather than discard. The intercept was measured on the right
         # population and is worth keeping; only the slope is being pulled back
         # to a value its own confidence interval comfortably contains.
@@ -304,7 +335,13 @@ def market_weight(matches_played: int, league: leagues.League | None = None) -> 
     """
     lg = league or leagues.DEFAULT
     mw = matches_played / lg.n_teams * 2.0
-    frac = max(0.0, 1.0 - mw / config.MARKET_DECAY_MW)
+    # Ten matchweeks, or the whole competition if it is shorter. The Champions
+    # League league phase is eight matchdays: decaying over ten left the
+    # preseason anchor still carrying 0.65 x 0.2 = 0.13 into the knockout,
+    # months after the last result it was meant to bridge to had been played.
+    rounds = lg.n_matches * 2.0 / lg.n_teams
+    span = min(config.MARKET_DECAY_MW, rounds) if rounds > 0 else config.MARKET_DECAY_MW
+    frac = max(0.0, 1.0 - mw / span)
     return config.MARKET_WEIGHT * frac
 
 

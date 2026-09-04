@@ -50,6 +50,13 @@ EURO_FILES: dict[str, tuple[str, ...]] = {
     "2023-24": ("cl", "el", "conf"),
     "2024-25": ("cl", "el", "conf", "clq", "elq", "confq"),
     "2025-26": ("cl", "clq", "elq", "confq"),
+    #: The season under forecast. It has to be here before a ball is kicked:
+    #: `load_competitions` walks this table, so a season absent from it can
+    #: never enter the corpus however many results upstream publishes, and the
+    #: ratings would stay frozen at the previous season's final all year.
+    #: `tests/test_europe.py` pins `config.SEASON in EURO_FILES` so the next
+    #: rollover cannot repeat it.
+    "2026-27": ("cl",),
 }
 
 #: The competitions whose matches are European rather than domestic. Used for
@@ -524,6 +531,30 @@ def load_cup_fixtures(reg: TeamRegistry, season: str, comp: str = "cl",
     return ours, meta
 
 
+def our_played(reg: TeamRegistry, season: str = config.SEASON,
+               comp: str = "cl") -> list[Match]:
+    """Played league-phase matches from OUR committed fixture file.
+
+    `data/europe/fixtures-{season}.txt` is the primary source for the current
+    season's league phase, because openfootball published the last three of
+    them +3, +68 and +208 days after the draw and never published two of them
+    at all. That makes it the only place a 2026-27 result exists on the morning
+    after matchday 1 -- and the rating fit, the global ranking and the club
+    trajectories all need it there, not just the cup page. No fetching: this is
+    a file in the repository.
+    """
+    path = our_fixture_path(season)
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return []
+    return [m for m in parse_openfootball_euro(text, season, reg, comp)
+            if m.played and m.stage in (None, "league")]
+
+
 def load_replay_fixtures(reg: TeamRegistry, season: str, comp: str = "cl"
                          ) -> tuple[list[Match], dict]:
     """A finished season's league phase, replayed as if it were the fixture list.
@@ -650,6 +681,35 @@ class Corpus:
                 self.matches.append(m)
         return self
 
+    def add_unique(self, matches: list[Match], group: str) -> int:
+        """As `add`, but never a second copy of a match already in the corpus.
+
+        The live cup build holds its own copy of this season's league phase --
+        `data/europe/fixtures-{season}.txt`, which is the primary source
+        precisely because openfootball publishes the file late or not at all --
+        and those results have to reach the rating fit the moment they are
+        played. But openfootball may publish the same match later, and a match
+        folded in twice is a match weighted twice. Identity is
+        `(season, home, away)`, which is unique inside a single round-robin
+        league phase whichever file it arrived in.
+
+        Returns how many matches were actually added.
+        """
+        seen = {(m.season, m.home, m.away) for m in self.matches}
+        n = 0
+        for m in matches:
+            if not m.played:
+                continue
+            key = (m.season, m.home, m.away)
+            if key in seen:
+                continue
+            seen.add(key)
+            if not m.comp:
+                m.comp = group
+            self.matches.append(m)
+            n += 1
+        return n
+
     #: Where the corpus starts. 2011, because that is where the UEFA files start
     #: and those matches are the only edges joining one league to another: a
     #: season with domestic results and no European ties is a set of leagues
@@ -662,6 +722,14 @@ class Corpus:
         if competitions:
             self.euro = load_competitions(self.reg, seasons, quiet=quiet)
             self.matches.extend(self.euro)
+            # ...and this season's own results, which upstream may not carry for
+            # months. Deduplicated on (season, home, away), so the day
+            # openfootball does publish them nothing is counted twice.
+            if seasons is None or config.SEASON in seasons:
+                mine = self.add_unique(our_played(self.reg), EUROPE)
+                if mine and not quiet:
+                    print(f"  · {mine} {config.SEASON} match(es) from our own "
+                          "league-phase file")
         if domestic:
             dom = load_domestic(self.reg, quiet=quiet)
             self.matches.extend(dom)

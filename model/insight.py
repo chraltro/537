@@ -126,9 +126,16 @@ def freeze_predictions(matches: list[dict], out_dir: str | None = None) -> dict:
             store = json.load(open(path)).get("frozen", {})
         except (ValueError, OSError):
             store = {}
+    # "Frozen before kick-off" has to mean the kick-off, not the feed. A match
+    # played on Saturday that openfootball has not committed by Wednesday is
+    # still unplayed as far as `m["played"]` knows, and re-freezing it on
+    # Wednesday's build stores a "pre-match" probability computed with four days
+    # of other results already in the fit. openfootball commits roughly weekly
+    # with multi-week gaps, so this is the normal case and not the edge one.
+    today = dt.date.today().isoformat()
     for m in matches:
         key = f"{m['h']}|{m['a']}"
-        if m["played"]:
+        if m["played"] or (key in store and m.get("date", "9999-99-99") <= today):
             continue                    # whatever was frozen before kick-off stands
         store[key] = {"ph": m["ph"], "pd": m["pd"], "pa": m["pa"],
                       "xgh": m["xgh"], "xga": m["xga"], "md": m["md"],

@@ -180,7 +180,11 @@ def load(assoc: str, reg: TeamRegistry,
     attached, because `model.external` resolves and gates them rather than
     letting a reader mint club ids of its own.
     """
-    text = fetch.get(url(assoc), required=False, tries=2)
+    # One attempt. This is a second feed: a host that is blocked or gone
+    # answers immediately and identically, and the retry backoff spends
+    # three seconds per URL to hear it twice. The GitHub sources keep the
+    # full four tries, whose failures really are transient.
+    text = fetch.get(url(assoc), required=False, tries=1)
     if text is None:
         raise FormatError(f"unreachable: {url(assoc)}")
 

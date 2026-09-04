@@ -41,7 +41,8 @@ import time
 import numpy as np
 
 from . import (backtest, clubmeta, config, europe, feeds, gamestate, insight, knockout,
-               leagues, priors, rankings, ratings, scale, seo, simulate, social)
+               leagues, priors, rankings, ratings, recap, scale, seo, simulate,
+               siminput, social)
 from .data import Dataset
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -74,6 +75,29 @@ def spi(fit: ratings.Fit, team: str, adj: float = 0.0) -> float:
         w, dr, _ = simulate.outcome_probs(m)
         pts += 3 * w + dr
     return float(pts / 6.0 * 100.0)
+
+
+def fit_cutoff(ref: dt.date) -> dt.date:
+    """The date `before()` is asked for, given the reference date.
+
+    `Dataset.before` and `Corpus.before` are both strictly-before, which is
+    right everywhere they are used to reconstruct what was knowable at a past
+    moment -- the backtest predicts the matches of exactly the day it cuts at,
+    and a `<=` there would train on them.
+
+    Live, it made the site disagree with itself for up to a day: a match played
+    today is already in the table, already in `base_pts` and already scored
+    against its frozen pre-kick-off forecast, but was invisible to the rating
+    fit until tomorrow. With a build every six hours, Saturday's results moved
+    no rating until Sunday.
+
+    So the live builds ask for the day *after* the reference date, which
+    includes everything reported today and nothing that has not been played.
+    The decay reference stays `ref`: a match weighted as one day old rather
+    than zero is a 0.28% difference, and the alternative is two dates that mean
+    the same thing.
+    """
+    return ref + dt.timedelta(days=1)
 
 
 def _rating_history(teams) -> dict[str, list]:
@@ -155,6 +179,178 @@ def _card_words(league: leagues.League) -> dict:
             "finish": "Projected finish",
             "topnote": f"top {league.ucl_places} qualifies",
             "posnote": "Chance of finishing in each place"}
+
+
+
+# --------------------------------------------------------------------------
+# Two derived files the site contract asks for: who to root for, and what
+# clinches what. Both are read off the simulation that has already run.
+# --------------------------------------------------------------------------
+#: The contract's positional names for the three headline events. Every
+#: competition has three and they always mean the same three *positions* --
+#: win it / qualify from the top band / go out or go down -- but they do not
+#: mean the same three things, which is the whole reason this is written down.
+#:
+#: `rooting.json` publishes the competition's OWN keys (`simulate.EVENTS` =
+#: title/ucl/releg for a league, `simulate.CUP_EVENTS` = top8/qualify/out for a
+#: cup), because those are the keys `matches.json`'s `swings` already uses and
+#: the site already labels. Publishing a cup's first event as "title" would
+#: have been actively wrong: in the league-phase simulation that event is
+#: finishing in the top eight, not winning the trophy, which is what "title"
+#: means everywhere else in the cup's own forecast.json. The contract names go
+#: alongside, in order, so a reader that wants the positional view has it.
+CONTRACT_EVENTS = ("title", "top", "out")
+
+#: Below this, an effect is not published. A club's title chance moving by four
+#: ten-thousandths on somebody else's result is not a thing to root for, and at
+#: 20 clubs x 10 matches x 3 events the rows that do not clear it are most of
+#: the file.
+ROOTING_FLOOR = 0.0005
+
+
+def _next_round(remaining: list) -> tuple[object, list[int]]:
+    """The next matchweek, and the indices of `remaining` that belong to it.
+
+    `remaining` is `sim["remaining"]`: (home, away, matchday, date) per unplayed
+    fixture, in the order the conditional tallies use. Matchday where the feed
+    has one -- a rearranged fixture belongs to the round it was scheduled in,
+    which is what a reader means by "this weekend" -- and the earliest date's
+    matches where it does not.
+    """
+    if not remaining:
+        return None, []
+    mds = [r[2] for r in remaining if r[2] is not None]
+    if mds:
+        md = min(mds)
+        return md, [i for i, r in enumerate(remaining) if r[2] == md]
+    day = min(r[3] for r in remaining)
+    return None, [i for i, r in enumerate(remaining) if r[3] == day]
+
+
+def write_rooting(out_dir: str, sim: dict, teams: list[str]) -> dict | None:
+    """`rooting.json`: what every club NOT playing wants each match to do.
+
+    The leverage score already answers "does this match matter", and it answers
+    it for the two clubs on the pitch. This is the other half of the same
+    tally: for each of next week's matches and each club not in it, how its
+    title / qualification / elimination chance moves if the match ends home
+    win, draw or away win, against its unconditional forecast.
+
+    Nothing is re-simulated. `simulate_season` already counts, for every
+    remaining fixture and every result, how often each club reached each event
+    -- that is what the leverage score is squeezed out of -- so this is the same
+    numbers divided differently.
+
+    Next matchweek only, and effects below `ROOTING_FLOOR` dropped: the full
+    matrix is every remaining fixture times every club times three events, which
+    is a megabyte of mostly zeroes for a question nobody asks in March about a
+    match in May.
+    """
+    cond = sim.get("conditional")
+    rem = sim.get("remaining")
+    base = sim.get("unconditional")
+    md, idxs = _next_round(rem or [])
+    if cond is None or not rem or base is None or not idxs:
+        # Nothing left to play. Remove any file the last build left rather than
+        # leaving last month's matchweek on the page as though it were next.
+        stale = os.path.join(out_dir, "rooting.json")
+        if os.path.exists(stale):
+            os.remove(stale)
+        return None
+    idx = {t: i for i, t in enumerate(teams)}
+    base_arr = np.stack(base, axis=1)                    # (n_teams, 3)
+    events = tuple(sim.get("events") or simulate.EVENTS)
+    rows = []
+    for m in idxs:
+        home, away, _md, date = rem[m]
+        playing = {home, away}
+        effects: dict[str, dict] = {}
+        for t in teams:
+            if t in playing:
+                continue                 # their own leverage already covers them
+            i = idx[t]
+            got = {}
+            for e, name in enumerate(events):
+                d = [float(cond[k, m, i, e] - base_arr[i, e]) for k in range(3)]
+                if any(v != v for v in d):
+                    continue             # a result no simulated season produced
+                if max(abs(v) for v in d) < ROOTING_FLOOR:
+                    continue
+                # `+ 0.0` so a rounded-away negative prints as 0.0 and not
+                # as -0.0, which is the same number and reads as a typo.
+                got[name] = [round(v, 4) + 0.0 for v in d]
+            if got:
+                effects[t] = got
+        rows.append({"h": home, "a": away, "date": date, "effects": effects})
+    payload = {
+        "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+        "md": md,
+        # This competition's own event keys -- the same three `matches.json`
+        # uses for its `swings`, so the site labels them with the code it
+        # already has.
+        "events": list(events),
+        # And the contract's positional names, in the same order, for a reader
+        # that wants "the first one is the one you win".
+        "contract_events": list(CONTRACT_EVENTS),
+        "note": ("Change in each club's probability of each event if this match "
+                 "ends home win / draw / away win, against the unconditional "
+                 "forecast, from the same simulation run. Clubs playing in the "
+                 "match are omitted. Effects below "
+                 f"{ROOTING_FLOOR} are dropped."),
+        "matches": rows,
+    }
+    json.dump(payload, open(os.path.join(out_dir, "rooting.json"), "w"),
+              separators=(",", ":"))
+    n_eff = sum(len(r["effects"]) for r in rows)
+    print(f"  → rooting.json ({len(rows)} match(es)"
+          + (f" of matchweek {md}" if md is not None else "")
+          + f", {n_eff} club effects)")
+    return payload
+
+
+def _clinch(rows: list[dict], fixtures, lines: dict[str, int]) -> None:
+    """Add a `clinch` block to every forecast row, in place.
+
+    The bound is the simple one and deliberately so: a rival's ceiling is its
+    current points plus three for each match it has left, and two rivals playing
+    each other -- which cannot both reach their ceiling -- is ignored. That
+    makes every answer here conservative: a club that this says has clinched
+    has clinched, and one that needs eleven more points may in truth need
+    fewer. The site says which bound it is.
+
+    `lines` maps the contract's three keys to how many finishing positions
+    count as success: 1 for the title, the qualification line for `top`, and
+    everything above the drop for `safe`.
+    """
+    pts = {r["id"]: r.get("cur_pts", 0) for r in rows}
+    rem = {r["id"]: 0 for r in rows}
+    for f in fixtures:
+        if f.played:
+            continue
+        for t in (f.home, f.away):
+            if t in rem:
+                rem[t] += 1
+    ceiling = {t: pts[t] + 3 * rem[t] for t in pts}
+    for r in rows:
+        t = r["id"]
+        block = {}
+        others = sorted((ceiling[o] for o in pts if o != t), reverse=True)
+        for key, k in lines.items():
+            if k <= 0:
+                continue
+            if len(others) < k:
+                block[key] = {"done": True, "need": 0}
+                continue
+            # Beat the k-th best rival ceiling and at most k-1 clubs can end
+            # above you, which is exactly the k places this line is about.
+            want = max(0, others[k - 1] + 1 - pts[t])
+            if want == 0:
+                block[key] = {"done": True, "need": 0}
+            elif want > 3 * rem[t]:
+                block[key] = {"done": False, "need": None}
+            else:
+                block[key] = {"done": False, "need": int(want)}
+        r["clinch"] = block
 
 
 def write_calendars(league: leagues.League, ms: list[dict], meta: dict,
@@ -310,7 +506,7 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
     shot_conv = ratings.fit_shot_conversion(ds.top)
     ref = max(dt.date.today(), kickoff)
     freshness = dict(ds.sources)
-    hist = ds.before(ref)
+    hist = ds.before(fit_cutoff(ref))
     # Every club in this season's fixture list is in the pool even if it has
     # never played a match the corpus can see. Belgium has no second-tier feed
     # upstream, so its three promoted clubs arrive with no record at all; the
@@ -343,6 +539,35 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
     prev_season = sorted({m.season for m in ds.top if m.season != ds.season})[-1]
     prior_net = priors.preseason_net(ds, fit, cal, teams, prev_season)
     base_adj = {t: prior_net[t] - raw_net[t] for t in teams}
+
+    # The walk-forward runs here rather than at the end of the build, because
+    # one number falls out of it that the forecast itself needs: the per-league
+    # calibration exponent. Everything it wants -- the dataset, the shot
+    # conversion, the measured priors -- is already in hand, and the file it
+    # writes is still written at the end beside the others.
+    bt = None
+    sharpen = backtest.load_sharpen(league.slug)
+    if not skip_backtest:
+        print(f"Running the walk-forward backtest (from {league.backtest_from})…")
+        bt = backtest.run(ds, cal=cal)
+        sharp = bt["sharpen"]
+        sharpen = float(sharp["k"])
+        backtest.save_sharpen(league.slug, sharp)
+        if sharp.get("held_out"):
+            h = sharp["held_out"]
+            print(f"  · calibration exponent k = {sharpen:.3f} "
+                  f"(held out on {h['n']} matches: log-loss "
+                  f"{h['log_loss']:.4f} → {h['calibrated']:.4f}, "
+                  f"gain {h['gain']:+.4f})")
+        else:
+            print(f"  · calibration exponent k = {sharpen:.3f} "
+                  f"({sharp.get('reason', '')})")
+        print(f"  · with the preseason correction "
+              f"{bt['model']['log_loss']:.4f} vs "
+              f"{bt['model_ratings_only']['log_loss']:.4f} on ratings alone")
+    elif sharpen != 1.0:
+        print(f"  · calibration exponent k = {sharpen:.3f}, from the last "
+              "backtest of this league")
 
     played = sum(1 for f in ds.fixtures if f.played)
     market = priors.load_market(priors.market_path(league))
@@ -384,7 +609,7 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
     wants_orders = bool(league.advance_playoff) or bool(league.releg_playoff_pos)
     sim = simulate.simulate_season(fit, ds.fixtures, teams, league=league,
                                    adj=adj, leverage=True, rating_sd=rating_sd,
-                                   keep_orders=wants_orders)
+                                   sharpen=sharpen, keep_orders=wants_orders)
 
     p_po_up = np.zeros(len(teams))
     p_po_down = np.zeros(len(teams))
@@ -489,7 +714,7 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
 
     ms = []
     for f in sorted(ds.fixtures, key=lambda x: (x.matchday or 0, x.date, x.home)):
-        rep = simulate.match_report(fit, f.home, f.away, adj)
+        rep = simulate.match_report(fit, f.home, f.away, adj, sharpen=sharpen)
         best = rep["top_scores"][0]
         lv = lev_by_match.get((f.home, f.away))
         ht = gamestate.half_time_report(ht_fit, f.home, f.away, adj)
@@ -533,23 +758,22 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
                                 "fixtures": sos[t]["fixtures"]} for t in teams}},
               open(os.path.join(out, "schedule.json"), "w"), separators=(",", ":"))
 
-    # Optional derived outputs; each module is owned by its feature and the
-    # pipeline must keep working whether or not it exists yet.
-    try:
-        from . import siminput
-        siminput.write_sim_input(fit, ds.fixtures, teams, adj, meta,
-                                 os.path.join(out, "sim_input.json"), league=league)
-        print("  → sim_input.json")
-    except ImportError:
-        pass
+    # Both of these used to be wrapped in `except ImportError: pass`, which was
+    # meant to make them optional and instead made them silent: an ImportError
+    # raised *inside* siminput or recap -- a renamed symbol, a bad nested
+    # import -- was swallowed with no log line while the previous run's
+    # sim_input.json and recap.json stayed on disk, so the browser's what-if
+    # worker read a stale lambda set as current. Neither guard bought anything
+    # either: both modules are imported unconditionally at the top of this file
+    # and by `build_cup` below.
+    siminput.write_sim_input(fit, ds.fixtures, teams, adj, meta,
+                             os.path.join(out, "sim_input.json"), league=league,
+                             sharpen=sharpen)
+    print("  → sim_input.json")
     names = {t: meta[t]["name"] for t in teams}
-    try:
-        from . import recap
-        recap.write_recap(os.path.join(out, "recap.json"), rows, played,
-                          names=names, words=_recap_words(league))
-        print("  → recap.json")
-    except ImportError:
-        pass
+    recap.write_recap(os.path.join(out, "recap.json"), rows, played,
+                      names=names, words=_recap_words(league))
+    print("  → recap.json")
 
     frozen = insight.freeze_predictions(ms, out)
     report = insight.season_report(ms, frozen, names)
@@ -563,6 +787,10 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
         r["xp"] = xp[r["id"]]["xp"]
         r["xp_diff"] = xp[r["id"]]["diff"]
         r["xp_played"] = xp[r["id"]]["played"]
+    _clinch(rows, ds.fixtures,
+            {"title": 1, "top": league.ucl_places,
+             "safe": league.n_teams - league.releg_places})
+    write_rooting(out, sim, teams)
     snaps = insight.append_history(rows, played, out)
     print(f"  → schedule.json, predictions.json, season_report.json "
           f"({report['n']} scored), history.json ({len(snaps)} snapshots)")
@@ -591,6 +819,7 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
         "matches_played": played,
         "matches_total": league.n_matches,
         "market_weight": round(w, 3),
+        "sharpen": round(float(sharpen), 4),
         "home_advantage": round(float(np.exp(fit.home)), 3),
         "ucl_places": league.ucl_places,
         "n_sims": int(sim["n_sims"]),
@@ -606,9 +835,7 @@ def build(league: leagues.League, *, skip_backtest: bool | None = None,
     write_calendars(league, ms, meta, teams)
     write_cards(league, payload)
 
-    if not skip_backtest:
-        print(f"Running the walk-forward backtest (from {league.backtest_from})…")
-        bt = backtest.run(ds)
+    if bt is not None:
         bt["calibration_priors"] = cal
         bt["league"] = league.slug
         bt["table"] = backtest.table_accuracy(
@@ -709,7 +936,21 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
 
     print("Fitting the pooled rating over the European corpus…")
     corpus = shared_corpus(reg, quiet=False)
-    hist = corpus.before(ref)
+    # This season's own results, into the corpus, before anything is fitted on
+    # it. `EURO_FILES` now carries 2026-27 so openfootball's copy arrives on its
+    # own -- when it arrives, which for the last three league phases was +3,
+    # +68 and +208 days after the draw, and twice never. Ours is the primary
+    # source and has to reach the fit the moment a match is played, or from
+    # matchday 1 the table shows results every rating it is computed from
+    # cannot see, and `global.json`, `ratings.json` and `trajectory.json` stay
+    # frozen at the previous season's final for the rest of the year.
+    # Deduplicated on (season, home, away) so the two copies cannot both land.
+    if not replay:
+        added = corpus.add_unique([f for f in fixtures if f.played], europe.EUROPE)
+        if added:
+            print(f"  · {added} played {season} league-phase match(es) added to "
+                  "the corpus from our own fixture file")
+    hist = corpus.before(ref if replay else fit_cutoff(ref))
     pool = sorted({m.home for m in hist} | {m.away for m in hist})
     missing = [t for t in teams if t not in set(pool)]
     if missing:
@@ -749,18 +990,37 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
     else:
         w = 0.0
 
+    # A cup's calibration exponent, if its own walk-forward has ever been long
+    # enough to fit one. `backtest.fit_sharpen` refuses below 750 scored
+    # matches and the two Swiss seasons are 378, so this is 1.0 today and will
+    # stay 1.0 until there is data -- which is the point: a correction fitted on
+    # two seasons of one competition is that competition's luck.
+    sharpen = backtest.load_sharpen(league.slug)
+    if sharpen != 1.0:
+        print(f"  · calibration exponent k = {sharpen:.3f}")
     print(f"Simulating the league phase {n_sims:,} times…")
     sim = simulate.simulate_season(fit, fixtures, teams, league=league,
                                    adj=adj, n_sims=n_sims, rating_sd=rating_sd,
                                    leverage=True, events=simulate.CUP_EVENTS,
-                                   keep_orders=True)
+                                   sharpen=sharpen, keep_orders=True)
     print("Drawing and playing the knockout…")
+    # With the league phase's own rating draws: a bracket played against one
+    # fixed tie matrix compounds four rounds of the favourite's edge with no
+    # rating uncertainty at all, while the league phase beside it resamples
+    # every scenario. See `knockout.simulate_bracket`.
     br = knockout.simulate_bracket(fit, teams, sim["orders"],
-                                   group=europe.EUROPE, adj=adj)
+                                   group=europe.EUROPE, adj=adj,
+                                   shocks=sim["shocks"], scenario=sim["scenario"])
 
     os.makedirs(out, exist_ok=True)
     meta = reg.meta
     parts = load_participants(season if not replay else None)
+    # The six table columns, from the results themselves. They used to be
+    # hardcoded to zero, so from matchday 1 every club would have shown
+    # P0 W0 D0 L0 GF0 GA0 Pts0 under a `matches_played` that said otherwise,
+    # the history snapshot would have recorded `played: 0` all season and the
+    # recap would have stayed in its preseason branch until June.
+    stand = {r["id"]: r for r in _table_from([f for f in fixtures if f.played], reg)}
     pos = sim["position"]
     direct, playoff = league.advance_direct, league.advance_playoff
     idx = {t: i for i, t in enumerate(teams)}
@@ -798,7 +1058,9 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
             "ucl": float(pos[i, :direct].sum()),
             "releg": float(pos[i, direct + playoff:].sum()),
             "pos": [round(float(x), 5) for x in pos[i]],
-            "played": 0, "w": 0, "d": 0, "l": 0, "gf": 0, "ga": 0, "cur_pts": 0,
+            **{k: (stand.get(t) or {}).get(src, 0) for k, src in
+               (("played", "pld"), ("w", "w"), ("d", "d"), ("l", "l"),
+                ("gf", "gf"), ("ga", "ga"), ("cur_pts", "pts"))},
             # A cup club's trajectory used to be empty, because the points
             # were fitted from a league's own matches and a cup has none. They
             # come from the pooled fit now, which every one of these clubs is
@@ -815,9 +1077,11 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
     ms = []
     for f in sorted(fixtures, key=lambda x: (x.matchday or 0, x.date, x.home)):
         ms.append(_match_row(fit, f, f.matchday,
-                             lev_by_match.get((f.home, f.away)), adj))
+                             lev_by_match.get((f.home, f.away)), adj,
+                             sharpen=sharpen))
     for f in sorted(knockouts, key=lambda x: (x.date, x.home)):
-        ms.append(_match_row(fit, f, KNOCKOUT_MD[f.stage], None, adj))
+        ms.append(_match_row(fit, f, KNOCKOUT_MD[f.stage], None, adj,
+                             sharpen=sharpen))
     json.dump({"matches": ms}, open(os.path.join(out, "matches.json"), "w"),
               separators=(",", ":"))
     print(f"  → matches.json ({len(ms)} rows, "
@@ -836,9 +1100,9 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
                                 "fixtures": sos[t]["fixtures"]} for t in teams}},
               open(os.path.join(out, "schedule.json"), "w"), separators=(",", ":"))
 
-    from . import siminput
     siminput.write_sim_input(fit, fixtures, teams, adj, meta,
-                             os.path.join(out, "sim_input.json"), league=league)
+                             os.path.join(out, "sim_input.json"), league=league,
+                             sharpen=sharpen)
     # The European files carry a half-time score in parentheses on every line,
     # which the parser now keeps, so a cup gets the same game-state panel as a
     # league -- built from these clubs' continental record rather than from a
@@ -863,9 +1127,11 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
         r["xp"] = xp[r["id"]]["xp"]
         r["xp_diff"] = xp[r["id"]]["diff"]
         r["xp_played"] = xp[r["id"]]["played"]
-    snaps = insight.append_history(rows, 0, out)
-    from . import recap
-    recap.write_recap(os.path.join(out, "recap.json"), rows, 0,
+    _clinch(rows, fixtures,
+            {"title": 1, "top": direct, "safe": direct + playoff})
+    write_rooting(out, sim, teams)
+    snaps = insight.append_history(rows, played_now, out)
+    recap.write_recap(os.path.join(out, "recap.json"), rows, played_now,
                       names=names, words=_recap_words(league))
     if sim.get("curves"):
         json.dump({"generated": dt.datetime.now(dt.timezone.utc)
@@ -884,6 +1150,7 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
         "matches_played": sum(1 for f in fixtures if f.played),
         "matches_total": league.n_matches,
         "market_weight": round(w, 3),
+        "sharpen": round(float(sharpen), 4),
         "home_advantage": round(float(np.exp(fit.home_advantage(europe.EUROPE))), 3),
         "ucl_places": league.ucl_places,
         "advance_direct": direct, "advance_playoff": playoff,
@@ -919,8 +1186,8 @@ def build_cup(league: leagues.League, *, replay: str | None = None,
     validate_cup(league)
 
 
-def _match_row(fit, f, md, lv, adj=None) -> dict:
-    rep = simulate.match_report(fit, f.home, f.away, adj)
+def _match_row(fit, f, md, lv, adj=None, *, sharpen: float = 1.0) -> dict:
+    rep = simulate.match_report(fit, f.home, f.away, adj, sharpen=sharpen)
     best = rep["top_scores"][0]
     return {
         "md": md, "date": f.date.isoformat(), "time": f.time,
@@ -997,6 +1264,15 @@ def validate_cup(league: leagues.League) -> None:
     fc = json.load(open(os.path.join(out, "forecast.json")))
     rows = fc["teams"]
     assert len(rows) == league.n_teams, "wrong club count"
+    # The table has to agree with the header above it. Two rows of the table
+    # move for every played match, so this is the one assertion that catches a
+    # league-phase table of zeroes sitting under "16 matches played" -- which is
+    # exactly what shipped before the columns were filled from the fixtures.
+    got = sum(t["played"] for t in rows)
+    assert got == 2 * fc["matches_played"], (
+        f"table shows {got} club-appearances against "
+        f"{fc['matches_played']} matches played")
+    assert sum(t["cur_pts"] for t in rows) <= 3 * fc["matches_played"]
     for t in rows:
         s = sum(t["pos"])
         assert abs(s - 1) < 1e-3, f"{t['id']} position distribution sums to {s}"
@@ -1906,6 +2182,13 @@ def main(argv: list[str] | None = None) -> None:
     args = ap.parse_args(argv)
 
     if args.probe:
+        # The probe's whole job is to ask the second feeds a fresh question, so
+        # it never answers one out of the persisted dead-URL cache. Only here:
+        # `build_sources` calls `probe_external` too, and clearing the cache in
+        # the middle of a build would spend the run re-learning what it already
+        # knew. See `fetch.forget_dead`.
+        from . import fetch
+        fetch.forget_dead()
         rows = probe_external()
         # A watched feed is not expected to arm: it is being probed precisely to
         # find out what it would do, and it contributes nothing either way. Only
@@ -1962,8 +2245,13 @@ def main(argv: list[str] | None = None) -> None:
                      ("coverage", build_coverage),
                      ("second feeds", build_sources),
                      ("club register", build_clubs),
-                     ("pooled ratings", build_ratings),
+                     # Shooting first: `build_ratings` reads shooting.json for
+                     # three of its nine ratings, and with the order the other
+                     # way round it read the file the PREVIOUS run wrote --
+                     # always one build stale, and absent entirely on a fresh
+                     # checkout, where it quietly proceeded with `sh = {}`.
                      ("shooting", build_shooting),
+                     ("pooled ratings", build_ratings),
                      ("retired flat files", lambda _r: drop_legacy_flat()),
                      ("feed freshness", check_feeds),
                      ("sitemap and club pages", build_seo),
@@ -1974,12 +2262,27 @@ def main(argv: list[str] | None = None) -> None:
             print(f"!! {name} failed: {exc}")
             failures.append((name, exc))
     write_manifest(ready)
+    # Cross-competition extras, last: they read the finished files of every
+    # competition plus the manifest, so nothing they need can still be being
+    # written. Optional by design -- the module is owned by another feature and
+    # a checkout without it must build exactly as before.
+    try:
+        from . import extras
+    except ImportError:
+        extras = None
+    if extras is not None:
+        try:
+            extras.build_all(OUT, ready)
+        except Exception as exc:                   # noqa: BLE001
+            print(f"!! extras failed: {exc}")
+            failures.append(("extras", exc))
     total = time.perf_counter() - t0
     print("\n--- timings ---")
     for slug, secs in timings:
         print(f"  {slug:15s} {secs:7.1f}s")
     print(f"  {'TOTAL':15s} {total:7.1f}s")
-    print(f"Manifest: {len(ready)}/{len(leagues.LEAGUES)} leagues ready "
+    print(f"Manifest: {len(ready)}/{len(leagues.LEAGUES + leagues.EUROPEAN)} "
+          f"competitions ready "
           f"({', '.join(sorted(ready))}).")
     if failures:
         raise SystemExit(f"{len(failures)} league(s) failed: "

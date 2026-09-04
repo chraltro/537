@@ -412,25 +412,55 @@ def test_thin_second_tier_falls_back_to_the_premier_league_constants():
     assert got["intercept"] == pytest.approx(0.0, abs=1e-6)
 
 
-def test_an_implausible_slope_is_clamped_not_discarded():
+def test_an_implausible_slope_is_clamped_when_there_are_pairs_behind_it():
     """Enough pairs is not the same as a believable answer. Eight seasons of a
     smaller league can fit a promoted-club slope of 3.0, which would triple a
     promoted club's rating gap instead of shrinking it.
 
-    Above the band the slope is pulled back to the ceiling and the fit is kept:
-    the intercept was measured on the right population -- promoted clubs in this
-    competition -- and throwing it away to take the Premier League's would
-    discard a good number along with a bad one. The output has to say what was
-    measured and what was done about it, so the site can too.
+    With `CLAMP_MIN_PAIRS` cases or more the slope is pulled back to the ceiling
+    and the fit is kept: the intercept was measured on the right population --
+    promoted clubs in this competition -- and throwing it away to take the
+    Premier League's would discard a good number along with a bad one. The
+    output has to say what was measured and what was done about it, so the site
+    can too.
     """
-    silly = [(0.1 * i, 0.3 * i) for i in range(-6, 6)]      # slope 3.0
+    silly = [(0.1 * i, 0.3 * i) for i in range(-15, 15)]      # slope 3.0, n=30
     got = priors.regress(silly, "promoted", "primeira-liga")
     hi = priors.SLOPE_BAND["promoted"][1]
-    assert len(silly) >= priors.MIN_PAIRS
+    assert len(silly) >= priors.CLAMP_MIN_PAIRS
     assert got["source"] == "primeira-liga"
     assert got["measured_slope"] > hi
     assert got["slope"] == pytest.approx(hi)
     assert "clamped" in got["reason"]
+
+
+def test_an_implausible_slope_on_a_handful_of_pairs_falls_back_entirely():
+    """The Primeira Liga case, which shipped for months.
+
+    Eight promoted-club pairs measured a slope of 2.01. The old code clamped the
+    slope to the ceiling and kept the intercept that had been fitted *alongside*
+    the rejected slope -- +0.58 goals a game -- which handed both promoted clubs
+    a line that was never fitted to anything, sixth and seventh of eighteen and
+    0.7% relegation risk. Below `CLAMP_MIN_PAIRS` the whole correction falls
+    back, slope and intercept together.
+    """
+    eight = [(0.1 * i, 0.201 * i) for i in range(-4, 4)]      # slope 2.01, n=8
+    got = priors.regress(eight, "promoted", "primeira-liga")
+    assert priors.MIN_PAIRS <= len(eight) < priors.CLAMP_MIN_PAIRS
+    assert got["source"] == "premier-league"
+    assert got["slope"] == priors.PL_FALLBACK["promoted"]["slope"]
+    assert got["intercept"] == priors.PL_FALLBACK["promoted"]["intercept"]
+    assert "fell back entirely" in got["reason"]
+
+
+def test_a_promoted_club_can_never_have_its_edge_amplified():
+    """A slope above 1 says promotion makes a club's second-tier edge bigger.
+
+    Nothing in this repository measures that -- the Premier League's promoted
+    slope is 0.36 over 53 cases -- and it is the direction that hurts when it is
+    wrong, so the ceiling is the theory's value and not the sample's.
+    """
+    assert priors.SLOPE_BAND["promoted"][1] <= 1.0
 
 
 def test_a_backwards_slope_is_discarded_entirely():

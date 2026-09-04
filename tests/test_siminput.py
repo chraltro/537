@@ -64,8 +64,11 @@ def written(tmp_path):
 
 def test_file_is_valid_json_with_the_expected_shape(written):
     doc = json.loads(written.read_text())
-    assert set(doc) == {"generated", "rho", "ucl_places", "releg_places",
-                        "n_teams", "teams", "fixtures"}
+    assert set(doc) == {"generated", "rho", "sharpen", "ucl_places",
+                        "releg_places", "n_teams", "teams", "fixtures"}
+    # The calibration exponent the published forecast applies, so the worker's
+    # conditional table cannot disagree with the page it is drawn on.
+    assert doc["sharpen"] == 1.0
     assert doc["rho"] == pytest.approx(-0.06)
     dt.datetime.fromisoformat(doc["generated"])          # parses, or this raises
     assert len(doc["teams"]) == len(TEAMS)

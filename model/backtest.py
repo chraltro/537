@@ -19,9 +19,133 @@ import numpy as np
 from . import config, europe, ratings
 from .data import Dataset
 from .parse import Match
-from .simulate import outcome_probs, score_matrix
+from .simulate import _lambdas, outcome_probs, score_matrix, sharpen_probs
 
 EPS = 1e-12
+
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CACHE = os.path.join(HERE, ".cache")
+
+#: Below this many scored matches a sharpening exponent is not fitted at all.
+#: One number over four thousand matches is a measurement; the same number over
+#: the three hundred and seventy-eight of the two Swiss Champions League seasons
+#: is the last two seasons' luck, and applying it would be exactly the hidden
+#: thumb on the scale this correction is meant not to be. So a cup runs at
+#: k = 1 until its own walk-forward is long enough to say otherwise.
+MIN_SHARPEN_N = 750
+
+#: How far from 1 a fitted exponent may go. The measured values are 1.18
+#: (Premier League) and 0.80 (Belgium); anything outside this band is a fit
+#: that has found something other than calibration.
+SHARPEN_BAND = (0.70, 1.40)
+
+#: The fraction of a league's scored matches, chronologically, that the honest
+#: evaluation of the exponent is fitted on. The rest is the held-out half the
+#: reported gain is measured over.
+SHARPEN_TRAIN = 0.60
+
+
+def sharpen_path(slug: str) -> str:
+    return os.path.join(CACHE, f"sharpen-{slug}.json")
+
+
+def load_sharpen(slug: str) -> float:
+    """The exponent the last backtest of this league fitted, or 1.0.
+
+    Cached rather than recomputed because the exponent is worth about 0.001 of
+    log-loss and the walk-forward that measures it costs twenty-five seconds:
+    on a `SKIP_BACKTEST=1` build the honest choice is last week's measured
+    number, and on a checkout that has never run one it is 1.0, which is the
+    uncalibrated model this correction started from.
+    """
+    try:
+        with open(sharpen_path(slug), encoding="utf-8") as fh:
+            k = float(json.load(fh)["k"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return 1.0
+    lo, hi = SHARPEN_BAND
+    return float(min(max(k, lo), hi))
+
+
+def save_sharpen(slug: str, block: dict) -> None:
+    try:
+        os.makedirs(CACHE, exist_ok=True)
+        with open(sharpen_path(slug), "w", encoding="utf-8") as fh:
+            json.dump(block, fh, indent=1)
+    except OSError:
+        pass
+
+
+def _best_k(P: np.ndarray, Y: np.ndarray) -> float:
+    """The exponent that minimises log-loss on these matches."""
+    from scipy.optimize import minimize_scalar
+    lo, hi = SHARPEN_BAND
+
+    def obj(k):
+        return log_loss(sharpen_probs(P, float(k)), Y)
+
+    res = minimize_scalar(obj, bounds=(lo, hi), method="bounded",
+                          options={"xatol": 1e-3})
+    return float(res.x)
+
+
+def fit_sharpen(P: np.ndarray, Y: np.ndarray, slug: str = "") -> dict:
+    """Fit the per-league sharpening exponent, and measure it honestly.
+
+    Two numbers come out of this and they are not the same number.
+
+    `k` is fitted on **every** match in the walk-forward -- all of them in the
+    past, none of them in the season being forecast -- and is the one applied to
+    the live forecast. `held_out` is the evidence that it is worth applying at
+    all: an exponent fitted on the chronologically first 60% of the same
+    matches, scored on the last 40%, which is a split the shipped number never
+    sees. Reporting the in-sample gain alone would be a model marking its own
+    homework, and shipping the 60% exponent would throw away four years of
+    evidence to make a headline number look cleaner.
+    """
+    n = len(Y)
+    band = {"lo": SHARPEN_BAND[0], "hi": SHARPEN_BAND[1]}
+    if n < MIN_SHARPEN_N:
+        return {"k": 1.0, "n": int(n), "band": band,
+                "reason": f"{n} matches is below the {MIN_SHARPEN_N} needed to "
+                          "fit a calibration exponent; left uncalibrated"}
+    cut = int(n * SHARPEN_TRAIN)
+    k_train = _best_k(P[:cut], Y[:cut])
+    before = log_loss(P[cut:], Y[cut:])
+    after = log_loss(sharpen_probs(P[cut:], k_train), Y[cut:])
+    k_all = _best_k(P, Y)
+    # The gate. An exponent fitted on every match in the walk-forward will
+    # always improve the log-loss of those same matches -- that is what fitting
+    # is -- so the only number that decides whether it ships is the one measured
+    # on matches its own fit never saw. Where that is negative the league is
+    # left alone: the Primeira Liga fits k = 1.10 in sample and *loses* 0.0033
+    # out of it, which is a correction that has been measured not to
+    # generalise, and applying it anyway would be the hidden thumb on the scale
+    # this whole mechanism exists to avoid.
+    ships = (before - after) > 0
+    return {
+        "k": round(k_all, 4) if ships else 1.0,
+        "measured_k": round(k_all, 4),
+        "applied": bool(ships),
+        **({} if ships else
+           {"reason": "the exponent fitted on the first 60% of these matches "
+                      f"lost {after - before:.4f} of log-loss on the last 40%, "
+                      "so this league ships uncalibrated"}),
+        "n": int(n),
+        "band": band,
+        "in_sample": {"log_loss": round(log_loss(P, Y), 5),
+                      "calibrated": round(log_loss(sharpen_probs(P, k_all), Y), 5)},
+        "held_out": {"k": round(k_train, 4), "n": int(n - cut),
+                     "train_n": int(cut),
+                     "log_loss": round(before, 5),
+                     "calibrated": round(after, 5),
+                     "gain": round(before - after, 5)},
+        "note": ("p -> p^k, renormalised. k is fitted on every match in this "
+                 "walk-forward and applied to the live forecast; `held_out` is "
+                 "the same fit made on the first 60% of these matches and "
+                 "scored on the last 40%, which is the only number that says "
+                 "whether the correction generalises."),
+    }
 
 
 def _result_index(m: Match) -> int:
@@ -309,13 +433,39 @@ TUNED_ON = ("2022-23", "2023-24", "2024-25")
 def run(ds: Dataset, *, seasons: list[str] | None = None,
         goals_weight: float = config.GOALS_WEIGHT,
         decay: float = config.TIME_DECAY,
-        history_years: int = 5, quiet: bool = False) -> dict:
+        history_years: int = 5, quiet: bool = False,
+        cal: dict | None = None, adj: bool = True) -> dict:
+    """Walk forward through this league's past seasons and score every match.
+
+    `adj` decides which of two models is scored. With it (the default) the
+    prediction goes through `simulate._lambdas` carrying the same preseason
+    correction the pipeline applies to the live forecast -- `priors.preseason_net`
+    minus the fit's own centred net, recomputed at every refit exactly as a
+    build recomputes it. Without it the prediction comes straight off the fit.
+
+    It matters because until this existed the site published the accuracy of a
+    model it does not run: the promoted-club and carryover corrections had never
+    been scored out of sample even once, which is precisely why a Primeira Liga
+    promoted-club slope of 2.01 measured over eight pairs shipped unnoticed.
+    Both are reported -- `model` is what the site publishes, `model_ratings_only`
+    is the fit alone -- so the correction has to earn its place every run.
+
+    The market anchor, the other half of the live `adj`, is *not* here and
+    cannot be: it is solved against a preseason odds snapshot, this repository
+    holds exactly one of those (2026-27, Premier League), and there is no
+    historical equivalent to walk forward over.
+    """
+    from . import priors
+
     all_seasons = sorted({m.season for m in ds.top if m.season != ds.season})
     seasons = seasons or [s for s in all_seasons if s >= ds.league.backtest_from]
     shot_conv = ratings.fit_shot_conversion(
         [m for m in ds.top if m.season < min(seasons)])
+    if adj and cal is None:
+        cal = priors.calibrate(ds, shot_conv)
 
     preds: list[np.ndarray] = []
+    raw_preds: list[np.ndarray] = []
     ys: list[int] = []
     seasons_of: list[str] = []
     base_preds = {k: [] for k in ("base", "elo", "form", "market", "clubelo")}
@@ -340,6 +490,11 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
     for season in seasons:
         season_matches = sorted([m for m in ds.top if m.season == season],
                                 key=lambda x: x.date)
+        # The clubs in this division that season, and where each of them came
+        # from -- which is all `preseason_net` needs to know which of the three
+        # measured corrections applies to whom.
+        season_teams = sorted({m.home for m in season_matches})
+        prior_season = ([s for s in all_seasons if s < season] or [None])[-1]
         for start, chunk in _rounds(season_matches):
             cutoff = min(m.date for m in chunk)
             lo = dt.date(cutoff.year - history_years, 1, 1)
@@ -354,10 +509,30 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
                               goals_weight=goals_weight, shot_conv=shot_conv,
                               warm=warm)
             warm = fit.warm
+            # The correction the pipeline would have applied on this date. Its
+            # inputs are the fit, this season's clubs and the measured
+            # regression -- all of them already here, which is the whole reason
+            # this was worth doing rather than approximating.
+            adj_map = None
+            if adj and cal and prior_season:
+                try:
+                    raw_net = priors._centred_net(fit, season_teams)
+                    prior_net = priors.preseason_net(ds, fit, cal, season_teams,
+                                                     prior_season)
+                    adj_map = {t: prior_net[t] - raw_net.get(t, 0.0)
+                               for t in season_teams if t in raw_net}
+                except (KeyError, ValueError):
+                    adj_map = None
             for m in chunk:
                 lh, la = fit.lambdas(m.home, m.away)
                 ph, pd, pa = outcome_probs(score_matrix(lh, la, fit.rho))
-                preds.append(np.array([ph, pd, pa]))
+                raw_preds.append(np.array([ph, pd, pa]))
+                if adj_map:
+                    alh, ala = _lambdas(fit, m.home, m.away, adj_map)
+                    aph, apd, apa = outcome_probs(score_matrix(alh, ala, fit.rho))
+                    preds.append(np.array([aph, apd, apa]))
+                else:
+                    preds.append(np.array([ph, pd, pa]))
                 ys.append(_result_index(m))
                 seasons_of.append(season)
                 base_preds["base"].append(base.predict(m))
@@ -372,11 +547,32 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
             print(f"  · {season}: {len(ys)} matches scored so far")
 
     P = np.array(preds)
+    P0 = np.array(raw_preds)
     Y = np.array(ys)
     S = np.array(seasons_of)
     held = ~np.isin(S, TUNED_ON)
+    sharp = fit_sharpen(P, Y, ds.league.slug)
     out = {"model": score_all(P, Y),
+           # The same walk-forward with the preseason correction switched off.
+           # `model` is the model the site publishes; this is the fit alone.
+           "model_ratings_only": score_all(P0, Y),
+           "adjusted": bool(adj),
+           "adjustment_note": (
+               "`model` carries the measured carryover / promotion / relegation "
+               "correction the live forecast applies (priors.preseason_net), "
+               "recomputed at every refit. `model_ratings_only` is the same "
+               "walk-forward straight off the ratings. The market anchor is not "
+               "included: it is solved against a preseason odds snapshot and no "
+               "historical snapshot exists to walk forward over. One caveat "
+               "the site should print: the regression `cal` itself is measured "
+               "over every season this walk-forward scores, so the two "
+               "constants it contributes are not strictly out of sample -- the "
+               "per-match prediction is, and the correction's shape is two "
+               "numbers over ~50 club-seasons."),
+           "sharpen": sharp,
            "held_out": score_all(P[held], Y[held]) if held.any() else None,
+           "held_out_ratings_only": (score_all(P0[held], Y[held])
+                                     if held.any() else None),
            "tuned_on": list(TUNED_ON),
            "by_season": [
                {"season": s, **score_all(P[S == s], Y[S == s]),
@@ -400,7 +596,12 @@ def run(ds: Dataset, *, seasons: list[str] | None = None,
                         # wrong the first time the file is refreshed.
                         **_snapshot_span(external)},
            "seasons": seasons,
-           "params": {"goals_weight": goals_weight, "decay": decay}}
+           "params": {"goals_weight": goals_weight, "decay": decay,
+                      "ridge": config.RIDGE,
+                      # The calibration exponent the live forecast applies.
+                      # Published so the method page can quote the number
+                      # rather than describe the idea.
+                      "sharpen": sharp["k"]}}
     out["calibration"] = calibration(P, Y)
     out["by_outcome"] = by_outcome(P, Y)
     return out
@@ -482,13 +683,18 @@ def run_european(corpus, seasons: list[str], *, comps=("cl",),
         if not quiet:
             print(f"  · {start}: {len(ys)} European matches scored")
     P, B, Y = np.array(preds), np.array(base_preds), np.array(ys)
+    # Shape parity with the domestic backtest, including the calibration
+    # exponent -- which for two Swiss seasons of one competition comes back at
+    # 1.0 with its reason, because 378 matches is not enough to fit one.
+    sharp = fit_sharpen(P, Y, "european")
     return {"model": score_all(P, Y),
             "baselines": {"league_average": score_all(B, Y)},
             "names": {"league_average": LeagueAverage.name},
             "seasons": seasons, "comps": list(comps),
+            "sharpen": sharp,
             # Shape parity with the domestic backtest. The pooled European fit
             # has no goals/shots blend, so that key is honestly absent.
-            "params": {"decay": decay, "ridge": ridge},
+            "params": {"decay": decay, "ridge": ridge, "sharpen": sharp["k"]},
             "calibration": calibration(P, Y)}
 
 

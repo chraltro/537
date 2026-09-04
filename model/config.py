@@ -48,6 +48,10 @@ GOALS_WEIGHT = 0.70
 TIME_DECAY = 0.0028
 # Ridge pull of attack/defence parameters toward zero, stabilises sparse fits.
 RIDGE = 0.02
+# A second ridge on the pooled fit's LEAGUE means, weighted by how few clubs
+# supply each league's European evidence, was built and measured on 2026-09-04
+# and is NOT here, because it did not do what it was meant to do. See
+# `ratings.fit_pooled` for the measurement and what it means.
 MAX_GOALS = 10             # score matrix truncation; P(>10) is ~1e-6
 
 # ---- Preseason priors ------------------------------------------------------

@@ -33,6 +33,8 @@ tested in a year is visibly that rather than quietly wrong.
 from __future__ import annotations
 
 import datetime as dt
+import json
+import os
 import statistics
 
 import numpy as np
@@ -155,6 +157,49 @@ def _spi_at(fit, t, a_bar, d_bar, home, adj: float = 0.0) -> float:
 FIRST_BRIDGED_SEASON = "2012-13"
 
 
+#: Bump when the meaning of a cached trajectory point changes -- a different
+#: recentring, a different ridge, anything that would make yesterday's number
+#: and today's mean two different things on one line.
+TRAJECTORY_CACHE_VERSION = 2
+
+
+class _TrajectoryCache:
+    """Past Julys of the pooled trajectory, kept on disk between builds."""
+
+    def __init__(self, directory: str | None = None) -> None:
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.dir = directory or os.path.join(here, ".cache")
+
+    def _path(self, year: int) -> str:
+        return os.path.join(self.dir, f"trajectory-{year}.json")
+
+    def get(self, year: int, n_past: int) -> dict[str, float] | None:
+        try:
+            with open(self._path(year), encoding="utf-8") as fh:
+                doc = json.load(fh)
+        except (OSError, ValueError):
+            return None
+        if (doc.get("version") != TRAJECTORY_CACHE_VERSION
+                or doc.get("n_past") != n_past
+                or doc.get("ridge") != config.RIDGE
+                or doc.get("decay") != config.TIME_DECAY):
+            return None
+        clubs = doc.get("clubs")
+        return clubs if isinstance(clubs, dict) and clubs else None
+
+    def put(self, year: int, n_past: int, clubs: dict[str, float]) -> None:
+        if not clubs:
+            return
+        try:
+            os.makedirs(self.dir, exist_ok=True)
+            with open(self._path(year), "w", encoding="utf-8") as fh:
+                json.dump({"version": TRAJECTORY_CACHE_VERSION, "year": year,
+                           "n_past": n_past, "ridge": config.RIDGE,
+                           "decay": config.TIME_DECAY, "clubs": clubs}, fh)
+        except OSError:
+            pass
+
+
 def trajectory(corpus: europe.Corpus, ref_date: dt.date | None = None,
                *, live_fit=None, quiet: bool = True) -> dict[str, list]:
     """Every club's SPI at the start of every season, on one scale.
@@ -179,6 +224,7 @@ def trajectory(corpus: europe.Corpus, ref_date: dt.date | None = None,
     # with identical values. Years, labelled in the winter convention the chart
     # already renders; each point is the fit as it stood that July.
     years = sorted({int(m.season[:4]) for m in corpus.matches if m.season[:4].isdigit()})
+    cache = _TrajectoryCache()
     first = int(FIRST_BRIDGED_SEASON[:4])
     out: dict[str, list] = {}
     # The newest point is fitted at exactly the date `build` uses, so the end of
@@ -213,6 +259,20 @@ def trajectory(corpus: europe.Corpus, ref_date: dt.date | None = None,
         if year == live and live_fit is not None:
             fit = live_fit
         else:
+            # A past July's point cannot change: it is a fit on matches that
+            # were all played before it, and next week's corpus holds exactly
+            # the same ones. Fifteen pooled fits at three seconds each was
+            # 175s of every build, 160s of it recomputing thirteen answers
+            # that were already known. The cache is keyed on how many matches
+            # the corpus holds before that date, so a second feed arming and
+            # backfilling a season does invalidate it.
+            done = cache.get(year, len(past))
+            if done is not None:
+                for t, v in done.items():
+                    out.setdefault(t, []).append({"season": label, "spi": v})
+                if not quiet:
+                    print(f"    {label}: {len(done)} clubs (cached)")
+                continue
             fit = ratings.fit_pooled(past, pool, ref, group_of=corpus.group_of,
                                      club_league=corpus.club_leagues(),
                                      default_group=europe.EUROPE)
@@ -220,6 +280,7 @@ def trajectory(corpus: europe.Corpus, ref_date: dt.date | None = None,
                                     played, last, ref)
         home = fit.home_advantage(europe.EUROPE)
         n = 0
+        fresh: dict[str, float] = {}
         for t in pool:
             # The same floor the ranking uses. A club with four matches in the
             # corpus has a rating the fit invented from its ridge, and a line
@@ -233,9 +294,12 @@ def trajectory(corpus: europe.Corpus, ref_date: dt.date | None = None,
             if (domestic.get(t, 0) < MIN_MATCHES
                     or (ref - last[t]).days > MAX_STALE_DAYS):
                 continue
-            out.setdefault(t, []).append(
-                {"season": label, "spi": round(_spi_at(fit, t, a_bar, d_bar, home), 1)})
+            v = round(_spi_at(fit, t, a_bar, d_bar, home), 1)
+            fresh[t] = v
+            out.setdefault(t, []).append({"season": label, "spi": v})
             n += 1
+        if year != live:
+            cache.put(year, len(past), fresh)
         if not quiet:
             print(f"    {label}: {n} clubs")
     return out
