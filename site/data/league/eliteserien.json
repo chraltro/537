@@ -7,7 +7,7 @@
  "clubs": 16,
  "results_to": "2026-05-04",
  "date_approx": false,
- "generated": "2026-08-29T17:28:30+00:00",
+ "generated": "2026-09-04T22:39:43+00:00",
  "table": [
   {
    "id": "brann",
@@ -72,7 +72,7 @@
    "pts": 10,
    "pos": 4,
    "gd": 7,
-   "spi": 52.2,
+   "spi": 52.3,
    "att": 69,
    "def": 66,
    "primary": "#FFD400"

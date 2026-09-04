@@ -7,7 +7,7 @@
  "clubs": 12,
  "results_to": "2025-05-31",
  "date_approx": false,
- "generated": "2026-08-29T17:28:31+00:00",
+ "generated": "2026-09-04T22:39:43+00:00",
  "table": [
   {
    "id": "zrinjski-mostar",
@@ -21,7 +21,7 @@
    "pts": 82,
    "pos": 1,
    "gd": 55,
-   "spi": 11.2,
+   "spi": 11.1,
    "att": 48,
    "def": 53,
    "primary": "#7A8290"
@@ -38,7 +38,7 @@
    "pts": 81,
    "pos": 2,
    "gd": 45,
-   "spi": 12.8,
+   "spi": 12.7,
    "att": 45,
    "def": 56,
    "primary": "#D0021B"
@@ -55,7 +55,7 @@
    "pts": 65,
    "pos": 3,
    "gd": 35,
-   "spi": 4.2,
+   "spi": 4.1,
    "att": 45,
    "def": 47,
    "primary": "#7A8290"
@@ -192,7 +192,7 @@
    "pos": 11,
    "gd": -48,
    "spi": 0.1,
-   "att": 41,
+   "att": 40,
    "def": 39,
    "primary": "#7A8290"
   },

@@ -7,7 +7,7 @@
  "clubs": 12,
  "results_to": "2025-05-25",
  "date_approx": false,
- "generated": "2026-08-29T17:28:31+00:00",
+ "generated": "2026-09-04T22:39:43+00:00",
  "table": [
   {
    "id": "kobenhavn",
@@ -38,7 +38,7 @@
    "pts": 62,
    "pos": 2,
    "gd": 22,
-   "spi": 33.5,
+   "spi": 33.6,
    "att": 62,
    "def": 59,
    "primary": "#000000"
@@ -56,7 +56,7 @@
    "pos": 3,
    "gd": 12,
    "spi": 25.4,
-   "att": 59,
+   "att": 58,
    "def": 57,
    "primary": "#7A8290"
   },
@@ -175,7 +175,7 @@
    "pos": 10,
    "gd": -27,
    "spi": 10.3,
-   "att": 51,
+   "att": 50,
    "def": 51,
    "primary": "#7A8290"
   },

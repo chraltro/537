@@ -7,7 +7,7 @@
  "clubs": 8,
  "results_to": "2025-05-18",
  "date_approx": false,
- "generated": "2026-08-29T17:28:31+00:00",
+ "generated": "2026-09-04T22:39:43+00:00",
  "table": [
   {
    "id": "sheriff",
@@ -21,7 +21,7 @@
    "pts": 56,
    "pos": 1,
    "gd": 38,
-   "spi": 8.1,
+   "spi": 8.0,
    "att": 46,
    "def": 51,
    "primary": "#7A8290"
@@ -56,7 +56,7 @@
    "pos": 3,
    "gd": 29,
    "spi": 3.9,
-   "att": 46,
+   "att": 45,
    "def": 47,
    "primary": "#7A8290"
   },
@@ -72,7 +72,7 @@
    "pts": 37,
    "pos": 4,
    "gd": 14,
-   "spi": 4.1,
+   "spi": 4.0,
    "att": 45,
    "def": 47,
    "primary": "#7A8290"

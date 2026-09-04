@@ -7,7 +7,7 @@
  "clubs": 12,
  "results_to": "2026-05-03",
  "date_approx": false,
- "generated": "2026-08-29T17:28:32+00:00",
+ "generated": "2026-09-04T22:39:43+00:00",
  "table": [
   {
    "id": "kuopion-ps",
@@ -72,9 +72,9 @@
    "pts": 9,
    "pos": 4,
    "gd": 5,
-   "spi": 5.5,
+   "spi": 5.6,
    "att": 51,
-   "def": 46,
+   "def": 47,
    "primary": "#7A8290"
   },
   {
@@ -89,7 +89,7 @@
    "pts": 7,
    "pos": 5,
    "gd": 0,
-   "spi": 2.0,
+   "spi": 2.1,
    "att": 45,
    "def": 44,
    "primary": "#7A8290"
@@ -208,7 +208,7 @@
    "pts": 3,
    "pos": 12,
    "gd": -6,
-   "spi": 1.0,
+   "spi": 1.1,
    "att": 46,
    "def": 42,
    "primary": "#7A8290"

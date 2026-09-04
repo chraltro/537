@@ -7,7 +7,7 @@
  "clubs": 14,
  "results_to": "2025-11-03",
  "date_approx": false,
- "generated": "2026-08-29T17:28:30+00:00",
+ "generated": "2026-09-04T22:39:42+00:00",
  "table": [
   {
    "id": "paok",
@@ -38,7 +38,7 @@
    "pts": 22,
    "pos": 2,
    "gd": 14,
-   "spi": 44.0,
+   "spi": 44.1,
    "att": 62,
    "def": 67,
    "primary": "#D50000"
@@ -106,7 +106,7 @@
    "pts": 12,
    "pos": 6,
    "gd": 2,
-   "spi": 28.4,
+   "spi": 28.5,
    "att": 56,
    "def": 61,
    "primary": "#007A3D"
@@ -157,7 +157,7 @@
    "pts": 9,
    "pos": 9,
    "gd": 0,
-   "spi": 14.9,
+   "spi": 15.0,
    "att": 51,
    "def": 54,
    "primary": "#7A8290"

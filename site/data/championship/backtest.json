@@ -1,15 +1,54 @@
 {
  "model": {
-  "log_loss": 1.0499736493666945,
-  "brier": 0.6325978139317695,
-  "rps": 0.2201163817386473,
-  "accuracy": 0.4528985507246377,
+  "log_loss": 1.0476956017759527,
+  "brier": 0.63096866484917,
+  "rps": 0.21929697522549335,
+  "accuracy": 0.4572463768115942,
   "n": 2760
  },
+ "model_ratings_only": {
+  "log_loss": 1.0499705510034523,
+  "brier": 0.6325957776715974,
+  "rps": 0.22011601438296066,
+  "accuracy": 0.45253623188405795,
+  "n": 2760
+ },
+ "adjusted": true,
+ "adjustment_note": "`model` carries the measured carryover / promotion / relegation correction the live forecast applies (priors.preseason_net), recomputed at every refit. `model_ratings_only` is the same walk-forward straight off the ratings. The market anchor is not included: it is solved against a preseason odds snapshot and no historical snapshot exists to walk forward over. One caveat the site should print: the regression `cal` itself is measured over every season this walk-forward scores, so the two constants it contributes are not strictly out of sample -- the per-match prediction is, and the correction's shape is two numbers over ~50 club-seasons.",
+ "sharpen": {
+  "k": 1.0545,
+  "measured_k": 1.0545,
+  "applied": true,
+  "n": 2760,
+  "band": {
+   "lo": 0.7,
+   "hi": 1.4
+  },
+  "in_sample": {
+   "log_loss": 1.0477,
+   "calibrated": 1.04756
+  },
+  "held_out": {
+   "k": 1.0462,
+   "n": 1104,
+   "train_n": 1656,
+   "log_loss": 1.04876,
+   "calibrated": 1.04858,
+   "gain": 0.00018
+  },
+  "note": "p -> p^k, renormalised. k is fitted on every match in this walk-forward and applied to the live forecast; `held_out` is the same fit made on the first 60% of these matches and scored on the last 40%, which is the only number that says whether the correction generalises."
+ },
  "held_out": {
-  "log_loss": 1.05564567686033,
-  "brier": 0.6366303175060426,
-  "rps": 0.22258193467247933,
+  "log_loss": 1.0535674073232548,
+  "brier": 0.635112776457549,
+  "rps": 0.22183409678164295,
+  "accuracy": 0.4528985507246377,
+  "n": 1104
+ },
+ "held_out_ratings_only": {
+  "log_loss": 1.0556370575204002,
+  "brier": 0.6366246205567525,
+  "rps": 0.22258061588251582,
   "accuracy": 0.45561594202898553,
   "n": 1104
  },
@@ -21,46 +60,46 @@
  "by_season": [
   {
    "season": "2021-22",
-   "log_loss": 1.0528213925915861,
-   "brier": 0.6344110147118778,
-   "rps": 0.22309081797520272,
-   "accuracy": 0.4692028985507246,
+   "log_loss": 1.0498144743795395,
+   "brier": 0.6322854833452342,
+   "rps": 0.22200688260585993,
+   "accuracy": 0.4601449275362319,
    "n": 552,
    "held_out": true
   },
   {
    "season": "2022-23",
-   "log_loss": 1.0595556139171511,
-   "brier": 0.639274021544462,
-   "rps": 0.22107377919418336,
-   "accuracy": 0.4365942028985507,
+   "log_loss": 1.0587794937098183,
+   "brier": 0.6391324986266733,
+   "rps": 0.22081892416625576,
+   "accuracy": 0.4384057971014493,
    "n": 552,
    "held_out": false
   },
   {
    "season": "2023-24",
-   "log_loss": 1.0315735575070064,
-   "brier": 0.6187455572155955,
-   "rps": 0.22028696359410374,
-   "accuracy": 0.47101449275362317,
+   "log_loss": 1.0323659389267177,
+   "brier": 0.6191774416986767,
+   "rps": 0.2206063645700433,
+   "accuracy": 0.4692028985507246,
    "n": 552,
    "held_out": false
   },
   {
    "season": "2024-25",
-   "log_loss": 1.0474477216886546,
-   "brier": 0.6317088558867049,
-   "rps": 0.21405729655999087,
-   "accuracy": 0.44565217391304346,
+   "log_loss": 1.040197761596719,
+   "brier": 0.6263078310054018,
+   "rps": 0.2113913938278816,
+   "accuracy": 0.47282608695652173,
    "n": 552,
    "held_out": false
   },
   {
    "season": "2025-26",
-   "log_loss": 1.058469961129074,
-   "brier": 0.6388496203002073,
-   "rps": 0.22207305136975594,
-   "accuracy": 0.4420289855072464,
+   "log_loss": 1.05732034026697,
+   "brier": 0.6379400695698642,
+   "rps": 0.22166131095742597,
+   "accuracy": 0.44565217391304346,
    "n": 552,
    "held_out": true
   }
@@ -74,10 +113,10 @@
    "n": 2760,
    "coverage": 1.0,
    "model_here": {
-    "log_loss": 1.0499736493666945,
-    "brier": 0.6325978139317695,
-    "rps": 0.2201163817386473,
-    "accuracy": 0.4528985507246377,
+    "log_loss": 1.0476956017759527,
+    "brier": 0.63096866484917,
+    "rps": 0.21929697522549335,
+    "accuracy": 0.4572463768115942,
     "n": 2760
    }
   },
@@ -89,10 +128,10 @@
    "n": 2760,
    "coverage": 1.0,
    "model_here": {
-    "log_loss": 1.0499736493666945,
-    "brier": 0.6325978139317695,
-    "rps": 0.2201163817386473,
-    "accuracy": 0.4528985507246377,
+    "log_loss": 1.0476956017759527,
+    "brier": 0.63096866484917,
+    "rps": 0.21929697522549335,
+    "accuracy": 0.4572463768115942,
     "n": 2760
    }
   },
@@ -104,10 +143,10 @@
    "n": 2760,
    "coverage": 1.0,
    "model_here": {
-    "log_loss": 1.0499736493666945,
-    "brier": 0.6325978139317695,
-    "rps": 0.2201163817386473,
-    "accuracy": 0.4528985507246377,
+    "log_loss": 1.0476956017759527,
+    "brier": 0.63096866484917,
+    "rps": 0.21929697522549335,
+    "accuracy": 0.4572463768115942,
     "n": 2760
    }
   }
@@ -121,10 +160,10 @@
    "n": 1104,
    "coverage": 0.4,
    "model_here": {
-    "log_loss": 1.05564567686033,
-    "brier": 0.6366303175060426,
-    "rps": 0.22258193467247933,
-    "accuracy": 0.45561594202898553,
+    "log_loss": 1.0535674073232548,
+    "brier": 0.635112776457549,
+    "rps": 0.22183409678164295,
+    "accuracy": 0.4528985507246377,
     "n": 1104
    }
   },
@@ -136,10 +175,10 @@
    "n": 1104,
    "coverage": 0.4,
    "model_here": {
-    "log_loss": 1.05564567686033,
-    "brier": 0.6366303175060426,
-    "rps": 0.22258193467247933,
-    "accuracy": 0.45561594202898553,
+    "log_loss": 1.0535674073232548,
+    "brier": 0.635112776457549,
+    "rps": 0.22183409678164295,
+    "accuracy": 0.4528985507246377,
     "n": 1104
    }
   },
@@ -151,10 +190,10 @@
    "n": 1104,
    "coverage": 0.4,
    "model_here": {
-    "log_loss": 1.05564567686033,
-    "brier": 0.6366303175060426,
-    "rps": 0.22258193467247933,
-    "accuracy": 0.45561594202898553,
+    "log_loss": 1.0535674073232548,
+    "brier": 0.635112776457549,
+    "rps": 0.22183409678164295,
+    "accuracy": 0.4528985507246377,
     "n": 1104
    }
   }
@@ -180,50 +219,59 @@
  ],
  "params": {
   "goals_weight": 0.7,
-  "decay": 0.0028
+  "decay": 0.0028,
+  "ridge": 0.02,
+  "sharpen": 1.0545
  },
  "calibration": [
   {
    "lo": 0.1,
    "hi": 0.2,
-   "predicted": 0.1733642636813718,
-   "observed": 0.13666666666666666,
-   "n": 300
+   "predicted": 0.1696638366200311,
+   "observed": 0.11851851851851852,
+   "n": 270
   },
   {
    "lo": 0.2,
    "hi": 0.30000000000000004,
-   "predicted": 0.2577641359179801,
-   "observed": 0.2608919824697087,
-   "n": 3879
+   "predicted": 0.25781584025274223,
+   "observed": 0.2582730093071355,
+   "n": 3868
   },
   {
    "lo": 0.30000000000000004,
    "hi": 0.4,
-   "predicted": 0.3485205980595169,
-   "observed": 0.34634634634634637,
-   "n": 1998
+   "predicted": 0.3482319436203592,
+   "observed": 0.34003925417075564,
+   "n": 2038
   },
   {
    "lo": 0.4,
    "hi": 0.5,
-   "predicted": 0.4450071624447633,
-   "observed": 0.4397212543554007,
+   "predicted": 0.44309437594634066,
+   "observed": 0.4564459930313589,
    "n": 1435
   },
   {
    "lo": 0.5,
    "hi": 0.6000000000000001,
-   "predicted": 0.5396480948027375,
+   "predicted": 0.537904283173515,
    "observed": 0.5418250950570342,
    "n": 526
   },
   {
    "lo": 0.6000000000000001,
    "hi": 0.7000000000000001,
-   "predicted": 0.6387346529982176,
-   "observed": 0.7213114754098361,
-   "n": 122
+   "predicted": 0.6403449978077487,
+   "observed": 0.6842105263157895,
+   "n": 114
+  },
+  {
+   "lo": 0.7000000000000001,
+   "hi": 0.8,
+   "predicted": 0.7337784662175795,
+   "observed": 0.8,
+   "n": 20
   }
  ],
  "by_outcome": [
@@ -238,46 +286,46 @@
   {
    "outcome": "draw",
    "n": 2760,
-   "predicted": 0.2564,
+   "predicted": 0.2565,
    "observed": 0.2605,
-   "bias": -0.0041,
-   "z": -0.49
+   "bias": -0.004,
+   "z": -0.47
   },
   {
    "outcome": "away",
    "n": 2760,
-   "predicted": 0.3167,
+   "predicted": 0.3166,
    "observed": 0.304,
-   "bias": 0.0127,
-   "z": 1.45
+   "bias": 0.0126,
+   "z": 1.44
   }
  ],
  "calibration_priors": {
-  "version": 3,
+  "version": 4,
   "continuing": {
-   "slope": 0.8471612359032323,
-   "intercept": -0.015383612020231264,
+   "slope": 0.8471616050323368,
+   "intercept": -0.015379309346334285,
    "n": 342,
    "source": "championship",
    "measured_slope": 0.8472
   },
   "promoted": {
-   "slope": 0.5246328283599349,
-   "intercept": -0.10455279464960585,
+   "slope": 0.5246197037379521,
+   "intercept": -0.10453948311275214,
    "n": 57,
    "source": "championship",
    "measured_slope": 0.5246
   },
   "relegated": {
    "slope": 1.0,
-   "intercept": 0.13161319052469497,
+   "intercept": 0.13158712917654827,
    "n": 57,
    "source": "championship",
-   "measured_slope": 1.2102,
+   "measured_slope": 1.2098,
    "reason": "measured slope 1.21 clamped to 1.0"
   },
   "league": "championship",
-  "generated": "2026-08-28"
+  "generated": "2026-09-04"
  },
  "league": "championship",
  "table": {
@@ -300,7 +348,7 @@
     "releg_overlap": 0.3333333333333333,
     "rank_corr": 0.6061,
     "mean_rank_error": 4.83,
-    "mean_points_error": 8.03
+    "mean_points_error": 8.02
    },
    {
     "season": "2023-24",
@@ -330,7 +378,7 @@
     "releg_overlap": 0.3333333333333333,
     "rank_corr": 0.433,
     "mean_rank_error": 5.67,
-    "mean_points_error": 9.7
+    "mean_points_error": 9.71
    }
   ],
   "n": 5,

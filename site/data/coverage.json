@@ -1,5 +1,5 @@
 {
- "generated": "2026-08-29T17:28:32+00:00",
+ "generated": "2026-09-04T22:39:44+00:00",
  "leagues": [
   {
    "slug": "premier-league",
@@ -10,7 +10,7 @@
    "first_season": "2000-01",
    "last_season": "2025-26",
    "matches": 9880,
-   "second_tier": 8856,
+   "second_tier": 8868,
    "above": 0,
    "missing_seasons": [],
    "partial_seasons": [],

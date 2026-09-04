@@ -7,7 +7,7 @@
  "clubs": 12,
  "results_to": "2025-11-01",
  "date_approx": false,
- "generated": "2026-08-29T17:28:30+00:00",
+ "generated": "2026-09-04T22:39:42+00:00",
  "table": [
   {
    "id": "heart-of-midlothian",
@@ -21,7 +21,7 @@
    "pts": 29,
    "pos": 1,
    "gd": 19,
-   "spi": 24.8,
+   "spi": 24.7,
    "att": 57,
    "def": 58,
    "primary": "#7A8290"
@@ -38,7 +38,7 @@
    "pts": 20,
    "pos": 2,
    "gd": 8,
-   "spi": 43.4,
+   "spi": 43.3,
    "att": 64,
    "def": 65,
    "primary": "#016A3A"
@@ -55,7 +55,7 @@
    "pts": 15,
    "pos": 3,
    "gd": 4,
-   "spi": 20.8,
+   "spi": 20.7,
    "att": 56,
    "def": 55,
    "primary": "#7A8290"
@@ -72,7 +72,7 @@
    "pts": 15,
    "pos": 4,
    "gd": 2,
-   "spi": 30.6,
+   "spi": 30.5,
    "att": 60,
    "def": 59,
    "primary": "#1B458F"
@@ -141,7 +141,7 @@
    "pos": 8,
    "gd": -4,
    "spi": 15.1,
-   "att": 52,
+   "att": 51,
    "def": 54,
    "primary": "#7A8290"
   },
@@ -174,7 +174,7 @@
    "pts": 10,
    "pos": 10,
    "gd": -5,
-   "spi": 11.9,
+   "spi": 11.8,
    "att": 51,
    "def": 52,
    "primary": "#7A8290"

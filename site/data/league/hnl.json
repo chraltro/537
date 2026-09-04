@@ -7,7 +7,7 @@
  "clubs": 10,
  "results_to": "2025-05-25",
  "date_approx": false,
- "generated": "2026-08-29T17:28:31+00:00",
+ "generated": "2026-09-04T22:39:43+00:00",
  "table": [
   {
    "id": "dinamo-zagreb",
@@ -72,7 +72,7 @@
    "pts": 49,
    "pos": 4,
    "gd": 4,
-   "spi": 15.0,
+   "spi": 14.9,
    "att": 45,
    "def": 59,
    "primary": "#7A8290"
@@ -140,7 +140,7 @@
    "pts": 39,
    "pos": 8,
    "gd": -9,
-   "spi": 8.9,
+   "spi": 8.8,
    "att": 51,
    "def": 49,
    "primary": "#7A8290"

@@ -1,6 +1,6 @@
 {
  "default": "premier-league",
- "generated": "2026-08-29T17:28:32+00:00",
+ "generated": "2026-09-04T22:39:44+00:00",
  "leagues": [
   {
    "slug": "premier-league",
@@ -114,8 +114,7 @@
    "releg_places": 12,
    "releg_note": "9th-24th enter a two-legged knockout play-off",
    "advance_direct": 8,
-   "advance_playoff": 16,
-   "ready_note": "League-phase draw: 27 August"
+   "advance_playoff": 16
   }
  ],
  "note": "ready=false means no live forecast; the directory may still hold replay staging data, stamped with a 'replay' key.",
@@ -205,12 +204,6 @@
    "slug": "first-professional-league"
   },
   {
-   "name": "Portugal, second tier",
-   "country": "Portugal",
-   "n": 18,
-   "slug": ""
-  },
-  {
    "name": "Belarusian Premier League",
    "country": "Belarus",
    "n": 18,
@@ -238,6 +231,12 @@
    "name": "Netherlands, second tier",
    "country": "Netherlands",
    "n": 17,
+   "slug": ""
+  },
+  {
+   "name": "Portugal, second tier",
+   "country": "Portugal",
+   "n": 16,
    "slug": ""
   },
   {

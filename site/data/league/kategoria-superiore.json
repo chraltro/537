@@ -7,7 +7,7 @@
  "clubs": 10,
  "results_to": "2025-05-12",
  "date_approx": false,
- "generated": "2026-08-29T17:28:31+00:00",
+ "generated": "2026-09-04T22:39:43+00:00",
  "table": [
   {
    "id": "egnatia-rrogozhine",
@@ -21,7 +21,7 @@
    "pts": 63,
    "pos": 1,
    "gd": 21,
-   "spi": 10.6,
+   "spi": 10.5,
    "att": 48,
    "def": 53,
    "primary": "#7A8290"
@@ -38,7 +38,7 @@
    "pts": 60,
    "pos": 2,
    "gd": 12,
-   "spi": 5.6,
+   "spi": 5.5,
    "att": 49,
    "def": 47,
    "primary": "#7A8290"

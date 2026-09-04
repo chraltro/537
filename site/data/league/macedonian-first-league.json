@@ -7,7 +7,7 @@
  "clubs": 12,
  "results_to": "2025-05-18",
  "date_approx": false,
- "generated": "2026-08-29T17:28:31+00:00",
+ "generated": "2026-09-04T22:39:43+00:00",
  "table": [
   {
    "id": "kf-shkendija-79",
@@ -21,7 +21,7 @@
    "pts": 70,
    "pos": 1,
    "gd": 29,
-   "spi": 8.6,
+   "spi": 8.5,
    "att": 49,
    "def": 50,
    "primary": "#7A8290"
@@ -72,7 +72,7 @@
    "pts": 51,
    "pos": 4,
    "gd": 4,
-   "spi": 3.6,
+   "spi": 3.5,
    "att": 46,
    "def": 46,
    "primary": "#7A8290"
