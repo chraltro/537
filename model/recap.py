@@ -16,6 +16,8 @@ import datetime as dt
 import json
 import os
 
+from . import feeds
+
 # Metrics compared between snapshots, in the order they are quoted on the site.
 METRICS = ("title", "ucl", "releg")
 
@@ -152,7 +154,8 @@ def narrative(rows: list, movers: list, shocks: list, before: dict | None,
     if movers:
         m = movers[0]
         verb = "rose" if m["delta"] > 0 else "fell"
-        line = (f"{names.get(m['id'], m['id'])}'s {W.get(m['metric'], m['metric'])} "
+        line = (f"{feeds.possessive(names.get(m['id'], m['id']))} "
+                f"{W.get(m['metric'], m['metric'])} "
                 f"{verb} {abs(round(m['delta'] * 100))} points to "
                 f"{_pct(m['after'])}")
         rest = [x for x in movers[1:4]]

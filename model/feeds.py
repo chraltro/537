@@ -52,13 +52,69 @@ def _fold(line: str) -> str:
     return "\r\n".join(out)
 
 
-def _stamp(d: dt.date, time: str | None) -> tuple[str, str]:
+#: The zone each competition's kick-off times are written in. The fixture feeds
+#: carry local wall-clock times with no zone attached, and until this map
+#: existed the calendars passed that ignorance on: RFC 5545 calls a time with no
+#: zone *floating*, which a client renders in the reader's own zone, so a
+#: subscriber in New York was shown a 20:00 BST kick-off at 20:00 EDT -- five
+#: hours late, every week. The zone of the competition is known; it is the zone
+#: of the *reader* that is not, and that is exactly what TZID lets a client
+#: work out for itself.
+#:
+#: The Champions League is Europe/Paris because UEFA publishes its kick-offs in
+#: CET/CEST, which is what the fixture file holds, whoever is at home.
+SLUG_TZ = {
+    "premier-league": "Europe/London",
+    "championship": "Europe/London",
+    "la-liga": "Europe/Madrid",
+    "serie-a": "Europe/Rome",
+    "bundesliga": "Europe/Berlin",
+    "ligue-1": "Europe/Paris",
+    "eredivisie": "Europe/Amsterdam",
+    "pro-league": "Europe/Brussels",
+    "primeira-liga": "Europe/Lisbon",
+    "champions-league": "Europe/Paris",
+}
+
+#: Every zone above is either UK time or Central European time, and both switch
+#: on the last Sunday of March and October under the same EU rule. Two shapes,
+#: therefore, parameterised by name and standard offset. Most clients resolve a
+#: TZID against their own database and ignore this block; the ones that do not
+#: (older Outlook, in particular) need it, and it costs eleven lines.
+_TZ_RULES = {
+    "Europe/London": ("+0000", "+0100", "GMT", "BST"),
+}
+_CET = ("+0100", "+0200", "CET", "CEST")
+
+
+def _vtimezone(tzid: str) -> list[str]:
+    std_off, dst_off, std_name, dst_name = _TZ_RULES.get(tzid, _CET)
+    return [
+        "BEGIN:VTIMEZONE", f"TZID:{tzid}",
+        "BEGIN:DAYLIGHT",
+        f"TZOFFSETFROM:{std_off}", f"TZOFFSETTO:{dst_off}",
+        f"TZNAME:{dst_name}", "DTSTART:19700329T010000",
+        "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU",
+        "END:DAYLIGHT",
+        "BEGIN:STANDARD",
+        f"TZOFFSETFROM:{dst_off}", f"TZOFFSETTO:{std_off}",
+        f"TZNAME:{std_name}", "DTSTART:19701025T020000",
+        "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU",
+        "END:STANDARD",
+        "END:VTIMEZONE",
+    ]
+
+
+def _stamp(d: dt.date, time: str | None, tz: str | None = None) -> tuple[str, str]:
     """DTSTART/DTEND for one fixture.
 
-    Kick-off times in the fixture feed are local wall-clock with no zone, and
-    inventing one would be worse than saying so: a timed fixture is written as
-    RFC 5545 *floating* local time, which every client renders in the reader's
-    own zone. A fixture with no time at all becomes an all-day event.
+    Kick-off times in the fixture feed are local wall-clock in the
+    competition's own country, so they are written with that country's `TZID`
+    and every client converts for its reader. A competition whose zone is not
+    known falls back to RFC 5545 floating time -- the old behaviour, which is
+    right only when there is genuinely nothing to say. A fixture with no time at
+    all becomes an all-day event, which is honest about a kick-off nobody has
+    announced.
     """
     if not time:
         nxt = d + dt.timedelta(days=1)
@@ -69,13 +125,32 @@ def _stamp(d: dt.date, time: str | None) -> tuple[str, str]:
     except ValueError:
         start = dt.datetime(d.year, d.month, d.day, 15, 0)
     end = start + dt.timedelta(hours=2)
-    return (f"DTSTART:{start:%Y%m%dT%H%M%S}", f"DTEND:{end:%Y%m%dT%H%M%S}")
+    pre = f";TZID={tz}" if tz else ""
+    return (f"DTSTART{pre}:{start:%Y%m%dT%H%M%S}",
+            f"DTEND{pre}:{end:%Y%m%dT%H%M%S}")
+
+
+def zone_for(uid_ns: str | None) -> str | None:
+    """The competition's zone, from the UID namespace the caller already passes.
+
+    `uid_ns` is `<slug>.537`, so the slug is in hand at every call site without
+    changing a signature the build already uses.
+    """
+    slug = str(uid_ns or "").split(".")[0]
+    return SLUG_TZ.get(slug)
 
 
 def calendar(matches: list[dict], meta: dict, *, title: str, uid_ns: str,
-             team: str | None = None, round_label=None) -> str:
-    """One iCalendar document. `matches` is the site's own `matches.json` rows."""
+             team: str | None = None, round_label=None,
+             tz: str | None = None) -> str:
+    """One iCalendar document. `matches` is the site's own `matches.json` rows.
+
+    `tz` is the zone the kick-off times are written in; when it is not given it
+    is looked up from `uid_ns`, so every existing caller gets the right zone
+    without passing one.
+    """
     now = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    tz = tz or zone_for(uid_ns)
     out = [
         "BEGIN:VCALENDAR", "VERSION:2.0",
         "PRODID:-//chraltro//537 football forecast//EN",
@@ -85,6 +160,9 @@ def calendar(matches: list[dict], meta: dict, *, title: str, uid_ns: str,
         f"REFRESH-INTERVAL;VALUE=DURATION:{REFRESH}",
         f"X-PUBLISHED-TTL:{REFRESH}",
     ]
+    if tz and any(m.get("time") for m in matches
+                  if not team or team in (m.get("h"), m.get("a"))):
+        out += _vtimezone(tz)
     for m in matches:
         if team and team not in (m["h"], m["a"]):
             continue
@@ -94,7 +172,7 @@ def calendar(matches: list[dict], meta: dict, *, title: str, uid_ns: str,
             d = dt.date.fromisoformat(m["date"])
         except (TypeError, ValueError):
             continue
-        start, end = _stamp(d, m.get("time"))
+        start, end = _stamp(d, m.get("time"), tz)
         if m.get("played"):
             summary = f"{h} {m['hg']}–{m['ag']} {a}"
             body = "Final score."
@@ -142,13 +220,25 @@ _EVENT_WORDS = {"title": "title chance", "ucl": "qualification chance",
                 "releg": "relegation risk"}
 
 
+def possessive(name: str) -> str:
+    """`Arsenal` -> `Arsenal's`, `Wolverhampton Wanderers` -> `Wanderers'`.
+
+    Every club whose name ends in s -- Wolves, Rangers, Spurs, Blackburn Rovers
+    -- read "Wolverhampton Wanderers's title chance" in the feed and in the
+    weekly narrative. English drops the second s on a plural, and half this
+    site's subjects are plurals.
+    """
+    name = str(name)
+    return name + ("'" if name.endswith(("s", "S")) else "'s")
+
+
 def _sentence(mv: dict, meta: dict, words: dict | None = None) -> str:
     name = meta.get(mv["id"], {}).get("name", mv["id"])
     vocab = {**_EVENT_WORDS, **(words or {})}
     word = vocab.get(mv["metric"], mv["metric"])
     verb = "rose" if mv["delta"] > 0 else "fell"
-    return (f"{name}'s {word} {verb} from {round(mv['before'] * 100)}% to "
-            f"{round(mv['after'] * 100)}%.")
+    return (f"{possessive(name)} {word} {verb} from "
+            f"{round(mv['before'] * 100)}% to {round(mv['after'] * 100)}%.")
 
 
 def feed_items(leagues_data: list[dict]) -> list[dict]:
