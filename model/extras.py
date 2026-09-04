@@ -368,6 +368,13 @@ def archive_recaps(out_dir: str, c: Competition, today: dt.date) -> dict | None:
     complete = _complete_rounds(c.matches)
     todo = [md for md in complete if md not in have]
     if not todo:
+        # A competition that has kicked off but finished no round yet still
+        # gets an empty archive: the review page fetches this file for every
+        # competition with a result, and a missing one is a console 404.
+        kicked_off = any(m.get("played") for m in c.matches)
+        if kicked_off and not os.path.exists(path):
+            _write(path, doc)
+            print(f"  → {c.slug}/recaps.json (0 rounds, nothing complete yet)")
         return None
 
     recap = _read(os.path.join(out_dir, c.slug, "recap.json")) or {}

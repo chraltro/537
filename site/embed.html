@@ -3,9 +3,32 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* The theme, before the first pixel. This used to be corrected inside
+   `initChrome`, which runs after a module load and after that module's
+   top-level await on the manifest -- so a reader on the light theme got about a
+   tenth of a second of the dark page first. Five lines in the head, run at parse
+   time, and the flash is gone.
+
+   It also settles what the default is. The site shipped `data-theme="dark"` on
+   every page and consulted `prefers-color-scheme` nowhere, so somebody whose
+   whole machine is set to light had to ask this one site again on every device.
+   A saved choice still wins over the system; the system wins over us. */
+(function () {
+  try {
+    var t = localStorage.getItem('plf-theme');
+    if (t !== 'light' && t !== 'dark') {
+      t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { /* private mode: the markup's own default stands */ }
+})();
+</script>
 <title>Forecast widget</title>
 <meta name="robots" content="noindex">
 <link rel="canonical" href="https://chraltro.github.io/537/embed.html">
+<link rel="modulepreload" href="assets/app.js">
+<link rel="preload" as="fetch" crossorigin href="data/leagues.json">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="icon" href="data:,">
 <style>
@@ -44,7 +67,7 @@
 /* The whole point of an embed is that it is small and does not phone home for
    anything it does not need, so this page imports only the formatting helpers
    and reads the manifest and one forecast file directly. */
-import { esc, pct, chipColor } from './assets/app.js';
+import { esc, pct, chipColor, fmtDate } from './assets/app.js';
 
 const ROOT = new URL('.', location.href).pathname;
 const q = new URLSearchParams(location.search);
@@ -85,7 +108,7 @@ try {
       </div>`).join('')}
     <footer>
       <span><a href="${link}" target="_blank" rel="noopener">chraltro.github.io/537</a></span>
-      <span>${esc(new Date(fc.generated).toISOString().slice(0, 10))}</span>
+      <span>${esc(fmtDate(fc.generated, { year: true }))}</span>
     </footer>`;
 } catch (e) {
   fail(e.message);

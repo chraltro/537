@@ -3,15 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* The theme, before the first pixel. This used to be corrected inside
+   `initChrome`, which runs after a module load and after that module's
+   top-level await on the manifest -- so a reader on the light theme got about a
+   tenth of a second of the dark page first. Five lines in the head, run at parse
+   time, and the flash is gone.
+
+   It also settles what the default is. The site shipped `data-theme="dark"` on
+   every page and consulted `prefers-color-scheme` nowhere, so somebody whose
+   whole machine is set to light had to ask this one site again on every device.
+   A saved choice still wins over the system; the system wins over us. */
+(function () {
+  try {
+    var t = localStorage.getItem('plf-theme');
+    if (t !== 'light' && t !== 'dark') {
+      t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { /* private mode: the markup's own default stands */ }
+})();
+</script>
 <title>Every match forecast — Premier League 2026/27</title>
 <meta name="description" content="Win, draw and loss probabilities plus a projected scoreline for every match of the season.">
 <meta property="og:title" content="Every match — season forecast">
 <meta property="og:description" content="Win, draw and loss probabilities plus a projected scoreline for every fixture.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="og/premier-league.png">
+<meta property="og:image" content="https://chraltro.github.io/537/og/premier-league.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="og/premier-league.png">
+<meta name="twitter:image" content="https://chraltro.github.io/537/og/premier-league.png">
 <link rel="canonical" href="https://chraltro.github.io/537/matches.html">
+<link rel="modulepreload" href="assets/app.js">
+<link rel="preload" as="fetch" crossorigin href="data/leagues.json">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -32,6 +55,7 @@
   
 
   <section class="card" id="c-all">
+  <h2 id="allhead">Every fixture</h2>
   <div class="controls">
     <label for="fteam">Club</label>
     <select id="fteam"><option value="">All clubs</option></select>
@@ -57,7 +81,7 @@
   </div>
 
   <div class="match matchhead">
-    <span class="when">Kick-off</span><span class="home">Home</span>
+    <span class="when"><span class="full">Kick-off</span><span class="abbr">Time</span></span><span class="home">Home</span>
     <span style="text-align:center"><span class="full">Win / draw / loss %</span><span class="abbr">W/D/L</span></span>
     <span class="away">Away</span><span class="proj">xG</span>
     <span class="stake">Stakes</span><span class="res">Result</span>
@@ -105,8 +129,9 @@
 
 <script type="module">
 import { data, pct, esc, initChrome, tip, tipRows, chipColor, initPalette, matchModal,
-         lg, withLg, setMeta, eventLabels, roundLabel, roundShort,
-         isMatchweek, cardUrl, initTabs, replaceQuery, url } from './assets/app.js';
+         lg, withLg, setMeta, eventLabels, roundLabel, roundShort, fmtDay,
+         isMatchweek, cardUrl, initTabs, replaceQuery, url, nextRound,
+         todayISO } from './assets/app.js';
 initChrome('matches');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
@@ -138,7 +163,10 @@ document.getElementById('fmwall').textContent = W.isCup ? 'All rounds' : `All ${
 document.getElementById('stamp').innerHTML =
   `<span><b>${matches.filter((m) => m.played).length}</b> played</span>
    <span><b>${matches.filter((m) => !m.played).length}</b> to come</span>
-   <span>Each played match is scored against the forecast frozen <b>before</b> kick-off</span>`;
+   <span>Each played match is scored against the forecast frozen <b>before</b> kick-off</span>
+   ${matches.some((m) => m.time)
+     ? '<span>Kick-off times are local to the match, as the fixture list gives them</span>'
+     : ''}`;
 
 const fteam = document.getElementById('fteam');
 fteam.insertAdjacentHTML('beforeend', [...fc.teams]
@@ -152,8 +180,7 @@ const mws = [...new Set(matches.map((m) => m.md))]
 document.getElementById('fmw').insertAdjacentHTML('beforeend',
   mws.map((n) => `<option value="${esc(n)}">${esc(roundLabel(n))}</option>`).join(''));
 
-const fmt = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
-  { weekday: 'short', day: 'numeric', month: 'short' });
+const fmt = fmtDay;
 
 /* A segment only carries its number when the label actually fits, so a 6%
    sliver never shows a clipped digit. */
@@ -193,8 +220,13 @@ const params = new URLSearchParams(location.search);
 
 /* Opening on every fixture in the season is a 48,000px page on a phone and answers nobody's
    question. Default to the round that is actually next, and leave the whole
-   season one dropdown away. */
-const nextMw = (matches.find((m) => !m.played) || matches[matches.length - 1]).md;
+   season one dropdown away.
+
+   "Actually next" used to mean `matches.find(m => !m.played)`, which asks the
+   data file rather than the calendar: with a build a few days behind, the page
+   opened on a round that finished last week, with blank result cells beside
+   live probabilities. */
+const nextMw = nextRound(matches).md;
 document.getElementById('fmw').value = String(nextMw);
 
 if (params.get('t') && meta[params.get('t')]) fteam.value = params.get('t');
@@ -217,8 +249,14 @@ function draw() {
   const sel = matches.filter((m) =>
     (!t || m.h === t || m.a === t) && (!w || String(m.md) === w) && (!onlyPlayed || m.played));
   const total = matches.length;
+  /* A round whose fixtures are all in the past is a set of results, and the
+     count says which it is rather than leaving a row of empty result cells to
+     be read as a forecast. */
+  const past = sel.length && sel.every((m) => String(m.date) < todayISO());
+  const unplayed = sel.filter((m) => !m.played).length;
   document.getElementById('count').textContent = w
-    ? `${sel.length} of ${total} matches · ${roundLabel(w).toLowerCase()}`
+    ? `${sel.length} of ${total} matches · ${roundLabel(w).toLowerCase()}${
+        past && unplayed ? ' · played, but no results in this build yet' : ''}`
     : `${sel.length} of ${total} matches`;
   if (!sel.length) {
     list.innerHTML = '<p class="empty">No matches match those filters.</p>';

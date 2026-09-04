@@ -103,7 +103,9 @@ carries `"generated": ISO-8601 UTC`. Club ids are registry ids (`arsenal`,
   simple bound (a rival's maximum is its current points plus three per
   remaining match; rivals playing each other is ignored, so the bound is
   conservative and the site says so). `done` is true once the outcome is
-  mathematically settled; `need` is null when it can no longer be reached.
+  mathematically settled; `need` is null when no attainable total
+  guarantees it yet, which is most of the table until spring. The site
+  reads `done` for badges and `need` only as a number to quote.
   Cups: `title` means first in the league phase, `top` the direct places,
   `safe` avoiding elimination.
 

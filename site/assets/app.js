@@ -162,12 +162,23 @@ export function lg() {
    league keys as well so anything reading `title`/`ucl`/`releg` still reads. */
 export function eventLabels() {
   const W = lg();
-  const base = { title: W.winWord, ucl: W.topFinish, releg: W.downWord };
-  if (W.isPromotion) return { ...base, ucl: 'automatic promotion' };
+  /* `top` and `out` are the competition-neutral spellings the cross-competition
+     files use (`clubindex.json`, `rooting.json`), because "ucl" and "releg" are
+     the league's words for what a cup calls the direct places and going out.
+     Both spellings resolve to the same phrase, so anything reading either is
+     right. */
+  const base = {
+    title: W.winWord, ucl: W.topFinish, releg: W.downWord,
+    top: W.topFinish, out: W.downWord,
+  };
+  if (W.isPromotion) return { ...base, ucl: 'automatic promotion', top: 'automatic promotion' };
   return W.isCup
     ? { ...base, top8: W.topFinish, qualify: 'reaching the knockout stage', out: 'elimination' }
     : base;
 }
+
+/** Whether a rise in this event's probability is good news for the club. */
+export const eventIsGood = (key) => !['releg', 'out', 'down'].includes(key);
 
 /* ================= rounds =================
    The league phase numbers its rounds; the knockout names them. Stage codes are
@@ -303,6 +314,9 @@ function absorb(name, d) {
     num('matches_total');
     if (d.league && typeof d.league === 'object') Object.assign(LG, d.league);
     if (d.replay) { LG.replay = d.replay; LG.replay_note = d.replay_note || ''; }
+    /* Every league-scoped page loads this file, so this is the one place that
+       has to notice a stalled build for all of them. */
+    if (d.generated) showStaleBanner(d.generated, LG.name);
   }
   if (name === 'sim_input') {
     num('ucl_places'); num('releg_places'); num('n_teams');
@@ -343,9 +357,55 @@ export async function ensureReplayBanner() {
   showReplayBanner();
 }
 
+/* ================= freshness =================
+   The site had exactly one freshness signal — twelve grey pixels reading
+   "Updated 29 Aug" — and nothing anywhere compared that stamp to the clock. The
+   build runs every six hours and the publish step is allowed to fail softly, so
+   a stalled deploy degraded into a confidently wrong site: a round finished last
+   week presented as the next one, in the same voice the site uses when it is
+   right.
+
+   Twelve hours is two missed builds. Under that this never fires, so a healthy
+   deploy shows nothing; over it, the reader is told before the numbers are. */
+const STALE_HOURS = 12;
+
+export function freshness(iso) {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return { hours: null, stale: false };
+  const hours = (Date.now() - t) / 36e5;
+  return { hours, stale: hours > STALE_HOURS };
+}
+
+/** How old, in the words a person would use. */
+function agePhrase(hours) {
+  if (hours < 48) return `${Math.round(hours)} hours old`;
+  const days = Math.round(hours / 24);
+  return `${days} days old`;
+}
+
+/* Same component as the staging banner: full bleed under the masthead, warning
+   toned, unmissable, and the same shape so the two never read as different
+   kinds of warning. */
+export function showStaleBanner(iso, subject) {
+  const f = freshness(iso);
+  if (!f.stale) return false;
+  if (document.getElementById('stalebanner')) return true;
+  const what = subject ? `${subject} figures` : 'These numbers';
+  const html = `<div class="banner" id="stalebanner" role="status">
+      <b>Out of date</b>
+      <span>${esc(what)} were built on ${esc(fmtStamp(iso))}, ${
+        esc(agePhrase(f.hours))}. This site rebuilds every six hours, so a gap
+        this long means a build has not published. Everything below describes the
+        season as it stood then, not as it stands today.</span></div>`;
+  const head = document.querySelector('header.masthead');
+  if (head) head.insertAdjacentHTML('afterend', html);
+  else document.body.insertAdjacentHTML('afterbegin', html);
+  return true;
+}
+
 /* ================= page metadata =================
    Titles and descriptions name the league, so a shared link says which one. */
-export function setMeta({ title, ogTitle, description, image }) {
+export function setMeta({ title, ogTitle, description, image, canonical }) {
   const set = (sel, v) => {
     const el = document.querySelector(sel);
     if (el && v) el.setAttribute('content', v);
@@ -362,15 +422,135 @@ export function setMeta({ title, ogTitle, description, image }) {
     set('meta[property="og:image"]', abs);
     set('meta[name="twitter:image"]', abs);
   }
+  setCanonical(canonical);
+}
+
+/* Every league-scoped page shipped one hardcoded canonical, so the Champions
+   League table, the Bundesliga table and the Championship promotion race all
+   told search engines they were duplicates of the Premier League page — 63 of
+   the sitemap's 73 URLs canonicalising away. The competition is part of the
+   page's identity, so it belongs in the canonical.
+
+   The href already in the head carries the production origin, which is the
+   whole point of a canonical: it must not become a localhost URL when the site
+   is served from one. Only the query is rewritten.
+
+   `rel` lets a page whose subject is not the current league name its own
+   (`projection.html?league=…`); left off, the default is this page carrying the
+   league it is showing, and nothing at all for a page not scoped to one. */
+function setCanonical(rel) {
+  const el = document.querySelector('link[rel="canonical"]');
+  if (!el) return;
+  const base = new URL(el.getAttribute('href') || location.href, location.href);
+  const file = base.pathname.split('/').pop() || 'index.html';
+  const u = new URL(rel || file, base);
+  if (!rel && !SITE_ONLY.has(file) && LG.slug !== DEFAULT_LEAGUE) {
+    u.searchParams.set('lg', LG.slug);
+  }
+  el.setAttribute('href', u.href);
 }
 
 /* The build writes one card per competition and one per club. */
 export const cardUrl = (slug, team) =>
   `${ROOT}og/${slug}${team ? `/${team}` : ''}.png`;
 
-export const pct = (x, d = 0) =>
-  x >= 0.9995 ? '>99%' : (x > 0 && x < 0.005 ? '<1%' : `${(x * 100).toFixed(d)}%`);
+/* Every probability the site prints goes through here, and two numbers never
+   come out of it. 100% and 0% are the two things a forecast of this kind cannot
+   honestly say: Sabah go out of the Champions League in 49,942 of 50,000
+   simulated seasons, which is not certainty, and an outcome that turned up in
+   none of them is "under one in fifty thousand" rather than impossible. Both
+   ends are clamped to the finest thing the requested number of decimals can
+   state, so `pct(x)` reads ">99%" and `pct(x, 1)` ">99.9%". */
+export function pct(x, d = 0) {
+  const v = Number(x);
+  if (!Number.isFinite(v)) return '\u2014';
+  const step = 10 ** -d;                          // 1, 0.1, 0.01 …
+  const shown = (v * 100).toFixed(d);
+  if (parseFloat(shown) >= 100) return `>${(100 - step).toFixed(d)}%`;
+  if (parseFloat(shown) <= 0) return `<${step.toFixed(d)}%`;
+  return `${shown}%`;
+}
+/* The same clamp for the numbers written *inside* a win/draw/loss bar, which
+   carry no per-cent sign and have room for two digits. */
+export const barPct = (p) => Math.min(99, Math.max(1, Math.round(p * 100)));
+/* "Liverpool — 10th · 1 pts". A points total is a count, and a count of one
+   takes the singular; a projected average of 1.0 does not. */
+export const ptsWord = (n) => `${n} ${Number(n) === 1 ? 'pt' : 'pts'}`;
 export const signed = (x) => (x > 0 ? `+${x}` : `${x}`);
+
+/* ================= dates and seasons =================
+   Four pages printed four different date formats, two of them ISO, and one
+   screen could carry "2026-08-29", "22 Aug" and "2026/27" at once. A reader is
+   never shown an ISO date now: these are the only formatters on the site.
+
+   An ISO day is read at midday rather than at midnight, so a timezone west of
+   UTC cannot roll it back to the day before. */
+const _at = (iso) => new Date(`${String(iso).slice(0, 10)}T12:00:00`);
+const _ok = (d) => d instanceof Date && !Number.isNaN(d.getTime());
+
+/** "22 Aug", or "22 Aug 2025" when the year is not this one. */
+export function fmtDate(iso, { weekday = false, year = 'auto' } = {}) {
+  const d = _at(iso);
+  if (!_ok(d)) return String(iso ?? '');
+  const showYear = year === true
+    || (year === 'auto' && d.getFullYear() !== new Date().getFullYear());
+  return d.toLocaleDateString('en-GB', {
+    ...(weekday ? { weekday: 'short' } : {}),
+    day: 'numeric', month: 'short', ...(showYear ? { year: 'numeric' } : {}),
+  });
+}
+/** "Sat 12 Sep" — the fixture-list form. */
+export const fmtDay = (iso) => fmtDate(iso, { weekday: true });
+/** "29 Aug, 17:21" — a build timestamp, which is a moment and not a day. */
+export function fmtStamp(iso) {
+  const d = new Date(iso);
+  if (!_ok(d)) return String(iso ?? '');
+  return d.toLocaleDateString('en-GB',
+    { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+/* The narrative sentences are written by the pipeline and carry the date they
+   were measured against as an ISO string, because that is the right thing for a
+   file to store and the wrong thing for a person to read. Rewritten on the way
+   to the page rather than in the file, so the data stays machine-readable. */
+export const humaniseDates = (text) =>
+  String(text ?? '').replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g,
+    (iso) => fmtDate(iso, { year: true }));
+
+/** "2025-26", "2025/26" and "25-26" all come out as "2025/26". */
+export function fmtSeason(s) {
+  const m = String(s ?? '').match(/^(\d{2,4})\s*[-/\u2013]\s*(\d{2,4})$/);
+  if (!m) return String(s ?? '');
+  const start = m[1].length === 2 ? `20${m[1]}` : m[1];
+  return `${start}/${m[2].slice(-2)}`;
+}
+
+/* ================= today =================
+   The site had no sense of time: every "has the season started?" decision was
+   read off the data file's own flags, so a build a few days behind cheerfully
+   presented a finished round as the next one. Anything that asks that question
+   asks it here. */
+export const todayISO = () => new Date().toISOString().slice(0, 10);
+
+/** The next round to play: the earliest one with a fixture today or later,
+    falling back to the first unplayed round, and finally to the last round in
+    the file. Returns null for an empty list. */
+export function nextRound(matches) {
+  if (!matches || !matches.length) return null;
+  const today = todayISO();
+  const ahead = matches.filter((m) => !m.played && String(m.date) >= today);
+  const pick = ahead.length
+    ? ahead.reduce((a, b) => (String(a.date) <= String(b.date) ? a : b))
+    : (matches.find((m) => !m.played) || matches[matches.length - 1]);
+  return pick;
+}
+
+/** Whether the newest fixture in a file is already in the past, which is the
+    one thing that makes "next up" and "before a ball is kicked" a lie. */
+export function calendarIsBehind(matches) {
+  if (!matches || !matches.length) return false;
+  const newest = matches.reduce((a, b) => (String(a.date) >= String(b.date) ? a : b));
+  return String(newest.date) < todayISO();
+}
 export const ord = (n) => {
   const s = ['th', 'st', 'nd', 'rd'];
   const v = n % 100;
@@ -402,6 +582,10 @@ export const PAGES = [
   { id: 'races',    label: 'Races',           long: 'The races',            file: 'races.html',     group: 'league', primary: true },
   { id: 'sim',      label: 'What if',         long: 'What if? simulator',   file: 'simulator.html', group: 'league' },
   { id: 'review',   label: 'Season review',   short: 'Review',              long: 'How wrong were we?',   file: 'review.html',    group: 'league' },
+  /* Not scoped to a competition, and the first thing a returning reader wants:
+     what is on, everywhere, between now and the weekend. It sits in the top row
+     rather than in the overflow menu for that reason. */
+  { id: 'week',     label: 'This week',       short: 'Week',                long: 'This week across Europe', file: 'week.html', group: 'europe', site: true, primary: true },
   { id: 'rankings', label: 'Global rankings', short: 'Rankings',            long: 'Global club rankings', file: 'rankings.html',  group: 'europe', site: true },
   { id: 'compare',  label: 'Compare clubs',   short: 'Compare',             long: 'Compare two clubs',    file: 'compare.html',   group: 'europe', site: true },
   { id: 'projection', label: 'Other leagues', short: 'Leagues', long: 'Every other league', file: 'projection.html', group: 'europe', site: true },
@@ -467,7 +651,7 @@ export function initChrome(page) {
       esc(l.name)}${l.ready ? '' : ' (not live yet)'}</option>`;
   }).join('');
 
-  /* The picker offered the nine competitions this site forecasts while the
+  /* The picker offered only the competitions this site forecasts while the
      ranking held sixty leagues, and the only way to any of the other fifty-one
      was a filter on one page. They have no table and no fixture list, so they
      cannot be forecast pages; what they do have is a rating, so these entries
@@ -502,12 +686,18 @@ export function initChrome(page) {
   const asked = (P.get('league') || '').trim();
   const projByslug = new Map(projected.map((l) => [l.slug, l]));
   let choice = '', awayName = '', awayKind = '';
-  if (page === 'projection') {
-    /* No `?league=` means the page picks the first one itself, and the box has
-       to say the same thing the page does. The page hosts both kinds now: a
-       league with a projected finish and a league with only a table. */
-    const r = rated.find((l) => l.slug === asked);
-    const l = projByslug.get(asked) || (r ? null : projected[0]);
+  if (page === 'projection' && asked) {
+    /* Only when a league is actually asked for. Two things used to go wrong
+       here without one. A dozen rated leagues carry an empty slug -- they are
+       groups of clubs in the pooled fit rather than named competitions -- so
+       `rated.find(l => l.slug === '')` matched the first of them and the
+       masthead announced "England, third tier" on a page that was showing
+       nothing of the sort, with the three competition tabs greyed out beside
+       it. And the page itself now answers a bare visit with the directory of
+       every rated league rather than by picking the first projected one, so
+       there is no league for the box to be standing on. */
+    const r = rated.find((l) => l.slug && l.slug === asked);
+    const l = projByslug.get(asked) || null;
     if (l) { choice = `proj:${l.slug}`; awayName = l.name; awayKind = 'proj'; }
     else if (r) { choice = `rated:${r.slug}`; awayName = r.name; awayKind = 'rated'; }
   } else if (page === 'rankings' && asked) {
@@ -544,9 +734,17 @@ export function initChrome(page) {
       </label>
       <nav class="top" aria-label="Sections">
         ${PAGES.filter((p) => p.primary).map((p) => {
+          /* Five tabs share 390px with a menu button, and "This week" wrapped to
+             two lines and grew the masthead by a row. The registry already
+             carries a short form for the names that do not fit; the bar shows
+             whichever the width allows, and both are in the markup so the
+             accessible name does not change with the viewport. */
+          const label = p.short
+            ? `<span class="full">${esc(p.label)}</span><span class="abbr">${esc(p.short)}</span>`
+            : esc(p.label);
           if (!awayKind || p.group !== 'league') {
             return `<a class="np" href="${pageHref(p)}"${
-              page === p.id ? ' aria-current="page"' : ''}>${esc(p.label)}</a>`;
+              page === p.id ? ' aria-current="page"' : ''}>${label}</a>`;
           }
           if (p.id === 'table') {
             /* Both kinds have a table of their own on that page, so the tab
@@ -631,15 +829,30 @@ export function initChrome(page) {
        new: choosing Serie A from Eliteserien's projected table stayed on
        Eliteserien and added a parameter that did nothing. */
     u.searchParams.delete('league');
-    if (page === 'projection') {
-      /* There is no projected version of a forecast league, so this is a jump
-         back to the table, which is the page the projection stands in for. */
-      u.pathname = u.pathname.replace(/projection\.html$/, 'index.html');
-    } else if (page === 'rankings') {
+    /* A matchweek number does not survive the hop. Switching from the Premier
+       League's matchweek 2 to the Champions League produced `?mw=2` on a
+       competition whose matchday 1 has not been played, which is a filter to
+       nothing dressed up as a filter to something. Rounds are numbered per
+       competition; only the club and the match deep link mean anything across
+       one, and those degrade to a default rather than to an error. */
+    u.searchParams.delete('mw');
+    const file = u.pathname.split('/').pop() || 'index.html';
+    if (page === 'rankings') {
       /* The ranking's own axis is the league filter, so switching league here
-         means filtering to it rather than leaving. */
+         means filtering to it rather than leaving. `?lg=` would mean nothing on
+         a page showing every club in Europe, so it is not set. */
       const pick = LEAGUES.find((l) => l.slug === v);
       if (pick) u.searchParams.set('league', pick.name);
+      u.searchParams.delete('lg');
+      location.href = u.toString();
+      return;
+    }
+    if (SITE_ONLY.has(file)) {
+      /* These pages are not scoped to a competition, so `?lg=` on them was a
+         promise the page did not keep: the address bar changed and nothing
+         else did. Choosing a league here means going to that league, which is
+         its table -- the page the picker sits above everywhere else. */
+      u.pathname = u.pathname.replace(new RegExp(`${file.replace('.', '\\.')}$`), 'index.html');
     }
     if (v === DEFAULT_LEAGUE) u.searchParams.delete('lg');
     else u.searchParams.set('lg', v);
@@ -653,14 +866,14 @@ export function initChrome(page) {
     <footer><div class="wrap">
       <p>
         <a href="${url('method.html')}">Method</a> ·
-        <a href="${ROOT}cal/${esc(LG.slug)}.ics">Calendar</a> ·
+        <span id="footcal"><a href="${ROOT}cal/${esc(LG.slug)}.ics">Calendar</a> ·</span>
         <a href="${ROOT}feed.xml">RSS</a> ·
         <a href="${ROOT}feed.json">JSON</a> ·
         <a href="${ROOT}embed.html?lg=${esc(LG.slug)}">Widget</a> ·
         <a href="https://github.com/datasets/football-datasets">football-datasets</a> ·
         <a href="https://github.com/openfootball">openfootball</a>
       </p>
-      <p class="foot-fine">Not affiliated with ${esc(W.the)}. Not betting advice.</p>
+      <p class="foot-fine" id="footfine">Not affiliated with ${esc(W.the)}. Not betting advice.</p>
     </div></footer>`);
   document.body.insertAdjacentHTML('beforeend', '<div id="tip" role="tooltip"></div>');
 
@@ -668,6 +881,27 @@ export function initChrome(page) {
   trackHeadHeight();
   lgifyLinks(document);
   registerWorker();
+}
+
+/* ================= whose page is this =================
+   The footer is built from the competition in `?lg=`, which is right on nine
+   pages and wrong on the tenth: `projection.html?league=scottish-premiership`
+   is a page about Scottish football that said "Not affiliated with the Premier
+   League" and offered a Premier League calendar. A page whose subject is not
+   the current league says so here.
+
+   A rated-but-not-forecast league has no fixture list anywhere, so it has no
+   calendar feed either, and the link goes rather than pointing at somebody
+   else's. */
+export function setFooterSubject(name, slug) {
+  const fine = document.getElementById('footfine');
+  if (fine && name) {
+    fine.textContent = `Not affiliated with ${withArticle(name)}. Not betting advice.`;
+  }
+  const cal = document.getElementById('footcal');
+  if (!cal) return;
+  if (slug) cal.querySelector('a').setAttribute('href', `${ROOT}cal/${slug}.ics`);
+  else cal.remove();
 }
 
 /* The masthead's real height, published for anything that has to sit under it.
@@ -1046,8 +1280,12 @@ export function initPalette(teams) {
       href: pageHref(p),
     })),
     ...teams.map((t) => ({ label: t.name, kind: 'Club', href: url(`team.html?t=${t.id}`), hint: t.short })),
+    /* The site's own rows say "MW 3" and the palette only answered to
+       "Matchweek 3", so typing what is on the screen found nothing. The
+       abbreviation rides along as the hint, which the filter already searches. */
     ...Array.from({ length: W.nWeeks }, (_, i) => ({
       label: `${W.roundWord} ${i + 1}`, kind: W.roundWord,
+      hint: `${W.roundAbbr} ${i + 1}`,
       href: url(`matches.html?mw=${i + 1}`) })),
     ...LEAGUES.filter((l) => l.ready && l.slug !== LG.slug).map((l) => ({
       label: `Switch to ${l.name}`, kind: 'League', href: swap(l.slug), hint: l.country || '' })),
@@ -1355,7 +1593,17 @@ export function unlockScroll() {
   window.scrollTo(0, lockedAt);
 }
 
-/* ================= modal ================= */
+/* ================= modal =================
+   `aria-modal="true"` is a promise to a keyboard and a screen reader that the
+   rest of the page is out of reach, and the dialog kept none of it: three tabs
+   took focus out into the masthead behind it, and Escape dropped focus on
+   BODY -- the top of the document -- rather than back on the fixture that had
+   been opened. Both are fixed here rather than per page, because every dialog
+   on the site goes through this function. */
+const FOCUSABLE = 'a[href], button:not([disabled]), input, select, textarea, '
+                + '[tabindex]:not([tabindex="-1"])';
+let modalReturn = null;
+
 export function modal(html) {
   let m = document.getElementById('modal');
   if (!m) {
@@ -1365,15 +1613,33 @@ export function modal(html) {
     m = document.getElementById('modal');
     m.addEventListener('click', (e) => { if (e.target.dataset.close !== undefined) closeModal(); });
     addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+    /* Tab wraps inside the box. Bound to the dialog rather than to the document
+       so it costs nothing while the dialog is closed. */
+    m.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab') return;
+      const b = m.querySelector('.modal-box');
+      const items = [...b.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null);
+      if (!items.length) { e.preventDefault(); b.focus(); return; }
+      const first = items[0], last = items[items.length - 1];
+      const at = document.activeElement;
+      if (e.shiftKey && (at === first || at === b)) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (at === last || at === b)) { e.preventDefault(); first.focus(); }
+    });
+  }
+  /* Where to put focus back. Captured on the way in only: reopening from inside
+     an open dialog would otherwise remember a button about to be replaced. */
+  if (m.hidden) {
+    const was = document.activeElement;
+    modalReturn = (was && was !== document.body && document.contains(was)) ? was : null;
   }
   const box = m.querySelector('.modal-box');
   box.innerHTML = `<button class="modal-x" data-close aria-label="Close">✕</button>${html}`;
   box.querySelectorAll('[data-ics]').forEach((a) => a.addEventListener('click', (e) => {
     e.preventDefault();
-    /* One fixture out of the competition's own feed, so the description is the
-       same text a subscriber already gets and there is one format to maintain. */
-    const [h, aw] = a.dataset.ics.split('|');
-    window.location.href = `${ROOT}cal/${LG.slug}/${encodeURIComponent(h)}.ics`;
+    /* Whatever the link resolved to: the single-event file when the build wrote
+       one, otherwise the club's own feed out of the competition's calendar, so
+       the description is the text a subscriber already gets. */
+    window.location.href = a.dataset.ics;
   }));
   box.scrollTop = 0;
   m.hidden = false;
@@ -1385,6 +1651,11 @@ export function closeModal() {
   if (!m || m.hidden) return;
   m.hidden = true;
   unlockScroll();
+  /* Back to the row that opened it. Without this a keyboard reader closed a
+     fixture and landed at the top of the document, with no way back to where
+     they had been except tabbing the whole page again. */
+  if (modalReturn && document.contains(modalReturn)) modalReturn.focus();
+  modalReturn = null;
 }
 
 /* ================= a scoreline grid from published parameters =================
@@ -1921,42 +2192,95 @@ export function halfTime(m, h, a) {
       &nbsp;·&nbsp; fitted on the half-time scores in the results feed.</div>`;
 }
 
+/* ================= optional files =================
+   `data()` puts a full-page failure banner up when a fetch fails, which is
+   right for the forecast a page is built on and wrong for an extra a dialog
+   would merely like to have. These resolve to null instead. */
+const _soft = {};
+export function softData(name) {
+  if (!(name in _soft)) {
+    _soft[name] = fetch(`${DATA}${LG.slug}/${name}.json`, { cache: 'no-cache' })
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  }
+  return _soft[name];
+}
+/** The same, for a file that belongs to the whole site rather than one league. */
+export function softSiteData(name) {
+  const key = `::${name}`;
+  if (!(key in _soft)) {
+    _soft[key] = fetch(`${DATA}${name}.json`, { cache: 'no-cache' })
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  }
+  return _soft[key];
+}
+
 /* ================= match dialog =================
    One implementation shared by every page that can open a match. `meta` is the
-   forecast's team map; `opts.link` adds a permalink to the matches page. */
+   forecast's team map; `opts.link` adds a permalink to the matches page.
+
+   A played match is a different document from an unplayed one and used to be
+   rendered as the same one: the result appeared as a clause in the subtitle and
+   everything under it stayed in the present tense, over probabilities
+   recomputed from today's ratings rather than the ones the match was actually
+   scored against. The rest of the site is scrupulous about that distinction --
+   "scored against the forecast frozen *before* kick-off" -- and this was the
+   one place that quietly was not. */
 export function matchModal(m, meta, opts = {}) {
   const EVENT = eventLabels();
   const h = meta[m.h], a = meta[m.a];
-  const fmtDay = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
-    { weekday: 'short', day: 'numeric', month: 'short' });
+  const played = !!m.played;
   const swings = (m.swings || []).map((s) => `
     <div class="swing-row">
       <span>${esc(meta[s.team].name)}: ${EVENT[s.event]}</span>
       ${swingBar(s.away, s.home, meta[s.team].name + ' ' + EVENT[s.event])}
       <b>${pct(s.away)} → ${pct(s.home)}</b>
     </div>`).join('');
+
+  const bar = (ph, pd, pa) => `
+    <div class="wdl" style="height:26px;margin-bottom:6px">
+      <i class="h" style="flex:${Math.max(ph, .02)}"><b>${barPct(ph)}</b></i>
+      <i class="d" style="flex:${Math.max(pd, .02)}"><b>${barPct(pd)}</b></i>
+      <i class="a" style="flex:${Math.max(pa, .02)}"><b>${barPct(pa)}</b></i>
+    </div>`;
+
+  /* The calendar link used to read "add to calendar" on a dialog headed by one
+     fixture and hand over all thirty-eight of the home club's, which is a
+     different thing than the words promised. It says whose fixtures it is now,
+     and upgrades itself to the single event when the build has written one. */
+  const clubIcs = `${ROOT}cal/${LG.slug}/${encodeURIComponent(m.h)}.ics`;
+  const oneIcs = `${ROOT}cal/${LG.slug}/match/${m.date}-${m.h}-${m.a}.ics`;
+
+  const result = played ? `
+    <div class="mresult">
+      <b>${m.hg}\u2013${m.ag}</b>
+      <span>${m.hg === m.ag ? 'Drawn'
+        : `${esc(m.hg > m.ag ? h.name : a.name)} won`}</span>
+    </div>` : '';
+
   tip(null);
   modal(`
     <h3>${esc(h.name)} v ${esc(a.name)}</h3>
-    <p class="msub">${esc(roundLabel(m.md, m.leg))} · ${fmtDay(m.date)}${m.time ? ` · ${m.time}` : ''}
-      ${m.played ? ` · finished ${m.hg}–${m.ag}` : ''}
+    <p class="msub">${esc(roundLabel(m.md, m.leg))} \u00b7 ${fmtDay(m.date)}${m.time ? ` \u00b7 ${m.time}` : ''}
       ${opts.link === false ? '' :
-        ` · <a href="${url(`matches.html?m=${m.h}--${m.a}`)}">link to this match</a>`}
-      ${m.played ? '' : ` · <a href="#" data-ics="${esc(m.h)}|${esc(m.a)}">add to calendar</a>`}</p>
-    <div class="wdl" style="height:26px;margin-bottom:6px">
-      <i class="h" style="flex:${Math.max(m.ph, .02)}"><b>${Math.round(m.ph * 100)}</b></i>
-      <i class="d" style="flex:${Math.max(m.pd, .02)}"><b>${Math.round(m.pd * 100)}</b></i>
-      <i class="a" style="flex:${Math.max(m.pa, .02)}"><b>${Math.round(m.pa * 100)}</b></i>
-    </div>
+        ` \u00b7 <a href="${url(`matches.html?m=${m.h}--${m.a}`)}">link to this match</a>`}
+      ${played ? '' : ` \u00b7 <a href="#" id="micsl" data-ics="${esc(clubIcs)}">Add ${esc(h.short)} fixtures</a>`}</p>
+    ${result}
+    ${played ? `<h4>What the forecast said before kick-off</h4>
+      <div id="mfrozen"><p class="hint">Looking for the frozen forecast\u2026</p></div>
+      <h4 style="margin-top:24px">The model\u2019s read of this fixture today</h4>
+      <p class="hint" style="margin:0 0 10px">Recomputed from the current ratings, so these
+        are not the numbers the result was scored against \u2014 they are what the model would
+        say about the same fixture now.</p>` : ''}
+    ${bar(m.ph, m.pd, m.pa)}
     <div class="hint" style="margin-bottom:20px">
-      ${esc(h.short)} win · draw · ${esc(a.short)} win &nbsp;·&nbsp;
-      expected goals ${m.xgh} – ${m.xga} &nbsp;·&nbsp; over 2.5 goals ${pct(m.o25)}
-      &nbsp;·&nbsp; both score ${pct(m.btts)}
-      ${typeof m.csh === 'number' ? `&nbsp;·&nbsp; clean sheet
+      ${esc(h.short)} win \u00b7 draw \u00b7 ${esc(a.short)} win &nbsp;\u00b7&nbsp;
+      expected goals ${m.xgh} \u2013 ${m.xga} &nbsp;\u00b7&nbsp; over 2.5 goals ${pct(m.o25)}
+      &nbsp;\u00b7&nbsp; both score ${pct(m.btts)}
+      ${typeof m.csh === 'number' ? `&nbsp;\u00b7&nbsp; clean sheet
         ${esc(h.short)} ${pct(m.csh)} / ${esc(a.short)} ${pct(m.csa)}` : ''}</div>
     ${halfTime(m, h, a)}
     <h4>Every plausible scoreline</h4>
-    <p class="hint" style="margin:0 0 12px">The likeliest single score is ${m.sc[0]}–${m.sc[1]},
+    <p class="hint" style="margin:0 0 12px">The likeliest single score ${played ? 'is' : 'is'} ${m.sc[0]}\u2013${m.sc[1]},
       and even that lands only ${pct(m.scp)} of the time.</p>
     ${scoreGrid(m.grid, h.short, a.short, m.sc)}
     ${swings ? `<h4 style="margin-top:24px">What rides on it</h4>
@@ -1967,4 +2291,43 @@ export function matchModal(m, meta, opts = {}) {
         <span><i style="background:var(--away)"></i>${esc(a.short)} win</span>
         <span><i style="background:var(--accent)"></i>${esc(h.short)} win</span>
       </div>` : ''}`);
+
+  /* A single-event file is written for fixtures inside the stub window only, so
+     the link starts on the club feed and moves to the one match if it is there.
+     A HEAD is enough and costs nothing when it 404s. */
+  if (!played) {
+    fetch(oneIcs, { method: 'HEAD' }).then((r) => {
+      const el = document.getElementById('micsl');
+      if (!r.ok || !el) return;
+      el.dataset.ics = oneIcs;
+      el.textContent = 'Add this match';
+    }).catch(() => { /* no per-match feed in this build */ });
+  }
+
+  /* The numbers the result was actually marked against. They live in
+     `predictions.json`, which the pipeline freezes before each kick-off and
+     never rewrites; the file is deployed already and nothing read it. */
+  if (played) {
+    softData('predictions').then((pr) => {
+      const el = document.getElementById('mfrozen');
+      if (!el) return;
+      const f = pr && pr.frozen && pr.frozen[`${m.h}|${m.a}`];
+      if (!f) {
+        el.innerHTML = `<p class="hint">No forecast was frozen for this match: it was
+          played before the freeze began, or the build that would have written one did not
+          run. The figures below are today's.</p>`;
+        return;
+      }
+      const outcome = m.hg > m.ag ? 'ph' : (m.hg === m.ag ? 'pd' : 'pa');
+      const best = ['ph', 'pd', 'pa'].reduce((x, y) => (f[x] > f[y] ? x : y));
+      const said = { ph: `${h.short} win`, pd: 'a draw', pa: `${a.short} win` };
+      el.innerHTML = bar(f.ph, f.pd, f.pa) + `
+        <div class="hint">${esc(h.short)} win ${pct(f.ph)} \u00b7 draw ${pct(f.pd)} \u00b7
+          ${esc(a.short)} win ${pct(f.pa)} &nbsp;\u00b7&nbsp; expected goals
+          ${f.xgh} \u2013 ${f.xga}${f.asof ? ` &nbsp;\u00b7&nbsp; frozen ${fmtDate(f.asof)}` : ''}.
+          It gave the result that happened ${pct(f[outcome], 1)} and
+          ${outcome === best ? 'favoured it' : `favoured ${esc(said[best])}`}. These are the
+          numbers this match is scored against everywhere on the site.</div>`;
+    });
+  }
 }

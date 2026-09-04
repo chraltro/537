@@ -3,15 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* The theme, before the first pixel. This used to be corrected inside
+   `initChrome`, which runs after a module load and after that module's
+   top-level await on the manifest -- so a reader on the light theme got about a
+   tenth of a second of the dark page first. Five lines in the head, run at parse
+   time, and the flash is gone.
+
+   It also settles what the default is. The site shipped `data-theme="dark"` on
+   every page and consulted `prefers-color-scheme` nowhere, so somebody whose
+   whole machine is set to light had to ask this one site again on every device.
+   A saved choice still wins over the system; the system wins over us. */
+(function () {
+  try {
+    var t = localStorage.getItem('plf-theme');
+    if (t !== 'light' && t !== 'dark') {
+      t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { /* private mode: the markup's own default stands */ }
+})();
+</script>
 <title>Premier League 2026/27 Forecast</title>
 <meta name="description" content="A rating for every club, a probability for every match, and 50,000 simulations of the season.">
 <meta property="og:title" content="Who wins the league? — season forecast">
 <meta property="og:description" content="A rating for every club, a probability for every match, and 50,000 simulations of the season.">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta property="og:image" content="og/premier-league.png">
-<meta name="twitter:image" content="og/premier-league.png">
+<meta property="og:image" content="https://chraltro.github.io/537/og/premier-league.png">
+<meta name="twitter:image" content="https://chraltro.github.io/537/og/premier-league.png">
 <link rel="canonical" href="https://chraltro.github.io/537/index.html">
+<link rel="modulepreload" href="assets/app.js">
+<link rel="preload" as="fetch" crossorigin href="data/leagues.json">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -30,6 +53,16 @@
     <h2>The season, projected</h2>
     <p class="sub">Average outcome across 50,000 simulated seasons.
       Click a column to sort, or a club for its own page.</p>
+
+    <div class="chips" role="tablist" aria-label="Which table" id="tblviews"
+         style="margin:0 0 14px"></div>
+    <label class="controls" id="sincewrap" hidden style="margin:-4px 0 14px">
+      <span style="color:var(--muted);font-size:12px">From</span>
+      <select id="sincemw"></select>
+    </label>
+
+    <button class="chip-btn colmore" id="colmore" aria-pressed="false"
+            aria-controls="tableview">Show more columns</button>
 
     <div id="tableview">
       <div class="scroller">
@@ -50,7 +83,39 @@
       </div>
     </div>
 
+    <div id="altview" hidden>
+      <div class="scroller">
+        <table id="alttbl">
+          <thead id="altheadrow"></thead>
+          <tbody id="altbody"></tbody>
+        </table>
+      </div>
+      <p class="hint" id="altnote" style="margin-top:16px"></p>
+    </div>
+
     <p class="hint" id="lines" style="margin-top:16px"></p>
+    <p class="hint" id="clinchnote" style="margin-top:10px" hidden></p>
+  </section>
+
+  <section class="card" id="c-character" hidden>
+    <h2>Club character</h2>
+    <p class="sub" id="charsub"></p>
+    <div class="scroller">
+      <table id="chartbl">
+        <thead><tr>
+          <th class="l" data-k="name">Club</th>
+          <th data-k="home_edge" title="Points per game at home minus points per game away, for this club. The competition's own average is in the note below">Home edge</th>
+          <th data-k="gd_sd" title="How far the goal difference swings from match to match. Lower is steadier, which is not the same as better">Swing</th>
+          <th class="p2" data-k="top_ppg" title="Points per game against the strongest quarter of the competition">Vs top</th>
+          <th class="p3" data-k="bts_pct" title="Share of this club's matches in which both sides scored">Both score</th>
+          <th class="p3" data-k="over25_pct" title="Share of this club's matches with three goals or more">Over 2.5</th>
+          <th class="p2" data-k="unbeaten" title="Longest run without defeat in the window">Unbeaten</th>
+          <th class="p4 l" data-k="best_win" title="Biggest winning margin in the window">Best win</th>
+        </tr></thead>
+        <tbody id="charbody"></tbody>
+      </table>
+    </div>
+    <p class="hint" id="charnote" style="margin-top:16px"></p>
   </section>
 
   <section class="card" id="c-ratings">
@@ -124,9 +189,11 @@
       <h2 id="nexthead">Next up</h2>
       <a class="morelink" href="matches.html" id="alllink">All matches →</a>
     </div>
-    <p class="sub">Every fixture carries a stakes bar: how far the result swings
+    <p class="sub" id="nextsub">Every fixture carries a stakes bar: how far the result swings
       someone's season. Click one for the full scoreline picture.</p>
     <div id="nextup"></div>
+    <p class="hint" style="margin-top:14px"><a href="week.html">Everything on across Europe
+      this week →</a></p>
   </section>
 
   <nav class="deeper" aria-label="Go deeper">
@@ -137,24 +204,30 @@
       <span>Rating trends on the European scale, finishing positions, and what each club
         still needs.</span></a>
     <a href="rankings.html"><b>Every club in Europe</b>
-      <span>One rating scale across every league with a feed, so a Dutch club and an
-        Italian one are finally comparable.</span></a>
-    <a href="review.html"><b>How wrong were we?</b>
-      <span>August's projection marked against what actually happened, club by club.</span></a>
+      <span id="deeperranked">One rating scale across every league with a feed, so a Dutch
+        club and an Italian one are finally comparable.</span></a>
+    <a href="review.html" id="deepreview"><b id="deepreviewh">How wrong were we?</b>
+      <span id="deepreviews">August's projection marked against what actually happened,
+        club by club.</span></a>
     <a href="method.html"><b>How it works, and how well</b>
       <span>The model, and the backtest against the closing odds and ClubElo.</span></a>
   </nav>
 </main>
 
 <script type="module">
-import { data, siteData, pct, signed, esc, ord, initChrome, tip, tipRows, rampColor,
+import { data, siteData, softData, pct, signed, esc, ord, initChrome, tip, tipRows, rampColor,
          makeSortable, chipColor, initPalette, matchModal, roundLabel,
-         lg, url, setMeta, cardUrl, initTabs } from './assets/app.js';
+         lg, url, setMeta, cardUrl, initTabs, nextRound, todayISO, fmtDay, fmtStamp,
+         softSiteData, isMatchweek, fmtSeason } from './assets/app.js';
 initChrome('table');
 
-/* forecast.json is 28KB and paints the whole page; matches.json is 350KB and
-   only feeds the next-up card. Fetch both at once, render on the first. */
-const mmPromise = data('matches');
+/* forecast.json is 28KB and paints the whole page. matches.json is 350KB and
+   used to be pulled on every visit to fill one card; `upcoming.json` is 20KB
+   and carries the same fixtures for the next fortnight, so the big file is now
+   fetched only when something actually needs the rest of the season — a match
+   dialog, or one of the alternate tables. Older builds have no upcoming file,
+   and fall back to the way this always worked. */
+const upPromise = softSiteData('upcoming');
 const fc = await data('forecast');
 
 /* Every league-dependent word on this page comes from here: how many clubs,
@@ -238,11 +311,6 @@ const rows = fc.teams.map((t, i) => ({ ...t, ...(RATINGS[t.id] || {}), rank: i +
 const byTitle = [...rows].sort((a, b) => b.title - a.title);
 const byReleg = [...rows].sort((a, b) => b.down - a.down);
 
-const fmtStamp = (iso) => new Date(iso).toLocaleDateString('en-GB',
-  { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-const fmtDay = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
-  { weekday: 'short', day: 'numeric', month: 'short' });
-
 /* ---- the answer, in one sentence ---- */
 const lead = byTitle[0], second = byTitle[1], drop = byReleg[0];
 const close = lead.title - second.title < 0.10;
@@ -264,13 +332,48 @@ document.getElementById('stamp').innerHTML = `
    say so rather than borrowing the league's word for it. */
 if (fc.lines) {
   const L = fc.lines;
+  /* The play-off used to live in a `title=` attribute on a column head and in a
+     hover tooltip on the row, which is to say nowhere at all for a touch screen
+     or a screen reader — and the sentence about what is enough to stay up
+     ignored it entirely, which in Germany and France is the difference between
+     staying up and playing two more matches for the right to. */
+  const playoff = fc.teams.some((t) => t.p_releg_playoff != null);
   document.getElementById('lines').textContent =
     `Across these simulations ${W.firstWord} usually takes about ${L.title.p50} points, `
     + `the ${W.topWord} ${L.top5.p50}, and ${L.safety.enough90} is enough to ${W.surviveWord} `
-    + 'in nine seasons out of ten.';
+    + 'in nine seasons out of ten.'
+    + (W.relegNote ? ` ${W.relegNote}, so the "${W.downN}" column counts both routes: `
+        + `the automatic places and losing the tie.` : '');
+  if (playoff && !W.relegNote) {
+    document.getElementById('lines').textContent +=
+      ` The "${W.downN}" column counts both the automatic places and the relegation `
+      + 'play-off.';
+  }
 }
 
 /* ---- table ---- */
+/* ---- clinched and eliminated ----
+   One badge per row, and only the most newsworthy of the four states, because a
+   row of four badges is a row nobody reads. `clinch` arrives on the forecast's
+   team rows once the build writes it; until then this returns nothing at all. */
+function clinchBadge(t) {
+  const c = t.clinch;
+  if (!c) return '';
+  const tag = (cls, text, why) =>
+    `<span class="clinch ${cls}" title="${esc(why)}">${esc(text)}</span>`;
+  const settled = 'Settled by arithmetic on the remaining fixtures, giving every rival the '
+    + 'maximum from each of theirs. The bound is conservative, so this can lag the truth.';
+  /* Only `done` is read. A null `need` does not mean the outcome is gone: on
+     this bound it means no attainable total *guarantees* it yet, which in
+     September is true of nearly every club and every outcome. Reading it as
+     elimination put a "Relegated" badge on a club sitting sixth with a 1%
+     relegation chance, which is the most wrong a badge can be. */
+  if (c.title?.done) return tag('in', W.isCup ? 'Top of the phase' : 'Champions', settled);
+  if (c.top?.done) return tag('in', `${W.topN} secured`, settled);
+  if (c.safe?.done) return tag('in', W.isCup ? 'Through the cut' : 'Safe', settled);
+  return '';
+}
+
 const maxPts = Math.max(...rows.map((r) => r.pts));
 const tbody = document.getElementById('tbody');
 const cls = (p) => (p >= 0.10 ? 'p-hi' : 'p-lo');
@@ -285,6 +388,7 @@ function render(list) {
         <span class="chip" style="background:${chipColor(t.primary)}"></span>
         <a href="${url(`team.html?t=${t.id}`)}">${esc(t.name)}</a>
         ${ARRIVED[t.arrived] ? `<span class="tag">${ARRIVED[t.arrived]}</span>` : ''}
+        ${clinchBadge(t)}
       </span></td>
       <td><b>${t.pts.toFixed(1)}</b>
         <span class="minibar" style="width:${(t.pts / maxPts * 100).toFixed(1)}%"></span></td>
@@ -456,41 +560,92 @@ if (luckRows.length) {
     + 'than the table shows.';
 }
 
-/* ---- next up (needs matches.json; the page above is already painted) ---- */
+/* ---- next up ----
+   Which round is next is a question about the calendar, and this page used to
+   answer it from the data file's own `played` flags: `matches.find(m => !m.played)`.
+   That is right while the build is fresh and silently wrong the moment it is
+   not — on 4 September the Bundesliga card was headed "Next up: matchweek 1"
+   over three fixtures from the previous week, with empty result cells and live
+   win/draw/loss bars. The clock is consulted now, and a round that has already
+   been played is never called "next". */
 initPalette(fc.teams);
-const mm = await mmPromise;
-const next = mm.matches.find((m) => !m.played);
-const round = next ? mm.matches.filter((m) => m.md === next.md) : [];
-document.getElementById('nexthead').textContent =
-  next ? `Next up: ${roundLabel(next.md).toLowerCase()}` : 'The season is complete';
-/* A cup's forecast counts the league phase; the fixture list also carries the
-   knockout rounds, so the link says how many matches are actually there. */
-if (mm.matches.length !== nMatches) {
-  document.getElementById('alllink').textContent = `All ${mm.matches.length} matches →`;
-  document.getElementById('deepermatches').textContent =
-    `Win, draw and loss probabilities for all ${mm.matches.length} fixtures, `
-    + 'sorted by what is at stake.';
+
+/* The whole season's fixture list, fetched the first time something genuinely
+   needs it and never twice. */
+let _mm = null;
+const allMatches = () => (_mm = _mm || data('matches').then((d) => d.matches));
+
+const up = await upPromise;
+const upRows = (up && up.matches || []).filter((m) => m.slug === W.slug);
+
+/* The next round, from whichever file is available. `upcoming.json` is the
+   cheap one and covers the fortnight either side of today, which is where the
+   next round always is; the full fixture list is the fallback and the only
+   source late in a season when the window is empty. */
+let round = [];
+let next = null;
+if (upRows.length) {
+  next = nextRound(upRows);
+  round = next ? upRows.filter((m) => String(m.md) === String(next.md)) : [];
+} else {
+  const ms = await allMatches();
+  next = nextRound(ms);
+  round = next ? ms.filter((m) => String(m.md) === String(next.md)) : [];
+  if (ms.length !== nMatches) {
+    /* A cup's forecast counts the league phase; the fixture list also carries
+       the knockout rounds, so the link says how many are actually there. */
+    document.getElementById('alllink').textContent = `All ${ms.length} matches →`;
+    document.getElementById('deepermatches').textContent =
+      `Win, draw and loss probabilities for all ${ms.length} fixtures, `
+      + 'sorted by what is at stake.';
+  }
 }
-const maxLev = Math.max(0.05, ...round.map((m) => m.lev));
+
+/* Everything in this round is already in the past: the build has not caught up
+   with the calendar. Saying "next up" here is the exact failure the staleness
+   banner exists to catch, so the heading says what this actually is. */
+const behind = round.length && round.every((m) => String(m.date) < todayISO());
+const nextLabel = W.isCup ? 'Next round' : 'Next up';
+document.getElementById('nexthead').textContent =
+  !next ? 'The season is complete'
+    : (behind ? `The last round on record: ${roundLabel(next.md).toLowerCase()}`
+              : `${nextLabel}: ${roundLabel(next.md).toLowerCase()}`);
+if (behind) {
+  document.getElementById('nextsub').textContent =
+    `This is the most recent round in this build, and it was played on `
+    + `${fmtDay(round[round.length - 1].date)}. Nothing newer has been published, so treat `
+    + 'the bars as what the model said beforehand rather than as a forecast of anything.';
+}
+
+const maxLev = Math.max(0.05, ...round.map((m) => m.lev || 0));
+/* `upcoming.json` carries display names of its own so it can be read without a
+   forecast beside it; this page has the forecast, and prefers it. */
+const nameOf = (m, side) => (meta[m[side]] || {}).name || m[side === 'h' ? 'hn' : 'an'] || m[side];
+const shortOf = (m, side) => (meta[m[side]] || {}).short
+  || (m[side === 'h' ? 'hn' : 'an'] || m[side]).slice(0, 3).toUpperCase();
 
 document.getElementById('nextup').innerHTML = round.length ? round.map((m) => `
-  <div class="fix" data-key="${m.h}|${m.a}" tabindex="0" role="button"
-       aria-label="${esc(meta[m.h].name)} versus ${esc(meta[m.a].name)}, details">
-    <span class="when">${fmtDay(m.date)}${m.time ? `<br>${m.time}` : ''}</span>
-    <span class="home"><span class="full">${esc(meta[m.h].name)}</span><span class="abbr">${esc(meta[m.h].short)}</span></span>
+  <div class="fix" data-key="${esc(m.h)}|${esc(m.a)}" tabindex="0" role="button"
+       aria-label="${esc(nameOf(m, 'h'))} versus ${esc(nameOf(m, 'a'))}, details">
+    <span class="when">${fmtDay(m.date)}${m.time ? `<br>${esc(m.time)}` : ''}</span>
+    <span class="home"><span class="full">${esc(nameOf(m, 'h'))}</span><span class="abbr">${esc(shortOf(m, 'h'))}</span></span>
     <span class="wdl">
       <i class="h" style="flex:${Math.max(m.ph, .02)}">${m.ph >= .16 ? `<b>${Math.round(m.ph * 100)}</b>` : ''}</i>
       <i class="d" style="flex:${Math.max(m.pd, .02)}">${m.pd >= .16 ? `<b>${Math.round(m.pd * 100)}</b>` : ''}</i>
       <i class="a" style="flex:${Math.max(m.pa, .02)}">${m.pa >= .16 ? `<b>${Math.round(m.pa * 100)}</b>` : ''}</i>
     </span>
-    <span class="away"><span class="full">${esc(meta[m.a].name)}</span><span class="abbr">${esc(meta[m.a].short)}</span></span>
-    <span class="stake" title="Stakes: ${(m.lev * 100).toFixed(0)} points of swing">
-      <i style="--f:${Math.min(100, (m.lev / maxLev) * 100).toFixed(0)}%"></i></span>
+    <span class="away"><span class="full">${esc(nameOf(m, 'a'))}</span><span class="abbr">${esc(shortOf(m, 'a'))}</span></span>
+    <span class="stake" title="Stakes: ${((m.lev || 0) * 100).toFixed(0)} points of swing">
+      <i style="--f:${Math.min(100, ((m.lev || 0) / maxLev) * 100).toFixed(0)}%"></i></span>
   </div>`).join('') : '<p class="empty">No fixtures left to play.</p>';
 
-const openByKey = (key) => {
+/* The dialog needs the scorelines and the swings, which only the full fixture
+   file carries — so opening one is where that file finally gets fetched. */
+const openByKey = async (key) => {
   const [hh, aa] = key.split('|');
-  matchModal(mm.matches.find((m) => m.h === hh && m.a === aa), meta);
+  const ms = await allMatches();
+  const m = ms.find((x) => x.h === hh && x.a === aa);
+  if (m) matchModal(m, meta);
 };
 const nx = document.getElementById('nextup');
 nx.addEventListener('click', (e) => {
@@ -504,6 +659,305 @@ nx.addEventListener('keydown', (e) => {
   e.preventDefault();
   openByKey(el.dataset.key);
 });
+
+/* ---- what that one scale is actually built on ----
+   The tile promised that a Dutch club and an Italian one are finally comparable
+   and said nothing about the fact that a large minority of the ranking is rated
+   on a feed that has stopped publishing. The claim is true and the caveat
+   belongs with it.
+
+   Written rather than counted: `global.json` is 450KB and this is one sentence
+   on a page that does not otherwise need it. The exact number is on the ranking
+   page, next to the rows it applies to, which is where it is useful. */
+document.getElementById('deeperranked').textContent =
+  'One rating scale across every league with a feed, so a Dutch club and an Italian one '
+  + 'are finally comparable. Many of those feeds have stopped publishing, and every club '
+  + 'rated on an old one says so on its row.';
+
+/* ---- a competition that has not started ----
+   The Champions League league phase begins on 8 September and every accuracy
+   surface on the site was written for a season in progress: the front page
+   offered "How wrong were we? — August's projection marked against what
+   actually happened" on a competition where nothing had happened, and no page
+   anywhere said when it starts. Gated on both halves — nothing played *and* the
+   first fixture still ahead — so a stalled build cannot make a season in
+   progress look like one that has not begun. */
+/* Three conditions, not one. Nothing played is necessary and nowhere near
+   sufficient: a build that has fallen six days behind also reports nothing
+   played, and the Bundesliga -- three matchweeks in -- would have been told it
+   had not started. The next round has to be the *first* round, and it has to be
+   still ahead. */
+const notStarted = (fc.matches_played || 0) === 0
+  && next && String(next.date) >= todayISO()
+  && isMatchweek(next.md) && Number(next.md) === 1;
+if (notStarted) {
+  document.getElementById('stamp').insertAdjacentHTML('beforeend',
+    `<span>First match <b>${fmtDay(next.date)}</b>${next.time ? `, ${esc(next.time)}` : ''}</span>`);
+  document.getElementById('answer').insertAdjacentHTML('beforeend',
+    ` <b>${esc(W.The)} ${fc.season} season starts on ${fmtDay(next.date)}</b>, so nothing here `
+    + 'has been tested against a result yet: this is the model before a ball is kicked.');
+  const rev = document.getElementById('deepreview');
+  rev.setAttribute('href', 'matches.html');
+  document.getElementById('deepreviewh').textContent = `It starts on ${fmtDay(next.date)}`;
+  document.getElementById('deepreviews').textContent =
+    `${roundLabel(next.md)}, and what the model makes of every fixture in it. There is `
+    + 'nothing to mark until results exist.';
+}
+
+/* ---- more columns, on a phone ----
+   Below 620px the projected table drops `.p2`, which is the Champions League
+   column in a league and the knockout play-off in a cup — for a mid-table club,
+   the only column with anything to say about its season. It stays hidden by
+   default, because five columns is what fits; it is no longer silently gone. */
+const colmore = document.getElementById('colmore');
+colmore.textContent = `Show ${W.isCup ? W.topN.toLowerCase() : 'more'} columns`;
+colmore.addEventListener('click', () => {
+  const on = colmore.getAttribute('aria-pressed') !== 'true';
+  colmore.setAttribute('aria-pressed', String(on));
+  document.getElementById('tableview').classList.toggle('showp2', on);
+  document.getElementById('altview').classList.toggle('showp2', on);
+  colmore.textContent = on ? 'Fewer columns'
+    : `Show ${W.isCup ? W.topN.toLowerCase() : 'more'} columns`;
+});
+
+/* ---- the other tables ----
+   Projected is the answer to the question in the headline and stays the
+   default. The other five are the ones every football site has and this one did
+   not: what the table actually says today, the last six, home only, away only,
+   and everything since a chosen round. All of them are arithmetic over
+   `matches.json`, which is 350KB and is therefore fetched on the first toggle
+   rather than on the first visit. */
+const VIEWS = [
+  { id: 'proj', label: 'Projected' },
+  { id: 'actual', label: 'Actual' },
+  { id: 'form', label: 'Form', long: 'Last 6' },
+  { id: 'home', label: 'Home' },
+  { id: 'away', label: 'Away' },
+  { id: 'since', label: `Since ${W.roundAbbr} 1` },
+];
+let view = 'proj';
+let sinceMd = 1;
+
+const chips = document.getElementById('tblviews');
+const drawChips = () => {
+  chips.innerHTML = VIEWS.map((v) => `
+    <button class="chip-btn" data-view="${v.id}" role="tab"
+            aria-pressed="${v.id === view}">${esc(
+      v.id === 'since' ? `Since ${W.roundAbbr} ${sinceMd}` : (v.long || v.label))}</button>`).join('');
+};
+drawChips();
+
+/* A league table, computed from results rather than simulated. One function for
+   all five, because they differ only in which matches each club is credited
+   with. */
+function standings(ms, pick) {
+  const acc = {};
+  fc.teams.forEach((t) => {
+    acc[t.id] = { id: t.id, name: t.name, short: t.short, primary: t.primary,
+                  pld: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 };
+  });
+  const played = ms.filter((m) => m.played && acc[m.h] && acc[m.a]);
+  const credit = (id, gf, ga) => {
+    const r = acc[id];
+    r.pld += 1; r.gf += gf; r.ga += ga;
+    if (gf > ga) { r.w += 1; r.pts += 3; } else if (gf === ga) { r.d += 1; r.pts += 1; }
+    else r.l += 1;
+  };
+  played.forEach((m) => {
+    if (pick(m, 'h')) credit(m.h, m.hg, m.ag);
+    if (pick(m, 'a')) credit(m.a, m.ag, m.hg);
+  });
+  return Object.values(acc).map((r) => ({ ...r, gd: r.gf - r.ga }))
+    .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf
+                    || a.name.localeCompare(b.name));
+}
+
+/* The last six is per club rather than per match, so it needs its own pass. */
+function formTable(ms, n) {
+  const recent = new Set();
+  fc.teams.forEach((t) => {
+    ms.filter((m) => m.played && (m.h === t.id || m.a === t.id))
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+      .slice(-n)
+      .forEach((m) => recent.add(`${t.id}@${m.h}|${m.a}`));
+  });
+  return standings(ms, (m, side) => recent.has(`${m[side]}@${m.h}|${m.a}`));
+}
+
+const ALT_HEAD = `<tr>
+  <th class="l">#</th><th class="l">Club</th>
+  <th title="Matches counted in this view">Pl</th>
+  <th class="p2">W</th><th class="p2">D</th><th class="p2">L</th>
+  <th class="p3">GF</th><th class="p3">GA</th>
+  <th title="Goal difference">GD</th><th title="Points">Pts</th>
+</tr>`;
+
+async function drawAlt() {
+  const ms = await allMatches();
+  const numbered = [...new Set(ms.filter((m) => isMatchweek(m.md)).map((m) => Number(m.md)))]
+    .sort((a, b) => a - b);
+  const sel = document.getElementById('sincemw');
+  if (sel.options.length !== numbered.length) {
+    sel.innerHTML = numbered.map((n) =>
+      `<option value="${n}">${esc(roundLabel(n))}</option>`).join('');
+    sel.value = String(sinceMd);
+  }
+  let rows, note;
+  if (view === 'actual') {
+    rows = standings(ms, () => true);
+    note = 'The table as the results leave it: three points a win, ordered by points then '
+      + 'goal difference. No tie-break beyond that is applied, so a club level on both is '
+      + 'placed alphabetically here rather than by whatever this competition uses.';
+  } else if (view === 'form') {
+    rows = formTable(ms, 6);
+    note = 'Each club\u2019s last six matches only, so the columns do not add up across '
+      + 'clubs: a side that has played four is scored on four. Form is the least '
+      + 'predictive thing on this page and the most fun to look at.';
+  } else if (view === 'home' || view === 'away') {
+    const want = view === 'home' ? 'h' : 'a';
+    rows = standings(ms, (m, side) => side === want);
+    note = `Only matches ${view === 'home' ? 'at home' : 'away'}. Every club plays the same `
+      + 'number of each over a season, so this is a fair split late on and a lopsided one '
+      + 'now.';
+  } else {
+    rows = standings(ms, (m) => isMatchweek(m.md) && Number(m.md) >= sinceMd);
+    note = `Everything from ${roundLabel(sinceMd).toLowerCase()} onwards. Knockout rounds are `
+      + 'left out, because they are not part of a table.';
+  }
+  document.getElementById('altheadrow').innerHTML = ALT_HEAD;
+  document.getElementById('altbody').innerHTML = rows.map((t, i) => `
+    <tr data-id="${t.id}">
+      <td class="l rank">${i + 1}</td>
+      <td class="l"><span class="club">
+        <span class="chip" style="background:${chipColor(t.primary)}"></span>
+        <a href="${url(`team.html?t=${t.id}`)}">${esc(t.name)}</a></span></td>
+      <td>${t.pld}</td>
+      <td class="p2">${t.w}</td><td class="p2">${t.d}</td><td class="p2">${t.l}</td>
+      <td class="p3">${t.gf}</td><td class="p3">${t.ga}</td>
+      <td>${signed(t.gd)}</td>
+      <td><b>${t.pts}</b></td>
+    </tr>`).join('');
+  document.getElementById('altnote').textContent = note;
+}
+
+function showView() {
+  const proj = view === 'proj';
+  document.getElementById('tableview').hidden = !proj;
+  document.getElementById('lines').hidden = !proj;
+  document.getElementById('altview').hidden = proj;
+  document.getElementById('sincewrap').hidden = view !== 'since';
+  document.querySelectorAll('#tblviews [data-view]').forEach((b) =>
+    b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+  if (!proj) drawAlt();
+}
+chips.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-view]');
+  if (!b) return;
+  view = b.dataset.view;
+  showView();
+});
+document.getElementById('sincemw').addEventListener('change', (e) => {
+  sinceMd = Number(e.target.value) || 1;
+  drawChips();
+  showView();
+});
+
+/* ---- clinched and eliminated ----
+   The deterministic bound beside the probabilistic one: the fewest further
+   points that settle an outcome whatever else happens. Absent until the build
+   writes it, and absent all season for a competition it cannot be computed for,
+   so nothing here assumes it exists. */
+/* Only when a badge is actually on screen. The rows carry a `clinch` block all
+   season and nothing in it is settled until spring, so keying the note on the
+   block's existence explained a badge nobody could see. */
+const anyClinch = rows.some((t) => clinchBadge(t));
+if (anyClinch) {
+  document.getElementById('clinchnote').hidden = false;
+  document.getElementById('clinchnote').textContent =
+    `A badge marks an outcome that is already settled by arithmetic rather than by `
+    + `probability. The bound is deliberately conservative: it gives every rival the `
+    + `maximum three points from each of its remaining matches and ignores that rivals `
+    + `play each other, so a club can be safe well before the badge says so.`;
+}
+
+/* ---- club character ----
+   Five numbers per club that `gamestate.json` has carried for every one of these
+   competitions, goals-only feeds included, and that nothing on the site showed.
+   Each is quoted against the competition's own average, because none of them
+   means anything on its own. */
+/* Fetched when the Ratings tab is first opened, and not before. `gamestate.json`
+   is ninety kilobytes feeding one card in a tab that is not the default, so
+   most visits should not pay for it at all; the panel exists either way,
+   because the ratings table is in it, and the card unhides itself inside that
+   panel when the file lands. */
+let charLoaded = false;
+function loadCharacter() {
+  if (charLoaded) return;
+  charLoaded = true;
+softData('gamestate').then((gsp) => {
+const prof = (gsp && gsp.profile) || {};
+const pav = (gsp && gsp.profile_average) || {};
+const charRows = fc.teams.filter((t) => prof[t.id] && prof[t.id].n)
+  .map((t) => ({ ...prof[t.id], id: t.id, name: t.name, primary: t.primary }));
+if (charRows.length >= 3) {
+  document.getElementById('c-character').hidden = false;
+  const num = (v, d = 2) => (v == null ? '\u2014' : Number(v).toFixed(d));
+  const rate = (v) => (v == null ? '\u2014' : pct(v));
+  /* One bar per row, drawn against the competition's spread rather than from
+     zero, with a tick at the average: the question is always "compared with
+     whom", and the answer is always "the rest of this division". */
+  const spread = (key) => {
+    const vals = charRows.map((r) => r[key]).filter((v) => v != null);
+    return [Math.min(...vals), Math.max(...vals)];
+  };
+  const bar = (key, v) => {
+    if (v == null) return '';
+    const [lo, hi] = spread(key);
+    const at = (x) => `${Math.max(0, Math.min(100, ((x - lo) / ((hi - lo) || 1)) * 100)).toFixed(1)}%`;
+    const av = pav[key];
+    return `<span class="charbar"><i style="width:${at(v)}"></i>${
+      av == null ? '' : `<u style="left:${at(av)}" title="Competition average ${num(av)}"></u>`}</span>`;
+  };
+  const renderChar = (list) => {
+    document.getElementById('charbody').innerHTML = list.map((t) => `
+      <tr data-id="${t.id}">
+        <td class="l"><span class="club">
+          <span class="chip" style="background:${chipColor(t.primary)}"></span>
+          <a href="${url(`team.html?t=${t.id}`)}">${esc(t.name)}</a></span></td>
+        <td><div class="charrow"><b>${num(t.home_edge)}</b></div>${bar('home_edge', t.home_edge)}</td>
+        <td><div class="charrow"><b>${num(t.gd_sd)}</b></div>${bar('gd_sd', t.gd_sd)}</td>
+        <td class="p2"><div class="charrow"><b>${num(t.top_ppg)}</b>${
+          t.top_n ? `<span class="avg">${t.top_n}</span>` : ''}</div></td>
+        <td class="p3">${rate(t.bts_pct)}</td>
+        <td class="p3">${rate(t.over25_pct)}</td>
+        <td class="p2">${t.unbeaten ?? '\u2014'}</td>
+        <td class="p4 l">${esc(t.best_win || '\u2014')}</td>
+      </tr>`).join('');
+  };
+  makeSortable(document.getElementById('chartbl'), charRows, renderChar, 'home_edge',
+               { param: 'csort' });
+  document.getElementById('charsub').innerHTML =
+    `Three things about a club that its attack and defence do not say, plus the numbers
+     people actually argue about. <b>Home edge</b> is points per game at home minus points
+     per game away — the model already carries a home advantage for ${esc(W.the)}; this is
+     the part that belongs to the club. <b>Swing</b> is how far the goal difference moves
+     from match to match: low is a side that grinds out 1–0 either way, which describes a
+     club rather than praising one. <b>Vs top</b> is points per game against the strongest
+     quarter of the table, with the number of such matches beside it. Click a column to
+     sort.`;
+  const seasons = (gsp && gsp.seasons) || [];
+  document.getElementById('charnote').textContent =
+    `Measured over ${seasons.length ? `${seasons.length} seasons (${fmtSeason(seasons[0])}\u2013`
+      + `${fmtSeason(seasons[seasons.length - 1])})` : 'the seasons in the results feed'}, so this is `
+    + 'history rather than this season, and it is description rather than a model input: '
+    + 'none of it feeds a probability anywhere on this site. The tick on each bar is '
+    + `${esc(W.the)} average: home edge ${num(pav.home_edge)}, swing ${num(pav.gd_sd)}, `
+    + `against the top quarter ${num(pav.top_ppg)}. A club with fewer than thirty matches on `
+    + 'record has no row, and a club that has never been outside the top quarter has no '
+    + '"vs top" figure rather than a made-up one.';
+}
+});
+}
 
 window.addEventListener('themechange', () => {
   document.querySelectorAll('.chip').forEach((el) => {
@@ -519,12 +973,29 @@ window.addEventListener('themechange', () => {
    until then rather than offered empty. */
 initTabs(document.getElementById('tabs'), [
   { id: 'table', label: 'Table', sections: [document.getElementById('c-table')] },
-  { id: 'ratings', label: 'Ratings', sections: [document.getElementById('c-ratings')] },
+  /* `c-character` is listed unconditionally even though it is still hidden: the
+     panel is kept by the ratings table beside it, and the card unhides itself
+     inside that panel when `gamestate.json` arrives. Filtering it out here
+     would leave it stranded outside the tab machinery. */
+  { id: 'ratings', label: 'Ratings',
+    sections: [document.getElementById('c-ratings'),
+               document.getElementById('c-character')], keepHidden: true },
   { id: 'finishes', label: 'Every finish', short: 'Finishes', sections: [document.getElementById('c-dist')] },
   { id: 'luck', label: 'Luck', sections: [document.getElementById('c-luck')] },
   { id: 'next', label: W.isCup ? 'Next round' : 'Next up',
     sections: [document.getElementById('c-next')] },
-].filter((g) => g.sections.every((el) => el && !el.hidden)));
+].map((g) => ({ ...g,
+    sections: g.sections.filter((el) => el && (g.keepHidden || !el.hidden)) }))
+ .filter((g) => g.sections.length));
+
+/* The character table's file is fetched the first time the tab it lives in is
+   asked for -- by a click, by the hash a shared link carries, or by Back. */
+document.querySelector('#tabs [data-tab="ratings"]')
+  ?.addEventListener('click', loadCharacter);
+addEventListener('hashchange', () => {
+  if (location.hash === '#ratings') loadCharacter();
+});
+if (location.hash === '#ratings') loadCharacter();
 </script>
 </body>
 </html>

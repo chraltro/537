@@ -3,15 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* The theme, before the first pixel. This used to be corrected inside
+   `initChrome`, which runs after a module load and after that module's
+   top-level await on the manifest -- so a reader on the light theme got about a
+   tenth of a second of the dark page first. Five lines in the head, run at parse
+   time, and the flash is gone.
+
+   It also settles what the default is. The site shipped `data-theme="dark"` on
+   every page and consulted `prefers-color-scheme` nowhere, so somebody whose
+   whole machine is set to light had to ask this one site again on every device.
+   A saved choice still wins over the system; the system wins over us. */
+(function () {
+  try {
+    var t = localStorage.getItem('plf-theme');
+    if (t !== 'light' && t !== 'dark') {
+      t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { /* private mode: the markup's own default stands */ }
+})();
+</script>
 <title>Projected leagues</title>
 <meta name="description" content="Projected final tables: the results so far, the matches still to play, and where each season is heading.">
 <meta property="og:title" content="Projected leagues">
 <meta property="og:description" content="Projected final tables, from the results so far.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="og/global.png">
+<meta property="og:image" content="https://chraltro.github.io/537/og/global.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="og/global.png">
+<meta name="twitter:image" content="https://chraltro.github.io/537/og/global.png">
 <link rel="canonical" href="https://chraltro.github.io/537/projection.html">
+<link rel="modulepreload" href="assets/app.js">
+<link rel="preload" as="fetch" crossorigin href="data/leagues.json">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -33,6 +56,17 @@
   .lgpick a[aria-current] { background: var(--accent); border-color: var(--accent); color: #fff; }
   .lgpick a:hover { text-decoration: none; color: var(--ink); }
   td.pos { min-width: 130px; }
+  /* The directory of every league the site rates and does not forecast. Fifty-one
+     entries want a grid, not a list: a country and a club count are all that
+     distinguishes one from the next. */
+  .lgdir { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+  .lgdir a {
+    display: block; text-decoration: none; padding: 11px 13px; border-radius: 11px;
+    border: 1px solid var(--grid); color: var(--ink);
+  }
+  .lgdir a:hover { text-decoration: none; border-color: var(--rule); background: var(--raised); }
+  .lgdir b { font-weight: 600; font-size: 13.5px; display: block; }
+  .lgdir span { color: var(--muted); font-size: 11.5px; }
 </style>
 </head>
 <body>
@@ -56,6 +90,13 @@
     </div>
   </section>
 
+  <section class="card" id="indexcard" hidden>
+    <h2 id="indexhead">Every other league</h2>
+    <p class="sub" id="indexsub"></p>
+    <div class="lgdir" id="lgdir"></div>
+    <p class="hint" id="indexnote" style="margin-top:18px"></p>
+  </section>
+
   <section class="card" id="nonecard" hidden>
     <h2>Nothing projected yet</h2>
     <p class="sub" id="nonesub"></p>
@@ -70,8 +111,8 @@
 </main>
 
 <script type="module">
-import { pct, esc, initChrome, initPalette, chipColor, setMeta, ROOT, siteData }
-  from './assets/app.js';
+import { pct, esc, initChrome, initPalette, chipColor, setMeta, ROOT, siteData,
+         setFooterSubject, fmtDate, fmtSeason, todayISO } from './assets/app.js';
 initChrome('projection');
 
 const manifest = await siteData('leagues');
@@ -83,8 +124,14 @@ const list = manifest.projected || [];
    choice having done nothing at all. */
 const rated = (manifest.rated || []).filter((l) => l.slug);
 const asked = new URLSearchParams(location.search).get('league');
-const here = list.find((l) => l.slug === asked)
-  || rated.find((l) => l.slug === asked) || list[0] || null;
+/* No league asked for means the directory, not the first one on a list of
+   whatever happens to be projected this week. The overflow menu's "Other
+   leagues" points here and `MANIFEST.projected` is usually empty, so a nav item
+   that promises fifty-one leagues delivered "Nothing projected yet" — the
+   primary route to half the site's content, landing on an empty state. */
+const here = asked
+  ? (list.find((l) => l.slug === asked) || rated.find((l) => l.slug === asked) || null)
+  : null;
 const projected = !!(here && list.some((l) => l.slug === here.slug));
 
 /* The chip row is the shortlist of leagues with a projected finish. On one of
@@ -121,25 +168,47 @@ if (here && !projected) {
   const L = await (await fetch(`${ROOT}data/league/${here.slug}.json`,
                                { cache: 'no-cache' })).json();
   setMeta({
-    title: `${L.name} ${L.season}: table and ratings`,
-    description: `The ${L.name} ${L.season} table as it stands, from the `
+    title: `${L.name} ${fmtSeason(L.season)}: table and ratings`,
+    description: `The ${L.name} ${fmtSeason(L.season)} table as it stands, from the `
       + `${L.played} results this site holds, with every club's rating.`,
+    /* Fifty-one of these share one file, so each has to name itself or they all
+       canonicalise to whichever one the search engine saw first. */
+    canonical: `projection.html?league=${encodeURIComponent(here.slug)}`,
   });
-  document.getElementById('h1').textContent = `${L.name} ${L.season}`;
+  /* The footer is built from `?lg=`, which on this page is whatever league the
+     reader was last looking at rather than the one on screen: a page about
+     Scottish football read "Not affiliated with the Premier League" and offered
+     a Premier League calendar. There is no fixture list for these leagues and so
+     no calendar feed either, which is why the link goes rather than moving. */
+  setFooterSubject(L.name, null);
+  document.getElementById('h1').textContent = `${L.name} ${fmtSeason(L.season)}`;
   document.getElementById('lede').innerHTML =
     `This site rates ${L.clubs} clubs in the ${esc(L.name)} but does not forecast it:
      there is no fixture list for it anywhere that does not want a subscription, so
      there is a table and there are ratings, and there is no projected finish.`;
   document.getElementById('stamp').innerHTML = `
-    <span>Season <b>${esc(L.season)}</b></span>
+    <span>Season <b>${esc(fmtSeason(L.season))}</b></span>
     <span><b>${L.played}</b> matches played</span>
     <span><b>${L.clubs}</b> clubs</span>
-    <span>Results to <b>${esc(L.results_to)}</b>${
+    <span>Results to <b>${esc(fmtDate(L.results_to, { year: true }))}</b>${
       L.date_approx ? ' <span class="hint">(dated by season, not by match)</span>' : ''}</span>`;
-  document.getElementById('tabletitle').textContent = `Table, ${L.season}`;
-  document.getElementById('tablesub').textContent =
-    'As the results this site holds leave it. The rating columns are the pooled '
-    + 'ones, so they compare with any club on the site.';
+  /* How old this is, said next to the table rather than only in a tile beside
+     the season. Offered from the same switcher as nine live competitions, a
+     table ten months out of date has to say so where the numbers are. */
+  const months = L.results_to
+    ? (Date.now() - Date.parse(`${L.results_to}T12:00:00`)) / (365.25 * 864e5 / 12) : 0;
+  const stale = months > 4;
+  document.getElementById('tabletitle').innerHTML =
+    `Table, ${esc(fmtSeason(L.season))}${stale
+      ? ` <span class="stale-tag" title="This feed has published nothing newer">last results ${
+          esc(fmtDate(L.results_to, { year: true }))}</span>` : ''}`;
+  document.getElementById('tablesub').textContent = stale
+    ? `As the results this site holds leave it, which is ${Math.round(months)} months ago: `
+      + `this feed has published nothing since ${fmtDate(L.results_to, { year: true })}, so `
+      + 'this is a finished season rather than a live one, and the ratings are as old as it '
+      + 'is. They are still the pooled ones, so they compare with any club on the site.'
+    : 'As the results this site holds leave it. The rating columns are the pooled '
+      + 'ones, so they compare with any club on the site.';
   document.getElementById('thead').innerHTML = TH.table;
   initPalette(L.table.map((t) => ({ id: t.id, name: t.name })));
   document.getElementById('tbody').innerHTML = L.table.map((t) => `
@@ -165,12 +234,47 @@ if (here && !projected) {
     });
   });
 } else if (!here) {
-  document.getElementById('lede').textContent =
-    'No league is being projected at the moment.';
-  document.getElementById('nonesub').innerHTML =
-    `No league is being projected right now. The <a href="method.html">method page</a>
-     lists every feed and what happened to each.`;
-  document.getElementById('nonecard').hidden = false;
+  /* The directory. Everything this site rates and does not forecast, in one
+     place, which is what the menu item has always claimed to be. */
+  const all = (manifest.rated || []);
+  const withPage = all.filter((l) => l.slug);
+  const noPage = all.filter((l) => !l.slug);
+  setMeta({
+    title: 'Every other league',
+    description: `The ${all.length} leagues this site rates but does not forecast: a table `
+      + 'and a rating for each, on the same European scale as every club on the site.',
+  });
+  document.getElementById('h1').textContent = 'Every other league';
+  document.getElementById('lede').innerHTML =
+    `This site forecasts ten competitions and <b>rates</b> many more. These are the rest:
+     leagues whose results the pooled fit can read, but whose fixture list is behind a
+     subscription or does not exist anywhere it can reach. They have a table and they have
+     ratings on the same European scale as every club on the site; what they do not have is
+     a projected finish, because a projection needs to know who plays whom.`;
+  document.getElementById('stamp').innerHTML = `
+    <span><b>${all.length}</b> leagues rated</span>
+    <span><b>${withPage.length}</b> with a table of their own</span>
+    ${list.length ? `<span><b>${list.length}</b> with a projected finish</span>` : ''}`;
+  document.getElementById('indexsub').textContent = list.length
+    ? 'Leagues with a projected final table come first; the rest carry a table and ratings.'
+    : 'Each has a table as the results this site holds leave it, and a rating for every club.';
+  document.getElementById('lgdir').innerHTML =
+    list.map((l) => `<a href="projection.html?league=${encodeURIComponent(l.slug)}">
+        <b>${esc(l.name)}</b><span>Projected finish</span></a>`).join('')
+    + withPage.map((l) => `<a href="projection.html?league=${encodeURIComponent(l.slug)}">
+        <b>${esc(l.name)}</b><span>${esc(l.country || '')}${
+          l.n ? ` · ${l.n} clubs rated` : ''}</span></a>`).join('')
+    + noPage.map((l) => `<a href="${ROOT}rankings.html?league=${encodeURIComponent(l.name)}">
+        <b>${esc(l.name)}</b><span>${esc(l.country || '')}${
+          l.n ? ` · ${l.n} clubs rated` : ''} · in the ranking</span></a>`).join('');
+  document.getElementById('indexcard').hidden = false;
+  document.getElementById('indexnote').innerHTML =
+    `The ${noPage.length} entries marked "in the ranking" are divisions the pooled fit knows
+     as a group of clubs rather than as a named competition, so they have no table of their
+     own and open filtered inside the
+     <a href="${ROOT}rankings.html">global ranking</a> instead. Where the numbers come from,
+     and what a feed that has stopped publishing does to a rating, is on the
+     <a href="method.html">method page</a>.`;
 } else {
   const p = await (await fetch(`${ROOT}data/${here.slug}/projection.json`,
                                { cache: 'no-cache' })).json();
@@ -181,11 +285,13 @@ if (here && !projected) {
 
   const lead = p.teams[0];
   setMeta({
-    title: `${p.name} ${p.season}: projected table`,
-    description: `Where the ${p.name} ${p.season} season is heading, from the `
+    title: `${p.name} ${fmtSeason(p.season)}: projected table`,
+    description: `Where the ${p.name} ${fmtSeason(p.season)} season is heading, from the `
       + `${p.matches_played} results so far and the ${left} matches still to play.`,
+    canonical: `projection.html?league=${encodeURIComponent(here.slug)}`,
   });
-  document.getElementById('h1').textContent = `${p.name} ${p.season}`;
+  setFooterSubject(p.name, null);
+  document.getElementById('h1').textContent = `${p.name} ${fmtSeason(p.season)}`;
   document.getElementById('lede').innerHTML = left
     ? `<b>${esc(nm(lead.id))}</b> finish top in ${pct(lead.title)} of ${
         p.n_sims.toLocaleString()} simulations of the ${left} matches left.`

@@ -23,7 +23,10 @@
   --draw:    #6c6c68;
   --good:    #0ca30c;
   --warning: #fab219;
-  --critical:#d03b3b;
+  /* #d03b3b is 3.62:1 on the card surface at 14px, under AA, and it carries
+     every falling percentage point on the races page. This is the same red the
+     away side already wears, which clears 4.5:1 and is one fewer red. */
+  --critical:#e66767;
   --shadow:  0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.28);
   --ramp-0:#171b21; --ramp-1:#17304d; --ramp-2:#1c4677; --ramp-3:#2360a5;
   --ramp-4:#2f7ad0; --ramp-5:#5598e7; --ramp-6:#9ec5f4;
@@ -72,6 +75,13 @@
 }
 
 * { box-sizing: border-box; }
+
+/* The browser hides `[hidden]` from its own stylesheet, which any class that
+   sets `display` outranks: `<label class="controls" hidden>` stayed on screen,
+   because `.controls { display: flex }` is one class more specific than the
+   user agent's `[hidden] { display: none }`. Every `hidden` on this site means
+   hidden, so it is stated here at a weight nothing can beat by accident. */
+[hidden] { display: none !important; }
 
 body {
   margin: 0;
@@ -217,6 +227,10 @@ nav.top .np.off {
   background: var(--surface); color: var(--ink); border: 1px solid var(--border);
   border-radius: 8px; padding: 6px 8px; font-size: 12.5px; font-weight: 550;
   font-family: inherit; max-width: 168px; cursor: pointer;
+  /* The cap applies at every width, so the ellipsis has to as well: it lived in
+     the narrow blocks only, and "Scottish Premiership" was clipped to "Scottish
+     Premiersh" on a full-width desktop with nothing to say it had been. */
+  text-overflow: ellipsis;
 }
 .lgswitch select:hover { background: var(--raised); }
 .lgswitch select option:disabled { color: var(--muted); }
@@ -431,14 +445,35 @@ footer a { color: var(--ink2); }
 
 @media (max-width: 900px) {
   .wrap { padding: 0 14px; }
-  .masthead .wrap { gap: 12px; }
-  .lgswitch select { max-width: 132px; font-size: 12px; padding: 5px 6px; }
+  .masthead .wrap { gap: 8px; }
+  /* 132px cut "Premier League" to "Premier Leagu" on every page in this band:
+     the cap lives here and the ellipsis lived only in the phone block below, so
+     the name was clipped mid-word with nothing to say it had been.
+
+     It is also the one thing in the bar that can give ground. Between 701 and
+     900px the masthead is a single row of brand, switcher, five links, a menu
+     button that wears the current page's name on six of the ten pages, and two
+     tools; at 768 with "Global rankings" in that button the row was 25px wider
+     than the viewport and the whole document scrolled sideways. So the switcher
+     shrinks first, down to whatever is left, and says so with an ellipsis
+     rather than pushing the page off the screen. */
+  .lgswitch { flex: 0 1 auto; min-width: 0; }
+  nav.top { min-width: 0; }
+  .lgswitch select {
+    max-width: 152px; width: 100%; font-size: 12px; padding: 5px 6px;
+    text-overflow: ellipsis;
+  }
   nav.top a, .morebtn { padding: 7px 9px; font-size: 13px; }
   .strip-head, .strip-row { grid-template-columns: 92px 1fr; gap: 8px; }
   .strip-row .club span:last-child { display: none; }   /* keep the code, drop the name */
   .cell { height: 16px; }
   .match { grid-template-columns: 56px 40px 1fr 40px 50px; gap: 8px; }
-  .match .proj, .match .stake { display: none; }
+  /* Both spellings, because `.match.matchhead .stake` above is one class more
+     specific than `.match .stake` and beat it from higher up the sheet: the
+     header kept seven cells over a row of five, so the result sat under a
+     column headed "Stakes" and "Result" wrapped under "Kick-off". */
+  .match .proj, .match .stake,
+  .match.matchhead .proj, .match.matchhead .stake { display: none; }
   .match .res { font-size: 12.5px; }
   .full { display: none; }
   .abbr { display: inline; }
@@ -478,7 +513,11 @@ footer a { color: var(--ink2); }
   tbody td.l .club a {
     overflow-wrap: break-word; hyphens: auto; flex: 1 1 0; min-width: 0;
   }
-  tbody td.l .club .stale-tag { flex-basis: 100%; margin-left: 0; }
+  tbody td.l .club .stale-tag,
+  /* Same reason as the staleness tag: a badge that refuses to wrap inside a
+     wrapping flex row squeezes the club's name into a column one character
+     wide, and "Aston Villa" came out eleven lines tall. */
+  tbody td.l .club .clinch { flex-basis: 100%; margin-left: 0; }
   tbody td.l:nth-child(2), thead th.l:nth-child(2) { max-width: min(31vw, 116px); }
   /* The global ranking shows four columns on a phone rather than the league
      table's six, so its club column can afford the extra sixteen pixels that
@@ -489,7 +528,12 @@ footer a { color: var(--ink2); }
   tbody td, thead th { padding-left: 5px; padding-right: 5px; }
   tbody td { font-size: 13px; }
   .masthead .wrap { gap: 6px; }
-  .themetoggle { width: 26px; height: 26px; margin-left: 0; }
+  /* 26x26 clears WCAG 2.5.8 and misses the 44px anybody actually aims at with a
+     thumb. The icon inside stays the size it was drawn at; the box around it
+     grows into the row's own padding, which the two-row phone masthead has to
+     spare. */
+  .themetoggle { width: 40px; height: 40px; margin-left: 0; }
+  .searchbtn { min-height: 40px; padding: 6px 9px; }
   nav.top a.np, .morebtn { font-size: 12.5px; padding-left: 0; padding-right: 0; }
   .morebtn { padding-left: 9px; padding-right: 9px; }
   /* The switcher keeps its place on a phone — it is how you get to the other
@@ -1127,3 +1171,203 @@ tr.rowcursor > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
     align-self: stretch; display: flex; align-items: center;
   }
 }
+
+
+/* ================= a result, once it is a result =================
+   A played fixture opened as a dialog headed by a forecast, with the score as a
+   clause in the subtitle. The score is the news; it goes first and it is the
+   biggest thing in the box. */
+.mresult {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  margin: 0 0 18px; padding: 12px 14px;
+  background: var(--raised); border-radius: 12px;
+}
+.mresult b {
+  font-size: 30px; font-weight: 700; letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.mresult span { color: var(--ink2); font-size: 13px; }
+#mfrozen .hint { margin: 0; }
+
+/* ================= more columns, on a phone =================
+   Below 620px the projected table sheds `.p2`, which on a league table is the
+   Champions League column and in a cup the knockout play-off -- for a mid-table
+   club, the only column with anything to say. It stays hidden by default,
+   because five columns is what fits, and the button says it is there. */
+.colmore { display: none; }
+@media (max-width: 620px) {
+  .colmore {
+    display: inline-flex; align-items: center; gap: 6px; margin: 0 0 12px;
+    min-height: 40px;
+  }
+  .showp2 .p2 { display: table-cell; }
+  /* Six columns in 362px only works if the club column gives up some of it and
+     the cells give up their padding. Wide enough that "Manchester" still fits on
+     one line, so a two-word name wraps where a reader would put the break. */
+  .showp2 tbody td.l:nth-child(2), .showp2 thead th.l:nth-child(2) {
+    max-width: min(29vw, 108px);
+  }
+  .showp2 tbody td, .showp2 thead th { padding-left: 3px; padding-right: 3px; }
+}
+
+/* ================= competition strip =================
+   A club plays in more than one competition and its two pages did not know the
+   other existed. One row of chips, the current one marked, so a Champions
+   League week is visible from the league page it starts on. */
+.compstrip { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.compstrip a, .compstrip span.here {
+  display: inline-flex; align-items: baseline; gap: 7px;
+  padding: 6px 12px; border-radius: 999px; border: 1px solid var(--grid);
+  color: var(--ink2); font-size: 12.5px; font-weight: 550; text-decoration: none;
+}
+.compstrip a:hover { color: var(--ink); border-color: var(--rule); text-decoration: none; }
+.compstrip .here { background: var(--raised); color: var(--ink); border-color: var(--rule); }
+.compstrip i { font-style: normal; color: var(--muted); font-size: 11.5px; }
+
+/* One line per fixture, across competitions: when, who, and which competition. */
+.xfix { display: grid; grid-template-columns: 84px 1fr 92px; gap: 12px; align-items: center;
+  padding: 9px 2px; border-bottom: 1px solid var(--grid); font-size: 13.5px; }
+.xfix:last-child { border-bottom: 0; }
+.xfix .when { color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.xfix .comp {
+  color: var(--muted); font-size: 10.5px; text-transform: uppercase;
+  letter-spacing: .06em; font-weight: 650; text-align: right;
+}
+.xfix .ha { color: var(--muted); font-size: 11px; }
+
+/* ================= this week across Europe =================
+   Ten competitions on one page, in the order they are played. The kick-off and
+   the competition chip are the two things that make a row findable; the bar is
+   what makes it worth reading. */
+.wkday {
+  font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
+  margin: 24px 0 8px; font-weight: 650; display: flex; align-items: center; gap: 10px;
+}
+.wkday::after { content: ""; flex: 1; height: 1px; background: var(--grid); }
+.wkrow {
+  display: grid; grid-template-columns: 54px 1fr 150px 1fr 118px 52px;
+  gap: 11px; align-items: center; padding: 9px 10px; border-radius: 9px;
+  border-bottom: 1px solid var(--grid); cursor: pointer;
+}
+.wkrow:hover { background: var(--raised); }
+.wkrow .when { color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.wkrow .home { text-align: right; font-weight: 550; min-width: 0; }
+.wkrow .away { text-align: left; font-weight: 550; min-width: 0; }
+.wkrow .comp {
+  font-size: 10.5px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--muted); text-align: center; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wkrow .lev { display: flex; justify-content: center; }
+.wkrow .lev i {
+  display: block; width: 34px; height: 5px; border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent) var(--f, 0%), var(--grid) var(--f, 0%));
+}
+.wkrow .res { text-align: center; font-variant-numeric: tabular-nums; font-weight: 700; }
+.wkhead {
+  border-bottom: 1px solid var(--rule); padding-bottom: 7px; margin-bottom: 2px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--muted); font-weight: 650; cursor: default;
+}
+.wkhead:hover { background: none; }
+/* The names here are the competitions' own and there is no three-letter code in
+   the file, so the row rearranges rather than truncating: two clubs on two lines
+   is longer and legible, "Olympique Lyonn…" in forty pixels is neither. */
+@media (max-width: 900px) {
+  .wkrow { grid-template-columns: 54px minmax(0, 1fr) 118px minmax(0, 1fr); gap: 6px 10px; }
+  .wkrow .home, .wkrow .away { overflow-wrap: break-word; }
+  .wkrow .comp { grid-column: 1 / -1; text-align: left; margin-top: -2px; }
+  .wkrow .lev { display: none; }
+  .wkhead .comp, .wkhead .lev { display: none; }
+}
+@media (max-width: 620px) {
+  .wkrow { grid-template-columns: 54px minmax(0, 1fr); gap: 3px 10px; padding: 11px 8px; }
+  .wkrow .when { grid-row: 1; grid-column: 1; }
+  .wkrow .home { grid-row: 1; grid-column: 2; text-align: left; }
+  .wkrow .away { grid-row: 2; grid-column: 2; text-align: left; }
+  .wkrow .away::before { content: 'v '; color: var(--muted); font-weight: 400; }
+  .wkrow .wdl { grid-row: 3; grid-column: 1 / -1; height: 16px; margin-top: 4px; }
+  .wkrow .comp { grid-row: 4; grid-column: 1 / -1; margin-top: 3px; }
+  /* Four stacked cells cannot be labelled by one row of headings. */
+  .wkhead { display: none; }
+}
+
+/* ================= a club's character =================
+   A value beside the competition's own average, because neither number means
+   anything without the other. */
+.charrow { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.charrow .avg { color: var(--muted); font-size: 11.5px; }
+.charbar {
+  display: block; height: 5px; border-radius: 3px; background: var(--grid);
+  margin-top: 8px; position: relative; overflow: hidden;
+}
+.charbar i { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 3px; }
+.charbar u {
+  position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink2);
+  text-decoration: none;
+}
+
+/* ================= clinched and eliminated ================= */
+.clinch {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+  font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  border: 1px solid var(--grid); color: var(--muted); vertical-align: 1px;
+  white-space: nowrap;
+}
+.clinch.in { color: var(--good); border-color: var(--good); }
+.clinch.out { color: var(--critical); border-color: var(--critical); }
+
+/* ================= movers, and the rooting guide ================= */
+.moverow, .rootrow {
+  display: grid; grid-template-columns: 1fr 96px 96px;
+  gap: 12px; align-items: center; padding: 9px 2px;
+  border-bottom: 1px solid var(--grid); font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+.moverow:last-child, .rootrow:last-child { border-bottom: 0; }
+.moverow .d, .rootrow .d { text-align: right; font-weight: 650; }
+.moverow .d.up, .rootrow .d.up { color: var(--good); }
+.moverow .d.dn, .rootrow .d.dn { color: var(--critical); }
+.rootrow .want { text-align: right; color: var(--ink2); font-size: 12.5px; }
+@media (max-width: 620px) {
+  .moverow, .rootrow { grid-template-columns: 1fr 76px 76px; gap: 8px; font-size: 12.5px; }
+  .xfix { grid-template-columns: 64px 1fr 68px; gap: 8px; font-size: 12.5px; }
+}
+
+/* ================= league strength ================= */
+.lgstr { display: grid; grid-template-columns: 26px minmax(0, 1fr) 84px minmax(0, 1fr) minmax(0, 170px);
+  gap: 12px; align-items: center; padding: 9px 2px;
+  border-bottom: 1px solid var(--grid); font-size: 13.5px;
+  font-variant-numeric: tabular-nums; }
+.lgstr:last-child { border-bottom: 0; }
+.lgstr .rk { color: var(--muted); }
+.lgstr .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lgstr .nm span { color: var(--muted); font-size: 11.5px; }
+.lgstr .iqr { position: relative; height: 8px; background: var(--grid); border-radius: 4px; }
+.lgstr .iqr i { position: absolute; top: 0; bottom: 0; background: var(--accent); border-radius: 4px; }
+.lgstr .iqr u { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); text-decoration: none; }
+.lgstr .top { color: var(--ink2); font-size: 12px; text-align: right;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 720px) {
+  .lgstr { grid-template-columns: 22px 1fr 62px; gap: 8px; font-size: 12.5px; }
+  .lgstr .iqr, .lgstr .top { display: none; }
+}
+
+/* A congestion strip: one block per fixture in the window, spaced by the days
+   between them. Description, never an input -- the card says so in words. */
+.congest { display: flex; gap: 6px; flex-wrap: wrap; align-items: stretch; }
+.congest .g {
+  min-width: 62px; flex: 0 0 auto; padding: 8px 9px; border-radius: 10px;
+  background: var(--raised); border: 1px solid var(--border);
+}
+.congest .g .d { color: var(--muted); font-size: 10.5px; letter-spacing: .04em; }
+.congest .g .o {
+  font-size: 12.5px; font-weight: 600; margin-top: 2px;
+  max-width: 112px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.congest .g .c { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+.congest .gap {
+  align-self: center; color: var(--muted); font-size: 10.5px;
+  font-variant-numeric: tabular-nums; padding: 0 1px;
+}
+.congest .gap.tight { color: var(--warning); font-weight: 700; }

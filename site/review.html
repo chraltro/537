@@ -3,15 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* The theme, before the first pixel. This used to be corrected inside
+   `initChrome`, which runs after a module load and after that module's
+   top-level await on the manifest -- so a reader on the light theme got about a
+   tenth of a second of the dark page first. Five lines in the head, run at parse
+   time, and the flash is gone.
+
+   It also settles what the default is. The site shipped `data-theme="dark"` on
+   every page and consulted `prefers-color-scheme` nowhere, so somebody whose
+   whole machine is set to light had to ask this one site again on every device.
+   A saved choice still wins over the system; the system wins over us. */
+(function () {
+  try {
+    var t = localStorage.getItem('plf-theme');
+    if (t !== 'light' && t !== 'dark') {
+      t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { /* private mode: the markup's own default stands */ }
+})();
+</script>
 <title>How wrong were we?</title>
 <meta name="description" content="The season's post-mortem: the preseason projection against what actually happened, club by club, and the results the model got most wrong.">
 <meta property="og:title" content="How wrong were we?">
 <meta property="og:description" content="The preseason projection against what actually happened, club by club.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="og/premier-league.png">
+<meta property="og:image" content="https://chraltro.github.io/537/og/premier-league.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="og/premier-league.png">
+<meta name="twitter:image" content="https://chraltro.github.io/537/og/premier-league.png">
 <link rel="canonical" href="https://chraltro.github.io/537/review.html">
+<link rel="modulepreload" href="assets/app.js">
+<link rel="preload" as="fetch" crossorigin href="data/leagues.json">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -23,6 +46,29 @@
     <p class="lede" id="lede">Loading the season…</p>
     <div class="stamp" id="stamp"></div>
   </div>
+
+  <section class="card" id="startcard" hidden>
+    <h2 id="starthead">It has not started yet</h2>
+    <p class="sub" id="startsub"></p>
+    <div class="tiles" id="starttiles"></div>
+    <p class="hint" id="startnote"></p>
+  </section>
+
+  <section class="card" id="roundcard" hidden>
+    <div class="cardbar">
+      <h2 id="roundhead">The matchweek in review</h2>
+      <button class="copybtn" id="copyround">Copy link</button>
+    </div>
+    <p class="sub" id="roundsub"></p>
+    <div class="controls">
+      <label for="mdsel" id="mdlab">Matchweek</label>
+      <select id="mdsel"></select>
+    </div>
+    <div class="narr" id="roundnarr"></div>
+    <div id="roundmovers"></div>
+    <div id="roundmatches"></div>
+    <p class="hint" id="roundnote" style="margin-top:14px"></p>
+  </section>
 
   <div class="tiles" id="tiles"></div>
 
@@ -57,13 +103,16 @@
 </main>
 
 <script type="module">
-import { data, pct, esc, ord, signed, initChrome, initPalette, chipColor, probBar,
-         lg, url, setMeta, roundLabel, cardUrl } from './assets/app.js';
+import { data, softData, softSiteData, pct, esc, ord, signed, initChrome, initPalette,
+         chipColor, probBar, lg, url, setMeta, roundLabel, cardUrl, fmtDate, fmtDay,
+         nextRound, todayISO, isMatchweek, copyLink, replaceQuery, ptsWord, humaniseDates,
+         withLg } from './assets/app.js';
 initChrome('review');
 
 const fc = await data('forecast');
 const W = lg();
 document.documentElement.setAttribute('data-kind', W.kind);
+const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
 initPalette(fc.teams);
 
 setMeta({
@@ -120,6 +169,138 @@ const rows = table.map((t) => ({
   projPts: baseline ? baseline[t.id]?.pts : t.pts,
 }));
 
+/* ---- a competition that has not started ----
+   "How wrong were we?" over "the season is 0% played, so this is an interim
+   report" over "nothing has been played yet, so there is nothing to mark" is
+   three sentences to say "not yet", on a page that never mentions the one fact
+   a reader wants: when it starts. Both halves of the gate matter — nothing
+   played, and the first fixture still ahead — so a stalled build cannot make a
+   season in progress look like one waiting to begin. */
+const up = await softSiteData('upcoming');
+const upRows = ((up && up.matches) || []).filter((m) => m.slug === W.slug);
+const firstUp = upRows.length ? nextRound(upRows) : null;
+const notStarted = !played && firstUp && String(firstUp.date) >= todayISO()
+  && isMatchweek(firstUp.md) && Number(firstUp.md) === 1;
+
+if (notStarted) {
+  const day = new Date(`${firstUp.date}T12:00:00`).toLocaleDateString('en-GB',
+    { weekday: 'long', day: 'numeric', month: 'long' });
+  document.getElementById('startcard').hidden = false;
+  document.getElementById('starthead').textContent = `${W.The} starts on ${day}`;
+  document.getElementById('startsub').textContent =
+    `There is nothing to mark yet: ${roundLabel(firstUp.md).toLowerCase()} is the first `
+    + `round and it has not been played. What is on this page after that is the forecast `
+    + `frozen before each kick-off, scored against what happened.`;
+  const first = upRows.filter((m) => String(m.md) === String(firstUp.md));
+  const tight = [...first].sort((a, b) =>
+    Math.max(a.ph, a.pd, a.pa) - Math.max(b.ph, b.pd, b.pa))[0];
+  const big = [...first].sort((a, b) => (b.lev || 0) - (a.lev || 0))[0];
+  document.getElementById('starttiles').innerHTML = [
+    ['First match', fmtDay(firstUp.date), `${firstUp.time || 'time to be confirmed'} · `
+      + `${firstUp.hn} v ${firstUp.an}`],
+    ['Fixtures in the round', String(first.length), roundLabel(firstUp.md)],
+    ...(tight ? [['Closest call', `${tight.hn} v ${tight.an}`,
+      `no result above ${pct(Math.max(tight.ph, tight.pd, tight.pa))}`]] : []),
+    ...(big && big.lev ? [['Most at stake', `${big.hn} v ${big.an}`,
+      `${(big.lev * 100).toFixed(0)} points of swing`]] : []),
+  ].map(([k, v, n]) => `<div class="tile"><div class="k">${esc(k)}</div>
+      <div class="v" style="font-size:20px">${esc(v)}</div>
+      <div class="n">${esc(n)}</div></div>`).join('');
+  document.getElementById('startnote').innerHTML =
+    `Every fixture in the round is on the <a href="${url('matches.html')}">matches page</a>, `
+    + `and the projected league phase is on the <a href="${url('index.html')}">table</a>.`;
+  document.getElementById('tablecard').hidden = true;
+}
+
+/* ---- one matchweek, kept ----
+   `recap.json` holds a round's narrative, movers and shocks and is overwritten
+   every build, so last week's reading of the season is gone the moment this
+   week's exists. `recaps.json` is the archive of the same thing, one entry per
+   completed round, never rewritten — which means a round can have a URL. */
+/* Not fetched at all before a ball is kicked: there cannot be a completed round
+   in a competition with no results, and asking for a file that cannot exist is
+   a 404 in the console of every reader who opens the page. */
+const arch = played ? await softData('recaps') : null;
+const rounds = (arch && arch.rounds || []).filter((r) => r && r.md != null);
+if (rounds.length) {
+  const card = document.getElementById('roundcard');
+  card.hidden = false;
+  const sel = document.getElementById('mdsel');
+  document.getElementById('mdlab').textContent = W.roundWord;
+  /* Newest first: the round somebody has just watched is the one they want. */
+  const ordered = [...rounds].sort((a, b) => Number(b.md) - Number(a.md));
+  sel.innerHTML = ordered.map((r) =>
+    `<option value="${esc(r.md)}">${esc(roundLabel(r.md))}</option>`).join('');
+  const asked = new URLSearchParams(location.search).get('md');
+  let atMd = ordered.some((r) => String(r.md) === asked) ? asked : String(ordered[0].md);
+  sel.value = atMd;
+
+  const drawRound = () => {
+    const r = ordered.find((x) => String(x.md) === atMd);
+    if (!r) return;
+    document.getElementById('roundhead').textContent = `${roundLabel(r.md)}, in review`;
+    document.getElementById('roundsub').textContent =
+      `${fmtDate(r.from)} to ${fmtDate(r.to)}. What the model said before these matches, and `
+      + 'what they did to the season. Written when the round finished and never rewritten '
+      + 'since.';
+    /* Rounds archived retrospectively carry no narrative — there was no
+       forecast-to-forecast comparison to write one from. */
+    const lines = Array.isArray(r.narrative) ? r.narrative : (r.narrative ? [r.narrative] : []);
+    document.getElementById('roundnarr').innerHTML =
+      lines.map((t) => `<p>${esc(humaniseDates(t))}</p>`).join('');
+    const METRIC = { title: W.isCup ? 'trophy chance' : 'title chance',
+                     ucl: `${W.topAdj} chance`, top: `${W.topAdj} chance`,
+                     releg: W.isCup ? 'elimination risk' : 'relegation risk',
+                     out: 'elimination risk' };
+    const GOOD_UP = { title: true, ucl: true, top: true, releg: false, out: false };
+    document.getElementById('roundmovers').innerHTML = (r.movers || []).length
+      ? `<div class="charthead" style="color:var(--ink2);font-size:12.5px;font-weight:600;margin:20px 0 6px">Who moved</div>`
+        + r.movers.map((m) => {
+          const t = meta[m.id];
+          if (!t) return '';
+          const up = m.delta > 0;
+          const good = up === (GOOD_UP[m.metric] !== false);
+          return `<div class="moverow">
+            <span class="club"><span class="chip" style="background:${chipColor(t.primary)}"></span>
+              <a href="${url(`team.html?t=${t.id}`)}">${esc(t.name)}</a>
+              <span class="hint"> · ${esc(METRIC[m.metric] || m.metric)}</span></span>
+            <span>${pct(m.before)} → <b>${pct(m.after)}</b></span>
+            <span class="d ${good ? 'up' : 'dn'}">${up ? '+' : '−'}${
+              Math.abs(m.delta * 100).toFixed(1)} pp</span>
+          </div>`;
+        }).join('')
+      : '';
+    /* Every match of the round with the probability it was actually given
+       beforehand — the frozen triple, not a number recomputed since. */
+    const ms = [...(r.matches || [])].sort((a, b) =>
+      (b.surprise ?? 0) - (a.surprise ?? 0));
+    document.getElementById('roundmatches').innerHTML = ms.length
+      ? `<div class="charthead" style="color:var(--ink2);font-size:12.5px;font-weight:600;margin:22px 0 6px">Every result, against what was said beforehand</div>`
+        + `<div id="tipish">` + ms.map((m) => {
+          const p = Array.isArray(m.p)
+            ? m.p[m.hg > m.ag ? 0 : (m.hg === m.ag ? 1 : 2)] : m.p;
+          const label = m.label
+            || `${(meta[m.h] || {}).name || m.h} ${m.hg}-${m.ag} ${(meta[m.a] || {}).name || m.a}`;
+          return `<div class="r rb"><span>${esc(label)}
+            <span class="hint">${esc(fmtDate(m.date || r.to))} · ${
+              m.called ? 'the model favoured this result' : 'the model favoured another'}</span>
+            ${probBar(p, m.called ? 'accent' : 'away')}</span><b>${pct(p, 1)}</b></div>`;
+        }).join('') + '</div>'
+      : '';
+    document.getElementById('roundnote').textContent =
+      'The percentage beside each result is what the forecast frozen before kick-off gave '
+      + 'to the result that actually happened. A round full of low numbers is a round the '
+      + 'model got wrong; a forecast with none of them at all is one nobody should trust.';
+    const q = withLg(new URLSearchParams());
+    q.set('md', atMd);
+    replaceQuery(q);
+  };
+  sel.addEventListener('change', () => { atMd = sel.value; drawRound(); });
+  document.getElementById('copyround').addEventListener('click', (e) =>
+    copyLink(e.currentTarget, location.href));
+  drawRound();
+}
+
 if (!played) {
   document.getElementById('tablesub').textContent =
     'Nothing has been played yet, so there is nothing to mark. Come back once the season '
@@ -133,7 +314,20 @@ if (!played) {
   const worstMiss = [...rows].sort((a, b) => a.err - b.err)[0];
   const exact = rows.filter((r) => r.err === 0).length;
 
-  document.getElementById('tiles').innerHTML = [
+  /* After one match each, "most underrated: Hull City, projected 20th, currently
+     5th" is a fact about one Saturday dressed as a verdict on a season. The page
+     already says the season is 3% played and then printed four numbers that
+     ignored it. Below roughly a sixth of the way in they are not printed at
+     all. */
+  const share = total ? played / total : 0;
+  if (share < 0.15) {
+    document.getElementById('tiles').innerHTML =
+      `<p class="hint" style="grid-column:1/-1;margin:0">Only ${played} of ${total} matches
+       have been played — ${Math.round(share * 100)}% of the season. Headline numbers over a
+       sample this small say more about one weekend than about the forecast, so they are held
+       back until about a sixth of the season is in. The table below is shown because it is
+       explicitly a comparison of two positions rather than a verdict on either.</p>`;
+  } else document.getElementById('tiles').innerHTML = [
     ['Average place missed by', mae.toFixed(1),
       `${exact} club${exact === 1 ? '' : 's'} landed exactly where projected`],
     ['Most underrated', esc(best.name),
@@ -158,8 +352,8 @@ if (!played) {
       <div class="errrow">
         <span class="club"><span class="chip" style="background:${chipColor(t.primary)}"></span>
           <a href="${url(`team.html?t=${t.id}`)}">${esc(t.name)}</a></span>
-        <span>${ord(t.proj)}<span class="hint"> · ${Math.round(t.projPts)} pts</span></span>
-        <span>${ord(t.real)}<span class="hint"> · ${t.actual_pts} pts</span></span>
+        <span>${ord(t.proj)}<span class="hint"> · ${ptsWord(Math.round(t.projPts))}</span></span>
+        <span>${ord(t.real)}<span class="hint"> · ${ptsWord(t.actual_pts)}</span></span>
         <span class="${Math.abs(t.err) >= 4 ? 'p-hi' : 'p-lo'}">${
           t.err === 0 ? 'spot on' : `${Math.abs(t.err)} ${t.err > 0 ? 'better' : 'worse'}`}</span>
       </div>`).join('');
@@ -174,7 +368,7 @@ if (!played) {
   document.getElementById('shockcard').hidden = !shocks.length;
   document.getElementById('shocks').innerHTML = `<div id="tipish">${shocks.map((r) => `
     <div class="r rb"><span>${esc(r.label)}
-      <span class="hint">${esc(roundLabel(r.md))} · ${esc(r.date)}</span>
+      <span class="hint">${esc(roundLabel(r.md))} · ${esc(fmtDate(r.date))}</span>
       ${probBar(r.p, 'away')}</span><b>${pct(r.p, 1)}</b></div>`).join('')}</div>`;
 
   /* luck */

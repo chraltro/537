@@ -3,16 +3,39 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* The theme, before the first pixel. This used to be corrected inside
+   `initChrome`, which runs after a module load and after that module's
+   top-level await on the manifest -- so a reader on the light theme got about a
+   tenth of a second of the dark page first. Five lines in the head, run at parse
+   time, and the flash is gone.
+
+   It also settles what the default is. The site shipped `data-theme="dark"` on
+   every page and consulted `prefers-color-scheme` nowhere, so somebody whose
+   whole machine is set to light had to ask this one site again on every device.
+   A saved choice still wins over the system; the system wins over us. */
+(function () {
+  try {
+    var t = localStorage.getItem('plf-theme');
+    if (t !== 'light' && t !== 'dark') {
+      t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { /* private mode: the markup's own default stands */ }
+})();
+</script>
 <title>The races — Premier League 2026/27</title>
 <meta name="description" content="The title race, the fight for Europe and the relegation battle, with the week's biggest forecast movers and the run of fixtures each contender faces.">
 <meta property="og:title" content="The races — season forecast">
 <meta property="og:description" content="Who is winning the title, the European places and the relegation fight, and how the forecast has moved this week.">
 <meta property="og:type" content="website">
 <meta property="og:type" content="website">
-<meta property="og:image" content="og/premier-league.png">
+<meta property="og:image" content="https://chraltro.github.io/537/og/premier-league.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="og/premier-league.png">
+<meta name="twitter:image" content="https://chraltro.github.io/537/og/premier-league.png">
 <link rel="canonical" href="https://chraltro.github.io/537/races.html">
+<link rel="modulepreload" href="assets/app.js">
+<link rel="preload" as="fetch" crossorigin href="data/leagues.json">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -90,6 +113,16 @@
   #tipish .hint { display: block; margin-top: 1px; }
   #tipish .pbar { max-width: 320px; }
 
+  /* Club names in these rows are set in a 186px column and clipped to
+     "Brighton & Hove Al…" on a phone; the site carries a three-letter code for
+     exactly this. The shared sheet swaps `.full` for `.abbr` at 900px, which is
+     far too early here -- these rows have the width until the layout collapses
+     -- so the swap is pushed down to 620 and restated at a specificity that
+     survives it. */
+  @media (max-width: 900px) and (min-width: 621px) {
+    .who .nm .full { display: inline; }
+    .who .nm .abbr { display: none; }
+  }
   @media (max-width: 900px) {
     .racerow { grid-template-columns: 1fr 78px; gap: 6px 12px; padding: 14px 2px; }
     .racerow .big { text-align: right; grid-row: 1; grid-column: 2; }
@@ -123,6 +156,17 @@
     </div>
     <p class="sub" id="weeksub"></p>
     <div id="weekbody"></div>
+  </section>
+
+  <section class="card" id="rooting" hidden>
+    <h2 id="roothead">Results that move your season</h2>
+    <p class="sub" id="rootsub"></p>
+    <div class="controls" style="margin-bottom:14px">
+      <label for="rootclub">Club</label>
+      <select id="rootclub"></select>
+    </div>
+    <div id="rootbody"></div>
+    <p class="hint" id="rootnote" style="margin-top:14px"></p>
   </section>
 
   <section class="card" id="title">
@@ -164,9 +208,10 @@
 </main>
 
 <script type="module">
-import { data, pct, esc, ord, initChrome, initPalette, chipColor, roundLabel,
-         lineChart, probBar, lg, url, setMeta, cardUrl, initTabs,
-         thisSeason } from './assets/app.js';
+import { data, softData, pct, esc, ord, initChrome, initPalette, chipColor, roundLabel,
+         lineChart, probBar, lg, url, setMeta, cardUrl, initTabs, eventLabels,
+         thisSeason, fmtDate, humaniseDates, todayISO, followed, isFollowed,
+         eventIsGood } from './assets/app.js';
 initChrome('races');
 
 const fc = await data('forecast');
@@ -175,7 +220,8 @@ document.documentElement.setAttribute('data-kind', W.kind);
 /* Everything below the forecast is optional: the page has to be right on the
    first build of a season, when none of these files exist yet. */
 const soft = async (n) => { try { return await data(n); } catch { return null; } };
-const [sc, rc, hs] = await Promise.all([soft('schedule'), soft('recap'), soft('history')]);
+const [sc, rc, hs, rt] = await Promise.all([soft('schedule'), soft('recap'), soft('history'),
+                                            softData('rooting')]);
 const sched = sc?.schedule || {};
 const snaps = thisSeason(hs?.snapshots, fc.season);
 const recap = rc || { mode: 'preseason', movers: [], shocks: [],
@@ -195,8 +241,7 @@ const METRIC = { title: W.isCup ? 'trophy chance' : 'title chance',
                  releg: W.isCup ? 'elimination risk' : 'relegation risk' };
 /* A rising relegation risk is bad news; a rising title chance is good news. */
 const GOOD_UP = { title: true, ucl: true, releg: false };
-const fmtDay = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
-  { day: 'numeric', month: 'short' });
+const fmtDay = fmtDate;
 
 initPalette(fc.teams);
 
@@ -250,7 +295,7 @@ document.getElementById('lede').innerHTML =
 document.getElementById('stamp').innerHTML = `
   <span>Season <b>${esc(fc.season)}</b></span>
   <span><b>${fc.matches_played}</b> of ${nMatches} matches played</span>
-  <span>Review as of <b>${esc(recap.asof || fc.generated.slice(0, 10))}</b></span>`;
+  <span>Review as of <b>${esc(fmtDate(recap.asof || fc.generated.slice(0, 10)))}</b></span>`;
 
 /* ---- fixture difficulty, on one scale for the whole page ----
    Shading is only comparable between clubs if every strip is measured against
@@ -282,7 +327,8 @@ function runIn(id) {
 
 const club = (t) => `<span class="who">
     <span class="chip" style="background:${chipColor(t.primary)}"></span>
-    <a class="nm" href="${url(`team.html?t=${t.id}`)}">${esc(t.name)}</a></span>`;
+    <a class="nm" href="${url(`team.html?t=${t.id}`)}"><span class="full">${esc(t.name)}</span><span
+      class="abbr">${esc(t.short || t.name)}</span></a></span>`;
 
 /* ---- one race ---- */
 function raceRows(list, key, third) {
@@ -315,8 +361,8 @@ function raceChart(list, key, what) {
   const yMax = Math.min(1, Math.ceil(peak * 10 + 0.5) / 10);
   return `<div class="charthead">How ${what} has moved</div>`
     + lineChart(series, { yMax, fmt: (v) => `${Math.round(v * 100)}%`, yLabel: what })
-    + `<div class="hint">${snaps.length} snapshots · ${esc(snaps[0].date)} to
-       ${esc(snaps[snaps.length - 1].date)}</div>`;
+    + `<div class="hint">${snaps.length} snapshots · ${esc(fmtDate(snaps[0].date))} to
+       ${esc(fmtDate(snaps[snaps.length - 1].date))}</div>`;
 }
 
 /* ---- the week in words ----
@@ -327,8 +373,27 @@ function narrative() {
   const lines = recap.narrative || [];
   const el = document.getElementById('narrative');
   if (!lines.length) { el.hidden = true; return; }
-  el.innerHTML = lines.map((t) => `<p>${esc(t)}</p>`).join('');
+  el.innerHTML = lines.map((t) => `<p>${esc(humaniseDates(t))}</p>`).join('');
 }
+
+/* ---- has this season started? ----
+   Two of the three answers here used to come from `recap.mode`, which is a
+   property of the build rather than of the calendar: with a stale file the
+   Bundesliga -- three matchweeks in -- was shown a panel headed "Where the
+   season starts" explaining the model's view "before a ball is kicked". That
+   phrase is only true when nothing has been played *and* the first fixture is
+   still ahead, so it is gated on both. */
+const fixtureDates = Object.values(sched)
+  .flatMap((r) => (r.fixtures || []).map((f) => f.date))
+  .filter(Boolean);
+const firstFixture = fixtureDates.length
+  ? fixtureDates.reduce((a, b) => (String(a) <= String(b) ? a : b)) : null;
+const preseason = (fc.matches_played || 0) === 0
+  && !!firstFixture && String(firstFixture) >= todayISO();
+
+/* The tab and the panel it opens have to agree. They did not: the strip said
+   "This week" over a panel headed "Where the season starts". */
+let weekTitle = 'This week';
 
 /* ---- this week ---- */
 function weekly() {
@@ -338,7 +403,7 @@ function weekly() {
 
   if (recap.mode === 'inseason') {
     head.textContent = 'This week';
-    sub.textContent = `${recap.note} Only moves of a percentage point or more are listed,`
+    sub.textContent = `${humaniseDates(recap.note)} Only moves of a percentage point or more are listed,`
       + ' and each club appears once, for whichever of its three numbers moved furthest.';
     const movers = (recap.movers || []).map((m) => {
       const t = meta[m.id];
@@ -369,14 +434,18 @@ function weekly() {
       ? movers
       : '<p class="empty">Nothing moved by as much as a percentage point this week.</p>')
       + shocks;
+    weekTitle = head.textContent;
     return;
   }
 
   /* Preseason: no movement to report yet, so answer the questions the reader
      actually came with instead of apologising for an empty card. */
-  head.textContent = 'Where the season starts';
-  sub.textContent = 'The three questions the season will answer, as the model sees them'
-    + ' before a ball is kicked. Every later week is measured against this.';
+  head.textContent = preseason ? 'Where the season starts' : 'This week';
+  sub.textContent = preseason
+    ? 'The three questions the season will answer, as the model sees them'
+      + ' before a ball is kicked. Every later week is measured against this.'
+    : 'No movement has been recorded against a previous forecast in this build, so this is'
+      + ' where the three races stand rather than how they moved.';
 
   /* Which race is actually live, in one sentence. The three tiles that used to
      sit here repeated the favourite and the likeliest relegation, both of
@@ -389,18 +458,110 @@ function weekly() {
     .sort((a, b) => b.n - a.n);
   const tightest = races[0];
 
+  weekTitle = head.textContent;
   body.innerHTML = `
-    <p class="hint" style="margin:0">${esc(recap.note)}
+    <p class="hint" style="margin:0">${esc(preseason ? recap.note
+      : `${fc.matches_played} of ${nMatches} matches have been played and this build has no `
+        + 'earlier forecast to measure them against.')}
       The tightest of the three is ${esc(tightest.label)}, with
       <b>${tightest.n}</b> clubs still between 5% and 95%, against
       ${races[1].n} in ${esc(races[1].label)} and ${races[2].n} in
       ${esc(races[2].label)}.</p>`;
 }
 
+/* ---- who you want to win ----
+   Leverage answers "does this match matter to the clubs in it". The question a
+   supporter actually has on a Saturday is the other one: which of the results
+   they are not involved in helps them most. `rooting.json` carries, for every
+   club not playing in a match, how its three season probabilities move on a
+   home win, a draw and an away win.
+
+   It is framed as description and never as advice. These are results that move
+   your season, which is a fact about the simulations; what anybody should do
+   about that is not this site's business, and the note says so. */
+const EVENT_LABEL = eventLabels();
+let rootClub = null;
+
+function rootingSetup() {
+  const card = document.getElementById('rooting');
+  if (!rt || !Array.isArray(rt.matches) || !rt.matches.length) return;
+  card.hidden = false;
+  const sel = document.getElementById('rootclub');
+  /* Default to a club the reader has actually followed, since the whole card is
+     addressed to a supporter; otherwise the first club in the table, which is
+     at least a club with something to gain. */
+  const mine = followed().filter((id) => meta[id]);
+  rootClub = mine[0] || byTitle[0].id;
+  sel.innerHTML = [...fc.teams].sort((a, b) => a.name.localeCompare(b.name))
+    .map((t) => `<option value="${esc(t.id)}"${t.id === rootClub ? ' selected' : ''}>${
+      esc(t.name)}${isFollowed(t.id) ? ' \u2605' : ''}</option>`).join('');
+  sel.addEventListener('change', () => { rootClub = sel.value; drawRooting(); });
+  document.getElementById('rootsub').textContent =
+    `Every other fixture in ${roundLabel(rt.md).toLowerCase()}, ranked by how far the result `
+    + 'moves this club\u2019s own season. The club\u2019s own match is not here \u2014 that one it '
+    + 'decides itself.';
+  document.getElementById('rootnote').textContent =
+    'Each figure is the change in probability against the forecast that assumes nothing '
+    + 'about the result, measured across the same simulations as everything else on this '
+    + 'site. It is a description of what the numbers do, not a suggestion about what to '
+    + 'watch or back, and a percentage point of title chance is a small thing next to '
+    + 'ninety minutes of football.';
+}
+
+function drawRooting() {
+  const body = document.getElementById('rootbody');
+  if (!rt || !rootClub) return;
+  const t = meta[rootClub];
+  const OUT = ['a home win', 'a draw', 'an away win'];
+  const rows = rt.matches.map((m) => {
+    const eff = (m.effects || {})[rootClub];
+    if (!eff) return null;
+    /* Of the three events, the one this fixture actually moves. */
+    let best = null;
+    Object.entries(eff).forEach(([key, d]) => {
+      if (!Array.isArray(d) || d.length !== 3) return;
+      const range = Math.max(...d) - Math.min(...d);
+      if (!best || range > best.range) best = { key, d, range };
+    });
+    if (!best || best.range < 0.0005) return null;
+    /* A rise is good news for two of the three events and bad for the third,
+       and which is which is the competition's own vocabulary: a league calls it
+       `releg`, a cup calls it `out`. */
+    const sign = eventIsGood(best.key) ? 1 : -1;
+    const scored = best.d.map((v) => v * sign);
+    const want = scored.indexOf(Math.max(...scored));
+    return { m, ...best, want, gain: scored[want] };
+  }).filter(Boolean).sort((a, b) => b.range - a.range);
+
+  if (!rows.length) {
+    body.innerHTML = `<p class="empty">Nothing else in this round moves ${
+      esc(t.name)}\u2019s season by as much as a twentieth of a percentage point.</p>`;
+    return;
+  }
+  body.innerHTML = rows.map(({ m, key, want, gain, d }) => {
+    const hn = (meta[m.h] || {}).name || m.h;
+    const an = (meta[m.a] || {}).name || m.a;
+    const wantWord = want === 0 ? `${esc((meta[m.h] || {}).short || hn)} win`
+      : (want === 1 ? 'A draw' : `${esc((meta[m.a] || {}).short || an)} win`);
+    const pp = Math.abs(gain * 100);
+    return `<div class="rootrow">
+      <span>${esc(hn)} v ${esc(an)}
+        <span class="hint"> \u00b7 ${esc(fmtDay(m.date))} \u00b7 ${
+          esc(EVENT_LABEL[key] || key)}</span></span>
+      <span class="want">${wantWord}</span>
+      <span class="d ${gain >= 0 ? 'up' : 'dn'}" title="${esc(t.name)} on ${esc(OUT[0])}: ${
+        (d[0] * 100).toFixed(2)}pp, a draw ${(d[1] * 100).toFixed(2)}pp, ${esc(OUT[2])}: ${
+        (d[2] * 100).toFixed(2)}pp">${gain >= 0 ? '+' : '\u2212'}${pp.toFixed(2)}
+        <em style="color:var(--muted);font-style:normal;font-size:11px"> pp</em></span>
+    </div>`;
+  }).join('');
+}
+
 /* ---- render everything that depends on club colours ---- */
 function render() {
   narrative();
   weekly();
+  drawRooting();
 
   const top = byTitle.slice(0, 5);
   const titleLead = Math.max(...top.map((t) => t.pts));
@@ -443,21 +604,25 @@ function render() {
   document.getElementById('relchart').innerHTML =
     raceChart(danger.slice(0, 5), 'releg', W.downRace);
 }
+rootingSetup();
 render();
 window.addEventListener('themechange', render);
+addEventListener('followchange', () => { rootingSetup(); drawRooting(); });
 
 /* One tab per race. The anchor chips this replaces already implied the split;
    they just made you scroll five screens to act on it. "This week" leads,
    because it is the part that changes between visits. */
 initTabs(document.getElementById('tabs'), [
-  { id: 'week', label: 'This week', sections: [document.getElementById('week')] },
+  { id: 'week', label: weekTitle, short: preseason ? 'Preseason' : 'This week',
+    sections: [document.getElementById('week'), document.getElementById('rooting')] },
   { id: 'title', label: W.winRace.replace(/^the /, '').replace(/^\w/, (c) => c.toUpperCase()),
     sections: [document.getElementById('title')] },
   { id: 'europe', label: W.isPromotion ? 'Promotion' : (W.isCup ? W.topN : 'Europe'),
     sections: [document.getElementById('topfive')] },
   { id: 'bottom', label: W.isCup ? 'The cut' : 'Relegation',
     sections: [document.getElementById('relegation')] },
-].filter((g) => g.sections.every(Boolean)));
+].map((g) => ({ ...g, sections: g.sections.filter((el) => el && !el.hidden) }))
+ .filter((g) => g.sections.length));
 </script>
 </body>
 </html>

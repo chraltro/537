@@ -3,15 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* The theme, before the first pixel. This used to be corrected inside
+   `initChrome`, which runs after a module load and after that module's
+   top-level await on the manifest -- so a reader on the light theme got about a
+   tenth of a second of the dark page first. Five lines in the head, run at parse
+   time, and the flash is gone.
+
+   It also settles what the default is. The site shipped `data-theme="dark"` on
+   every page and consulted `prefers-color-scheme` nowhere, so somebody whose
+   whole machine is set to light had to ask this one site again on every device.
+   A saved choice still wins over the system; the system wins over us. */
+(function () {
+  try {
+    var t = localStorage.getItem('plf-theme');
+    if (t !== 'light' && t !== 'dark') {
+      t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { /* private mode: the markup's own default stands */ }
+})();
+</script>
 <title>Global club rankings</title>
 <meta name="description" content="Every club in Europe on one rating scale, from one model fitted over continental football back to 2011-12 and every domestic league with a feed.">
 <meta property="og:title" content="Global club rankings">
 <meta property="og:description" content="A single rating scale covering every club in Europe, so clubs from different leagues can be compared directly.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="og/global.png">
+<meta property="og:image" content="https://chraltro.github.io/537/og/global.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="og/global.png">
+<meta name="twitter:image" content="https://chraltro.github.io/537/og/global.png">
 <link rel="canonical" href="https://chraltro.github.io/537/rankings.html">
+<link rel="modulepreload" href="assets/app.js">
+<link rel="preload" as="fetch" crossorigin href="data/leagues.json">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -29,7 +52,9 @@
     <div class="stamp" id="stamp"></div>
   </div>
 
-  <section class="card">
+  <div id="tabs"></div>
+
+  <section class="card" id="c-rank">
     <div class="cardbar">
       <h2>The ranking</h2>
       <a class="morelink" href="compare.html">Compare two clubs →</a>
@@ -72,6 +97,20 @@
     </p>
   </section>
 
+  <section class="card" id="c-leagues">
+    <h2>How strong is each league?</h2>
+    <p class="sub" id="lgsub"></p>
+    <div id="lgtable"></div>
+    <p class="hint" id="lgnote" style="margin-top:16px"></p>
+  </section>
+
+  <section class="card" id="c-movers">
+    <h2>Who is moving</h2>
+    <p class="sub" id="movsub"></p>
+    <div id="movbody"></div>
+    <p class="hint" id="movnote" style="margin-top:16px"></p>
+  </section>
+
   <nav class="deeper" aria-label="Go deeper">
     <a href="compare.html"><b>Compare two clubs</b>
       <span>Any two clubs in Europe, side by side, with the head-to-head record and a
@@ -86,8 +125,9 @@
 </main>
 
 <script type="module">
-import { siteData, esc, ord, initChrome, tip, tipRows, makeSortable, chipColor,
-         initPalette, setMeta, followButton, followed } from './assets/app.js';
+import { siteData, softSiteData, esc, ord, initChrome, tip, tipRows, makeSortable,
+         chipColor, initPalette, setMeta, followButton, followed, fmtStamp, fmtDate,
+         fmtSeason, initTabs, showStaleBanner, ROOT } from './assets/app.js';
 initChrome('rankings');
 
 const g = await siteData('global');
@@ -102,9 +142,6 @@ setMeta({
     + `${g.n_leagues} leagues, rated from ${g.n_matches.toLocaleString()} matches.`,
 });
 
-const fmtStamp = (iso) => new Date(iso).toLocaleDateString('en-GB',
-  { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-
 document.getElementById('lede').innerHTML =
   `One rating for <b>${g.n_clubs}</b> clubs across <b>${g.n_leagues}</b> leagues, fitted in a `
   + `single model over <b>${g.n_matches.toLocaleString()}</b> matches. `
@@ -113,8 +150,13 @@ document.getElementById('lede').innerHTML =
   + 'forecasts: probabilities, projected points and title chances are still each '
   + "competition's own fit on its own matches.";
 
+/* This page never loads a competition's forecast, so the freshness check the
+   forecast triggers everywhere else has to be made here from the ranking's own
+   stamp. */
+showStaleBanner(g.generated, 'The global ranking');
+
 document.getElementById('stamp').innerHTML = `
-  <span>Fitted to <b>${g.asof}</b></span>
+  <span>Fitted to <b>${esc(fmtDate(g.asof))}</b></span>
   <span>Scale set: <b>${g.scale_clubs}</b> big-five clubs</span>
   <span>Updated <b>${fmtStamp(g.generated)}</b></span>`;
 
@@ -141,7 +183,7 @@ const seasonOf = (iso) => {
   if (!iso) return 'an unknown season';
   const d = new Date(`${iso}T12:00:00`);
   const y = d.getFullYear() - (d.getMonth() < 6 ? 1 : 0);
-  return `${String(y).slice(2)}-${String(y + 1).slice(2)}`;
+  return fmtSeason(`${y}-${String(y + 1).slice(2)}`);
 };
 
 const maxSpi = Math.max(...rows.map((r) => r.spi));
@@ -151,7 +193,12 @@ const count = document.getElementById('count');
 /* The whole ranking was rendered as "the top 400" and no way to see the rest --
    a cap presented as a total. It is a real cap, because a thousand rows of eight
    cells is a slow paint on a phone, so it stays and gains a button. */
-const PAGE = 400;
+/* Four hundred rows of eight cells is a slow paint everywhere and a 24,000px
+   page on a phone -- twenty-nine screens of table under a search box that is
+   the actual answer on that screen. The cap is smaller where the screen is,
+   and both are a first page rather than a total. */
+const narrow = matchMedia('(max-width: 620px)').matches;
+const PAGE = narrow ? 50 : 400;
 let limit = PAGE;
 
 function render(list) {
@@ -277,7 +324,7 @@ body.addEventListener('mousemove', (e) => {
         Math.round(f.blank_pct * 100)}%`],
     ] : []),
     ['Matches in the fit', t.n],
-    ['Newest result', t.last || 'unknown'],
+    ['Newest result', t.last ? fmtDate(t.last, { year: true }) : 'unknown'],
   ]), e);
 });
 body.addEventListener('mouseleave', () => tip(null));
@@ -287,6 +334,147 @@ document.getElementById('note').textContent =
   + 'two years. Clubs marked with an age are rated on a domestic feed that stopped '
   + 'publishing: twenty-nine associations have nothing newer than May 2025. Their rating is '
   + 'as old as the tag says, and the simulation widens their interval to match.';
+
+/* ================= how strong is each league? =================
+   The pooled fit rates nine hundred clubs across sixty leagues on one scale,
+   and this page filtered *by* league without ever ranking them — which is the
+   question a single scale exists to answer. Everything here is arithmetic over
+   the payload the page has already downloaded.
+
+   The middle of a league is the honest summary of it, not its best club: one
+   very strong side does not make a strong division, and a median is not moved
+   by one. The bar shows the middle half, so a league with a wide spread reads
+   as one. */
+const quant = (sorted, q) => {
+  if (!sorted.length) return null;
+  const i = (sorted.length - 1) * q;
+  const lo = Math.floor(i), hi = Math.ceil(i);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo);
+};
+
+const leagues = [...byLeague.keys()].map((name) => {
+  const clubs = rows.filter((r) => r.league === name);
+  const spis = clubs.map((c) => c.spi).sort((a, b) => a - b);
+  const top = clubs.reduce((a, b) => (b.spi > a.spi ? b : a));
+  const stale = clubs.filter((c) => c.stale > 13).length;
+  return {
+    name, n: clubs.length, top,
+    country: clubs[0].country || '',
+    median: quant(spis, 0.5), p25: quant(spis, 0.25), p75: quant(spis, 0.75),
+    stale, slug: (clubs.find((c) => c.slug) || {}).slug || '',
+  };
+}).filter((l) => l.n >= 6).sort((a, b) => b.median - a.median);
+
+if (leagues.length > 1) {
+  const lo = Math.min(...leagues.map((l) => l.p25));
+  const hi = Math.max(...leagues.map((l) => l.p75));
+  const at = (v) => `${(((v - lo) / ((hi - lo) || 1)) * 100).toFixed(1)}%`;
+  document.getElementById('lgtable').innerHTML = leagues.map((l, i) => {
+    const gap = i ? leagues[i - 1].median - l.median : null;
+    return `<div class="lgstr">
+      <span class="rk">${i + 1}</span>
+      <span class="nm">${l.slug
+        ? `<a href="${ROOT}index.html?lg=${encodeURIComponent(l.slug)}">${esc(l.name)}</a>`
+        : `<a href="${ROOT}rankings.html?league=${encodeURIComponent(l.name)}">${esc(l.name)}</a>`}
+        <span>${esc(l.country)} · ${l.n} rated${
+          l.stale ? ` · ${l.stale} stale` : ''}</span></span>
+      <span><b>${l.median.toFixed(1)}</b>${gap == null ? ''
+        : `<span class="hint" title="Gap in median rating to the league above"> −${
+            gap.toFixed(1)}</span>`}</span>
+      <span class="iqr" title="Middle half of the league: ${l.p25.toFixed(1)} to ${
+        l.p75.toFixed(1)}"><i style="left:${at(l.p25)};width:${
+        (((l.p75 - l.p25) / ((hi - lo) || 1)) * 100).toFixed(1)}%"></i><u
+        style="left:${at(l.median)}"></u></span>
+      <span class="top" title="Strongest club: ${esc(l.top.name)} on ${
+        l.top.spi.toFixed(1)}">${esc(l.top.name)} ${l.top.spi.toFixed(1)}</span>
+    </div>`;
+  }).join('');
+  const best = leagues[0], second = leagues[1];
+  document.getElementById('lgsub').innerHTML =
+    `Every league with at least six rated clubs, ordered by the rating of its <b>middle</b>
+     club rather than its best one: one very strong side does not make a strong division,
+     and a median is not moved by one. The bar is the middle half of the league — its
+     twenty-fifth to seventy-fifth percentile — with a tick at the median, so a division
+     where everybody is close together looks like one. The number beside each median is the
+     gap to the league above.`;
+  document.getElementById('lgnote').textContent =
+    `${best.name} lead on a median of ${best.median.toFixed(1)}, `
+    + `${(best.median - second.median).toFixed(1)} clear of ${second.name}. These are the `
+    + 'same ratings as the table beside this one, so they carry the same caveat: a league '
+    + 'marked stale is rated on a feed that has stopped publishing, and its position here '
+    + 'is as old as that feed. Continental ties are the only matches that join one league '
+    + 'to another, so a division whose clubs rarely play outside it is placed on thinner '
+    + 'evidence than one whose clubs play in Europe every year.';
+}
+
+/* ================= who is moving =================
+   `trajectory.json` gives one rating per club per July, which is a career and
+   not a season. This is the same ranking week by week, which is the only way to
+   see a club's run while it is happening. */
+const gh = await softSiteData('global_history');
+const weeks = (gh && gh.weeks) || [];
+const movsub = document.getElementById('movsub');
+const movbody = document.getElementById('movbody');
+const movnote = document.getElementById('movnote');
+if (weeks.length < 2) {
+  movsub.textContent = 'The ranking is recorded once a week, on the Monday.';
+  movbody.innerHTML = `<p class="empty">${weeks.length
+    ? `There is one column so far, for the week of ${esc(fmtDate(weeks[0]))}. A second week
+       is all this needs.`
+    : 'No weekly columns have been written yet.'}</p>`;
+  movnote.textContent =
+    'Until then the season-by-season trajectory on each club page is the longer view, and '
+    + 'the club pages of the ten forecast competitions carry a daily line of their own.';
+} else {
+  const last = weeks.length - 1;
+  const moves = Object.entries(gh.clubs || {}).map(([id, line]) => {
+    const now = line[last];
+    /* The most recent earlier week this club actually appears in: a club that
+       was missing for a fortnight has not "moved" over that gap. */
+    let was = null, from = null;
+    for (let i = last - 1; i >= 0; i--) {
+      if (line[i] != null) { was = line[i]; from = weeks[i]; break; }
+    }
+    if (now == null || was == null) return null;
+    const club = rows.find((r) => r.id === id);
+    return club ? { club, now, was, from, d: now - was } : null;
+  }).filter(Boolean).filter((m) => Math.abs(m.d) >= 0.05);
+  moves.sort((a, b) => Math.abs(b.d) - Math.abs(a.d));
+  const show = moves.slice(0, 20);
+  movsub.textContent =
+    `The biggest changes in rating between the week of ${fmtDate(weeks[last - 1])} and the `
+    + `week of ${fmtDate(weeks[last])}, across all ${Object.keys(gh.clubs || {}).length} `
+    + 'clubs the ranking holds.';
+  movbody.innerHTML = show.length ? show.map((m) => `
+    <div class="moverow">
+      <span class="club"><span class="chip" style="background:${chipColor(m.club.primary)}"></span>
+        ${m.club.slug
+          ? `<a href="team.html?t=${encodeURIComponent(m.club.id)}&lg=${
+              encodeURIComponent(m.club.slug)}">${esc(m.club.name)}</a>`
+          : `<span>${esc(m.club.name)}</span>`}
+        <span class="hint"> · ${esc(m.club.league)}</span></span>
+      <span>${m.was.toFixed(1)} → <b>${m.now.toFixed(1)}</b></span>
+      <span class="d ${m.d >= 0 ? 'up' : 'dn'}">${m.d >= 0 ? '+' : '\u2212'}${
+        Math.abs(m.d).toFixed(1)}</span>
+    </div>`).join('')
+    : '<p class="empty">Nothing moved by as much as a tenth of a rating point this week.</p>';
+  movnote.textContent =
+    'A rating moves when results arrive, so a club out of season sits still and a club '
+    + 'playing twice a week moves twice as often. A big rise after one result is the fit '
+    + 'having had little to go on, not a club having transformed: the interval on each '
+    + 'rating is wider than most of these moves.';
+}
+
+/* Three questions, three tabs. The ranking is the page and stays the default;
+   the other two are readings of the same payload. */
+initTabs(document.getElementById('tabs'), [
+  { id: 'clubs', label: 'The ranking', short: 'Clubs',
+    sections: [document.getElementById('c-rank')] },
+  { id: 'leagues', label: 'League strength', short: 'Leagues',
+    sections: [document.getElementById('c-leagues')] },
+  { id: 'movers', label: 'Who is moving', short: 'Movers',
+    sections: [document.getElementById('c-movers')] },
+]);
 
 /* The palette's club entries link into one league's pages, and this page is
    not league-scoped -- a Dutch club opened from a Premier League palette would

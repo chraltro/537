@@ -3,12 +3,39 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Page not found — Premier League Forecast</title>
-<meta name="description" content="Page not found. The open football forecast lives here.">
+<script>
+/* The theme, before the first pixel. This used to be corrected inside
+   `initChrome`, which runs after a module load and after that module's
+   top-level await on the manifest -- so a reader on the light theme got about a
+   tenth of a second of the dark page first. Five lines in the head, run at parse
+   time, and the flash is gone.
+
+   It also settles what the default is. The site shipped `data-theme="dark"` on
+   every page and consulted `prefers-color-scheme` nowhere, so somebody whose
+   whole machine is set to light had to ask this one site again on every device.
+   A saved choice still wins over the system; the system wins over us. */
+(function () {
+  try {
+    var t = localStorage.getItem('plf-theme');
+    if (t !== 'light' && t !== 'dark') {
+      t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { /* private mode: the markup's own default stands */ }
+})();
+</script>
+<title>Page not found — 537</title>
+<meta name="description" content="Page not found. 537 forecasts ten European competitions: a rating for every club, a probability for every match, and a simulated season.">
+<!-- A 404 is not a page anybody should land on from a search result, and it has
+     no canonical of its own because there is no canonical version of "nothing
+     here". Telling the crawler so is the honest form. -->
+<meta name="robots" content="noindex">
 <meta property="og:type" content="website">
-<meta property="og:image" content="/537/og/premier-league.png">
+<meta property="og:image" content="https://chraltro.github.io/537/og/premier-league.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="/537/og/premier-league.png">
+<meta name="twitter:image" content="https://chraltro.github.io/537/og/premier-league.png">
+<link rel="modulepreload" href="/537/assets/app.js">
+<link rel="preload" as="fetch" crossorigin href="/537/data/leagues.json">
 <link rel="stylesheet" href="/537/assets/style.css">
 <link rel="manifest" href="/537/manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -40,7 +67,10 @@
   import { initChrome, lg, setMeta } from '/537/assets/app.js';
   initChrome('');
   const W = lg();
-  setMeta({ title: `Page not found — ${W.name} Forecast` });
+  /* The site is called 537; the competition is which forecast you land in
+     next. The title used to name the competition and not the site, which is
+     the one thing a lost reader needs to recognise. */
+  setMeta({ title: '537 — page not found' });
   document.getElementById('ntable').textContent =
     `Title, Champions League and relegation odds for all ${W.nTeams} clubs`;
   document.getElementById('vmatches').textContent = `All ${W.nMatches} fixtures`;

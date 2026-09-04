@@ -9,10 +9,11 @@
 
    Message in:
      { fixtures, rho, basePts, baseGf, baseGa, picks, nSims, seed, runId,
-       uclPlaces, relegPlaces, nTeams }
-   where the last three come from the league's sim_input.json — how many places
-   take a Champions League spot, how many go down automatically, and how many
-   clubs are in the league. Nothing here assumes twenty, five and three.
+       uclPlaces, relegPlaces, nTeams, sharpen }
+   where the last four come from the league's sim_input.json — how many places
+   take a Champions League spot, how many go down automatically, how many clubs
+   are in the league, and the competition's calibration exponent. Nothing here
+   assumes twenty, five and three.
    `fixtures` are the unplayed matches as
      { h, a, hi, ai, lh, la }                    (hi/ai are team indices)
    and `picks` maps "home|away" to either { res: "H" | "D" | "A" } or
@@ -78,6 +79,43 @@ function scoreGrid(lh, la, rho) {
   return p;
 }
 
+/* ---- the published probabilities are calibrated; these have to be too ----
+   The pipeline fits one exponent per competition on that league's own
+   walk-forward and applies it to every probability it publishes. This worker
+   rebuilds its grids from lambdas rather than reading the published ones, so
+   without the same step it would quietly disagree with the page it is drawn on:
+   the what-if table's "no changes" column would not match the projected table.
+
+   Applied exactly as `docs/max-build-contracts.md` §8 specifies: the exponent
+   acts on the 1X2 triple, and the score matrix is then reweighted so that each
+   result class carries its new weight while the distribution of scorelines
+   *within* a result is untouched. A missing or unit exponent is a no-op. */
+function sharpenGrid(p, k) {
+  if (!(k > 0) || Math.abs(k - 1) < 1e-9) return p;
+  const cls = new Float64Array(3);
+  for (let h = 0; h < NG; h++) {
+    for (let a = 0; a < NG; a++) {
+      cls[h > a ? 0 : (h === a ? 1 : 2)] += p[h * NG + a];
+    }
+  }
+  const q = new Float64Array(3);
+  let t = 0;
+  for (let i = 0; i < 3; i++) { q[i] = Math.pow(cls[i], k); t += q[i]; }
+  if (!(t > 0)) return p;
+  const f = new Float64Array(3);
+  for (let i = 0; i < 3; i++) f[i] = (cls[i] > 0) ? (q[i] / t) / cls[i] : 0;
+  let s = 0;
+  for (let h = 0; h < NG; h++) {
+    for (let a = 0; a < NG; a++) {
+      const i = h * NG + a;
+      p[i] *= f[h > a ? 0 : (h === a ? 1 : 2)];
+      s += p[i];
+    }
+  }
+  if (s > 0) for (let i = 0; i < NC; i++) p[i] /= s;
+  return p;
+}
+
 const keeps = (res, h, a) =>
   res < 0 || (res === 0 ? h > a : res === 1 ? h === a : h < a);
 
@@ -108,6 +146,8 @@ self.onmessage = function (ev) {
   const runId = msg.runId || 0;
   const nSims = msg.nSims || 5000;
   const rho = msg.rho || 0;
+  /* Missing means 1.0, which the sharpener treats as the identity. */
+  const sharpen = (typeof msg.sharpen === 'number' && msg.sharpen > 0) ? msg.sharpen : 1;
   const picks = msg.picks || {};
   const basePts = Int32Array.from(msg.basePts);
   const baseGf = Int32Array.from(msg.baseGf);
@@ -150,7 +190,7 @@ self.onmessage = function (ev) {
       continue;
     }
     const res = (p && p.res in RES) ? RES[p.res] : -1;
-    writeCdf(scoreGrid(f.lh, f.la, rho), res, cdf, k * NC);
+    writeCdf(sharpenGrid(scoreGrid(f.lh, f.la, rho), sharpen), res, cdf, k * NC);
   }
 
   const pts = new Int32Array(n);

@@ -3,13 +3,36 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* The theme, before the first pixel. This used to be corrected inside
+   `initChrome`, which runs after a module load and after that module's
+   top-level await on the manifest -- so a reader on the light theme got about a
+   tenth of a second of the dark page first. Five lines in the head, run at parse
+   time, and the flash is gone.
+
+   It also settles what the default is. The site shipped `data-theme="dark"` on
+   every page and consulted `prefers-color-scheme` nowhere, so somebody whose
+   whole machine is set to light had to ask this one site again on every device.
+   A saved choice still wins over the system; the system wins over us. */
+(function () {
+  try {
+    var t = localStorage.getItem('plf-theme');
+    if (t !== 'light' && t !== 'dark') {
+      t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { /* private mode: the markup's own default stands */ }
+})();
+</script>
 <title>Club forecast — Premier League 2026/27</title>
 <meta name="description" content="Per-club season forecast: rating trajectory, finishing-position distribution and every remaining fixture.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="og/premier-league.png">
+<meta property="og:image" content="https://chraltro.github.io/537/og/premier-league.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="og/premier-league.png">
+<meta name="twitter:image" content="https://chraltro.github.io/537/og/premier-league.png">
 <link rel="canonical" href="https://chraltro.github.io/537/team.html">
+<link rel="modulepreload" href="assets/app.js">
+<link rel="preload" as="fetch" crossorigin href="data/leagues.json">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -49,7 +72,9 @@
       <span id="clubtools" style="margin-left:auto;display:flex;gap:8px"></span>
     </div>
     <h1 id="title">Club</h1>
+    <nav class="compstrip" id="compstrip" aria-label="This club's competitions"></nav>
     <p class="lede" id="lede"></p>
+    <p class="hint" id="clinchline" hidden></p>
     <div class="stamp" id="stamp"></div>
   </div>
 
@@ -75,6 +100,42 @@
       <div class="axis20" id="posaxis" style="margin-top:6px"></div>
     </section>
   </div>
+
+  <section class="card" id="movecard" hidden>
+    <h2 id="movehead">How the forecast has changed</h2>
+    <p class="sub" id="movesub"></p>
+    <div id="movechart"></div>
+    <div id="movepts"></div>
+    <p class="hint" id="movenote" style="margin-top:14px"></p>
+  </section>
+
+  <section class="card" id="elsewhere" hidden>
+    <h2 id="elsehead">This club elsewhere</h2>
+    <p class="sub" id="elsesub"></p>
+    <div class="tiles" id="elsetiles"></div>
+    <h3 style="font-size:14px;margin:20px 0 4px">The next five, whatever the competition</h3>
+    <div id="elsefix"></div>
+    <div id="congestwrap" hidden>
+      <h3 style="font-size:14px;margin:24px 0 4px">The next three weeks</h3>
+      <p class="sub" id="congestsub"></p>
+      <div class="congest" id="congest"></div>
+      <p class="hint" id="congestnote" style="margin-top:12px"></p>
+    </div>
+  </section>
+
+  <section class="card" id="rootcard" hidden>
+    <h2>Results that move their season</h2>
+    <p class="sub" id="rootsub"></p>
+    <div id="rootbody"></div>
+    <p class="hint" id="rootnote" style="margin-top:14px"></p>
+  </section>
+
+  <section class="card" id="charcard" hidden>
+    <h2>Character</h2>
+    <p class="sub" id="charsub"></p>
+    <div class="statgrid" id="chargrid"></div>
+    <p class="hint" id="charnote" style="margin-top:14px"></p>
+  </section>
 
   <section class="card cuponly" id="bracketcard">
     <h2>How far they get</h2>
@@ -151,17 +212,22 @@
 </main>
 
 <script type="module">
-import { data, pct, signed, esc, ord, initChrome, tip, tipRows, timeline, chipColor,
-         initPalette, matchModal, lg, withLg, setMeta, eventLabels, cardUrl,
-         bracketStrip, roundLabel, roundShort, initTabs, followButton,
-         copyLink, siteData, radar, DIMS, replaceQuery } from './assets/app.js';
+import { data, softData, softSiteData, pct, signed, esc, ord, initChrome, tip, tipRows,
+         timeline, chipColor, initPalette, matchModal, lg, withLg, setMeta, eventLabels,
+         cardUrl, bracketStrip, roundLabel, roundShort, initTabs, followButton,
+         copyLink, siteData, radar, DIMS, replaceQuery, lineChart, thisSeason,
+         fmtDate, fmtDay, fmtSeason, todayISO, ptsWord, ROOT, LEAGUES,
+         eventIsGood } from './assets/app.js';
 initChrome('team');
 
 const [fc, mm] = [await data('forecast'), await data('matches')];
 /* Two files this page can do without: a competition built before they existed,
    or one whose feed has no half-time score, simply hides those sections. */
 const soft = async (name) => { try { return await data(name); } catch { return null; } };
-const [scen, gs] = [await soft('scenarios'), await soft('gamestate')];
+/* Four optional files, fetched together rather than one after another: they do
+   not depend on each other and the page waits for the slowest either way. */
+const [scen, gs, hist, root] = await Promise.all(
+  [soft('scenarios'), soft('gamestate'), soft('history'), softData('rooting')]);
 const W = lg();
 document.documentElement.setAttribute('data-kind', W.kind);
 const meta = Object.fromEntries(fc.teams.map((t) => [t.id, t]));
@@ -208,9 +274,11 @@ window.addEventListener('themechange', render);
    data for them, and a tab whose sections are all hidden is dropped rather than
    offered as an empty panel. */
 const TAB_GROUPS = [
-  { id: 'season', label: 'Season', ids: ['c-season', 'radarcard', 'bracketcard'] },
-  { id: 'fixtures', label: 'Fixtures', ids: ['c-fdr', 'c-big', 'c-fixtures'] },
-  { id: 'form', label: 'Form', ids: ['scencard', 'shotcard', 'statecard'] },
+  { id: 'season', label: 'Season',
+    ids: ['c-season', 'movecard', 'radarcard', 'bracketcard'] },
+  { id: 'fixtures', label: 'Fixtures',
+    ids: ['c-fdr', 'elsewhere', 'c-big', 'rootcard', 'c-fixtures'] },
+  { id: 'form', label: 'Form', ids: ['scencard', 'charcard', 'shotcard', 'statecard'] },
 ];
 const showTab = initTabs(
   document.getElementById('tabs'),
@@ -279,7 +347,7 @@ function renderScenarios(t) {
       .filter((i) => i >= lo && i <= hi && (i % step === 0 || i === hi));
     document.getElementById('scenbody').innerHTML = idx.map((i) => `
       <div class="scen-row">
-        <span class="pts">${row.pts[i]} pts</span>
+        <span class="pts">${ptsWord(row.pts[i])}</span>
         <span class="scen-bar"><i style="width:${(vals[i] * 100).toFixed(1)}%"></i></span>
         <span class="val">${pct(vals[i], 0)}</span>
       </div>`).join('');
@@ -385,8 +453,8 @@ function renderShooting(t) {
      <div class="n">${esc(note)}</div></div>`;
   const rate = (x) => (x == null ? '—' : pct(x, 0));
   document.getElementById('shotsub').textContent =
-    `From ${sh.n} matches across ${seasons.length} seasons (${seasons[0]}–`
-    + `${seasons[seasons.length - 1]}).`;
+    `From ${sh.n} matches across ${seasons.length} seasons (${fmtSeason(seasons[0])}–`
+    + `${fmtSeason(seasons[seasons.length - 1])}).`;
   document.getElementById('shotgrid').innerHTML = [
     tile('Shots', sh.shots_pm.toFixed(1),
          `per match · league average ${(av.shots_pm ?? 0).toFixed(1)}`),
@@ -419,8 +487,8 @@ function renderState(t) {
   const avg = gs.average || {};
   const seasons = (gs.seasons || []);
   document.getElementById('statesub').textContent =
-    `From ${st.n} matches across ${seasons.length} seasons (${seasons[0]}–`
-    + `${seasons[seasons.length - 1]}), using the half-time score the results feed has always `
+    `From ${st.n} matches across ${seasons.length} seasons (${fmtSeason(seasons[0])}–`
+    + `${fmtSeason(seasons[seasons.length - 1])}), using the half-time score the results feed has always `
     + 'carried and this forecast never read.';
   const tile = (k, v, note) =>
     `<div class="s"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div>
@@ -487,6 +555,364 @@ function register(id) {
   if (r.founded) bits.push(`Founded <b>${r.founded}</b>`);
   if (r.city) bits.push(esc(r.city));
   return bits.length ? `<span>${bits.join(' · ')}</span>` : '';
+}
+
+/* ================= one club, every competition =================
+   Arsenal have a Premier League page and a Champions League page and neither
+   knew the other existed: on the Tuesday the Champions League starts, the league
+   page said nothing about it. `clubindex.json` is the merge — every ready
+   competition a club is in, where it stands in each, and its next five in each.
+
+   It is 170KB, which is more than this page should ever put in front of a first
+   paint, so it is fetched after the page is drawn and the cards fill in when it
+   lands. */
+let _cidx = null;
+const clubIndex = () => (_cidx = _cidx
+  || softSiteData('clubindex').then((d) => (d && d.clubs) || {}).catch(() => ({})));
+
+const EVENT = eventLabels();
+
+/* Another competition's three headline events are that competition's, not this
+   page's: Arsenal's Premier League title chance was being labelled "the trophy"
+   because the page happened to be the Champions League one. The manifest knows
+   how many places each competition gives out, so the words come from there. */
+const LG_BY_SLUG = Object.fromEntries(LEAGUES.map((l) => [l.slug, l]));
+const NUMWORD = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+function compWords(e) {
+  const l = LG_BY_SLUG[e.slug] || {};
+  const adv = l.advance_direct || l.ucl_places || 4;
+  const n = NUMWORD[adv] || adv;
+  if (e.kind === 'cup') {
+    return { title: 'first in the league phase', top: `the top ${n}`, out: 'elimination' };
+  }
+  if (e.kind === 'promotion') {
+    return { title: 'the title', top: 'automatic promotion', out: 'relegation' };
+  }
+  return { title: 'the title', top: `a top-${n} finish`, out: 'relegation' };
+}
+
+async function renderElsewhere(t) {
+  const want = t.id;
+  const idx = await clubIndex();
+  if (current !== want) return;                    // the reader moved on
+  const entries = (idx[want] || []).filter((e) => e && e.slug);
+  const strip = document.getElementById('compstrip');
+  strip.innerHTML = entries.length < 1 ? '' : entries.map((e) => {
+    const here = e.slug === W.slug;
+    const where = e.pos ? `${ord(e.pos)}` : 'not started';
+    const inner = `${esc(e.name)} <i>${esc(where)}</i>`;
+    return here
+      ? `<span class="here">${inner}</span>`
+      : `<a href="${ROOT}team.html?t=${encodeURIComponent(want)}&lg=${encodeURIComponent(e.slug)}"
+           >${inner}</a>`;
+  }).join('');
+
+  const others = entries.filter((e) => e.slug !== W.slug);
+  const card = document.getElementById('elsewhere');
+  const all = entries.flatMap((e) => (e.next || []).map((f) => ({ ...f, comp: e })))
+    .sort((a, b) => String(a.date).localeCompare(String(b.date))
+                    || String(a.time || '').localeCompare(String(b.time || '')));
+  /* Same rule as everywhere else on the site: "next" is a question about the
+     calendar. A build that has not caught up still lists last week's fixture as
+     unplayed, and it does not belong under a heading that says next. */
+  const ahead = all.filter((f) => String(f.date) >= todayISO());
+  const merged = ahead.length ? ahead : all;
+  if (!others.length && merged.length < 2) { card.hidden = true; return; }
+  card.hidden = false;
+  document.getElementById('elsehead').textContent = others.length
+    ? 'This club elsewhere' : 'What is next';
+  document.getElementById('elsesub').textContent = others.length
+    ? `${t.name} are in ${entries.length} of the competitions this site forecasts. Each `
+      + 'tile is where they stand in one of them; the list under it is their fixtures in '
+      + 'all of them, in the order they are played.'
+    : `${t.name} are only in ${W.the} among the competitions this site forecasts, so this `
+      + 'is simply their next five.';
+
+  document.getElementById('elsetiles').innerHTML = others.map((e) => `
+    <a class="tile" style="text-decoration:none"
+       href="${ROOT}team.html?t=${encodeURIComponent(want)}&lg=${encodeURIComponent(e.slug)}">
+      <div class="k">${esc(e.name)}</div>
+      <div class="v" style="font-size:20px">${e.pos ? ord(e.pos) : 'Not started'}</div>
+      <div class="n">${e.played ? `${e.played} played, ${ptsWord(e.pts)} · ` : ''}${
+        esc(compWords(e).title)} ${pct(e.title ?? 0)} · ${
+        esc(compWords(e).top)} ${pct(e.top ?? 0)}</div>
+    </a>`).join('');
+
+  document.getElementById('elsefix').innerHTML = merged.length
+    ? merged.slice(0, 5).map((f) => `
+      <div class="xfix">
+        <span class="when">${esc(fmtDay(f.date))}${f.time ? `<br>${esc(f.time)}` : ''}</span>
+        <span><span class="ha">${f.home ? 'home to' : 'away at'}</span>
+          ${esc(f.opp_name || f.opp)}
+          <span class="hint"> · win ${pct(f.home ? f.ph : f.pa)}</span></span>
+        <span class="comp">${esc(f.comp.name)}</span>
+      </div>`).join('')
+    : '<p class="empty">No fixtures left in any competition.</p>';
+
+  renderCongestion(t, merged);
+}
+
+/* ---- fixture congestion ----
+   Description, not an input. The README's own list of limits says the model has
+   no notion of a club playing six times in eighteen days, and this card does not
+   change that: it shows the calendar and says, in the card, that the numbers
+   above it are innocent of it. */
+function renderCongestion(t, merged) {
+  const wrap = document.getElementById('congestwrap');
+  const today = todayISO();
+  const horizon = new Date(`${today}T12:00:00`);
+  horizon.setDate(horizon.getDate() + 21);
+  const cut = horizon.toISOString().slice(0, 10);
+  const run = merged.filter((f) => String(f.date) >= today && String(f.date) <= cut);
+  if (run.length < 2) { wrap.hidden = true; return; }
+  wrap.hidden = false;
+  const days = (a, b) => Math.round(
+    (Date.parse(`${b}T12:00:00`) - Date.parse(`${a}T12:00:00`)) / 864e5);
+  const gaps = run.slice(1).map((f, i) => days(run[i].date, f.date));
+  const tightest = Math.min(...gaps);
+  document.getElementById('congestsub').textContent =
+    `${run.length} matches in the next 21 days, across ${
+      new Set(run.map((f) => f.comp.slug)).size} competition${
+      new Set(run.map((f) => f.comp.slug)).size === 1 ? '' : 's'}, with the days between them.`;
+  document.getElementById('congest').innerHTML = run.map((f, i) => `
+    ${i ? `<span class="gap${gaps[i - 1] <= 3 ? ' tight' : ''}"
+             title="${gaps[i - 1]} day${gaps[i - 1] === 1 ? '' : 's'} between">${
+             gaps[i - 1]}d</span>` : ''}
+    <span class="g">
+      <span class="d">${esc(fmtDate(f.date))}</span>
+      <span class="o">${f.home ? '' : 'at '}${esc(
+        (meta[f.opp] || {}).short || f.opp_name || f.opp)}</span>
+      <span class="c">${esc(f.comp.name.split(' ')[0])}</span>
+    </span>`).join('');
+  document.getElementById('congestnote').textContent =
+    `The shortest turnaround in this run is ${tightest} day${tightest === 1 ? '' : 's'}. `
+    + 'This is a description of the calendar and nothing more: the forecast on this page '
+    + 'takes no account of how recently a club last played, or of how far it travelled to '
+    + 'do it. Where a fixture has no confirmed date it is not here at all.';
+}
+
+/* ================= how the forecast has changed =================
+   The chart above this one is the club's decade. This is its fortnight: the
+   same three numbers the races page tracks for a whole division, for the one
+   club being looked at, which is the question a supporter actually has. */
+function renderMove(t) {
+  const card = document.getElementById('movecard');
+  const snaps = thisSeason(hist?.snapshots, fc.season)
+    .filter((s) => s.teams && s.teams[t.id]);
+  if (snaps.length < 2) {
+    card.hidden = false;
+    document.getElementById('movechart').innerHTML = '';
+    document.getElementById('movepts').innerHTML = '';
+    document.getElementById('movesub').textContent =
+      'The forecast keeps one snapshot a day.';
+    document.getElementById('movenote').textContent = snaps.length === 1
+      ? 'This build has the first of them, so there is one point and no line yet. A second '
+        + 'day of results is all this needs.'
+      : 'This build has none of them yet for this club, so there is nothing to draw. '
+        + 'Tracking begins as snapshots accumulate.';
+    return;
+  }
+  card.hidden = false;
+  const at = (s, k) => {
+    const v = s.teams[t.id];
+    return v == null ? null : (v[k] ?? null);
+  };
+  const series = [
+    { label: W.isCup ? 'Trophy' : 'Title', color: 'var(--accent)',
+      points: snaps.map((s) => at(s, 'title')) },
+    { label: W.topN, color: 'var(--good)', points: snaps.map((s) => at(s, 'ucl')) },
+    { label: W.downN, color: 'var(--away)', points: snaps.map((s) => at(s, 'releg')) },
+  ].filter((sr) => sr.points.some((p) => p != null));
+  const peak = Math.max(0.1, ...series.flatMap((sr) => sr.points).filter((p) => p != null));
+  const yMax = Math.min(1, Math.ceil(peak * 10 + 0.5) / 10);
+  document.getElementById('movechart').innerHTML =
+    lineChart(series, { yMax, fmt: (v) => `${Math.round(v * 100)}%`,
+                        yLabel: `${t.name}'s season, day by day` });
+  const pts = snaps.map((s) => at(s, 'pts')).filter((p) => p != null);
+  /* `lineChart` draws from zero, which is right for a probability and useless
+     for a points total: a fortnight of movement between 72 and 78 becomes a
+     flat line across the top of an axis that starts at nothing. The series is
+     drawn as its distance above a floor just under the lowest value, and the
+     axis labels add the floor back, so the shape is the movement. */
+  const floor = Math.max(0, Math.floor(Math.min(...pts)) - 2);
+  const span = Math.max(4, Math.ceil(Math.max(...pts)) + 2 - floor);
+  document.getElementById('movepts').innerHTML = pts.length > 1
+    ? `<div style="color:var(--ink2);font-size:12.5px;font-weight:600;margin:18px 0 4px"
+        >Projected points</div>`
+      + lineChart([{ label: t.short, color: chipColor(t.primary),
+                     points: snaps.map((s) => {
+                       const v = at(s, 'pts');
+                       return v == null ? null : v - floor;
+                     }) }],
+                  { yMax: span, fmt: (v) => Math.round(v + floor),
+                    yLabel: 'projected points' })
+    : '';
+  document.getElementById('movesub').textContent =
+    `${W.isCup ? 'Trophy' : 'Title'}, ${W.topN.toLowerCase()} and ${W.downN.toLowerCase()} `
+    + `for ${t.name}, one point per day since the first snapshot of the season. The chart `
+    + 'above is the club\u2019s whole record; this is the fortnight.';
+  const first = snaps[0], last = snaps[snaps.length - 1];
+  const move = (k) => {
+    const a = at(first, k), b = at(last, k);
+    return (a == null || b == null) ? null : (b - a);
+  };
+  const say = (k, label) => {
+    const d = move(k);
+    if (d == null) return '';
+    const pp = Math.abs(d * 100);
+    return pp < 0.5 ? `${label} has barely moved`
+      : `${label} is ${d > 0 ? 'up' : 'down'} ${pp.toFixed(1)} points`;
+  };
+  document.getElementById('movenote').textContent =
+    `${snaps.length} snapshots, ${fmtDate(first.date)} to ${fmtDate(last.date)}. Since the `
+    + `first of them, ${[say('title', W.isCup ? 'the trophy chance' : 'the title chance'),
+                         say('ucl', `the ${W.topN.toLowerCase()} chance`),
+                         say('releg', `the ${W.downWord} risk`)]
+        .filter(Boolean).join(', ')}. A snapshot is written once a day and never rewritten, `
+    + 'so this line is a record rather than a reconstruction.';
+}
+
+/* ================= character =================
+   Five numbers `gamestate.json` has carried for every competition here,
+   goals-only feeds included, and that nothing rendered. Each is quoted against
+   the competition's own average, in the shape the shooting tiles already use. */
+function renderCharacter(t) {
+  const card = document.getElementById('charcard');
+  const pr = gs && gs.profile && gs.profile[t.id];
+  if (!pr || !pr.n) { card.hidden = true; return; }
+  card.hidden = false;
+  const av = (gs && gs.profile_average) || {};
+  const seasons = gs.seasons || [];
+  const tile = (k, v, note) =>
+    `<div class="s"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div>
+     <div class="n">${esc(note)}</div></div>`;
+  const num = (v, d = 2) => (v == null ? '\u2014' : Number(v).toFixed(d));
+  const vs = (key, d = 2) => (av[key] == null ? 'no competition average'
+    : `${esc(W.the)} average ${num(av[key], d)}`);
+  document.getElementById('charsub').textContent =
+    `From ${pr.n} matches${seasons.length ? ` across ${seasons.length} seasons (${fmtSeason(seasons[0])}`
+      + `\u2013${fmtSeason(seasons[seasons.length - 1])})` : ''}. Three things a rating does not say, and `
+    + 'three numbers people argue about, each beside what the rest of the competition does.';
+  document.getElementById('chargrid').innerHTML = [
+    tile('Home edge', num(pr.home_edge),
+         `points per game at home minus away · ${vs('home_edge')}`),
+    tile('Swing', num(pr.gd_sd),
+         `goal difference moves this much match to match · ${vs('gd_sd')}`),
+    tile('Against the top quarter', num(pr.top_ppg),
+         pr.top_ppg == null
+           ? 'never outside the top quarter, so there is no bracket to score them on'
+           : `points per game over ${pr.top_n} such matches · ${vs('top_ppg')}`),
+    tile('Both teams score', pr.bts_pct == null ? '\u2014' : pct(pr.bts_pct),
+         `of their matches · ${vs('bts_pct')}`),
+    tile('Over 2.5 goals', pr.over25_pct == null ? '\u2014' : pct(pr.over25_pct),
+         `of their matches · ${vs('over25_pct')}`),
+    tile('Longest unbeaten', pr.unbeaten == null ? '\u2014' : String(pr.unbeaten),
+         `matches · biggest win ${pr.best_win || 'not on record'}`),
+  ].join('');
+  document.getElementById('charnote').textContent =
+    'Home edge is the part of home advantage that belongs to this club rather than to the '
+    + 'competition, which the model already carries separately. Swing describes a club '
+    + 'rather than praising one: a side that loses narrowly every week scores low on it. '
+    + 'None of these feed a forecast \u2014 the ratings read the same matches and read them '
+    + 'better, weighted by age and by who the opponent was.';
+}
+
+/* ================= who they want to win =================
+   The same file the races page reads, narrowed to this club. Framed as what
+   moves their season, never as what anybody should want. */
+function renderRooting(t) {
+  const card = document.getElementById('rootcard');
+  const body = document.getElementById('rootbody');
+  if (!root || !Array.isArray(root.matches)) { card.hidden = true; return; }
+  const rows = root.matches.map((m) => {
+    const eff = (m.effects || {})[t.id];
+    if (!eff) return null;
+    let best = null;
+    Object.entries(eff).forEach(([key, d]) => {
+      if (!Array.isArray(d) || d.length !== 3) return;
+      const range = Math.max(...d) - Math.min(...d);
+      if (!best || range > best.range) best = { key, d, range };
+    });
+    if (!best || best.range < 0.0005) return null;
+    /* A rise is good news for two of the three events and bad for the third,
+       and which is which is the competition's own vocabulary: a league calls it
+       `releg`, a cup calls it `out`. */
+    const sign = eventIsGood(best.key) ? 1 : -1;
+    const scored = best.d.map((v) => v * sign);
+    const want = scored.indexOf(Math.max(...scored));
+    return { m, ...best, want, gain: scored[want] };
+  }).filter(Boolean).sort((a, b) => b.range - a.range).slice(0, 6);
+  if (!rows.length) { card.hidden = true; return; }
+  card.hidden = false;
+  document.getElementById('rootsub').textContent =
+    `The other fixtures in ${roundLabel(root.md).toLowerCase()}, ranked by how far the `
+    + `result moves ${t.name}\u2019s own season. Their own match is not here \u2014 that one they `
+    + 'decide themselves.';
+  document.getElementById('rootbody').innerHTML = rows.map(({ m, key, want, gain, d }) => {
+    const hn = (meta[m.h] || {}).name || m.h;
+    const an = (meta[m.a] || {}).name || m.a;
+    const wantWord = want === 0 ? `${esc((meta[m.h] || {}).short || hn)} win`
+      : (want === 1 ? 'A draw' : `${esc((meta[m.a] || {}).short || an)} win`);
+    return `<div class="rootrow">
+      <span>${esc(hn)} v ${esc(an)}
+        <span class="hint"> \u00b7 ${esc(fmtDate(m.date))} \u00b7 ${esc(EVENT[key] || key)}</span></span>
+      <span class="want">${wantWord}</span>
+      <span class="d ${gain >= 0 ? 'up' : 'dn'}" title="home win ${(d[0] * 100).toFixed(2)}pp, draw ${
+        (d[1] * 100).toFixed(2)}pp, away win ${(d[2] * 100).toFixed(2)}pp">${
+        gain >= 0 ? '+' : '\u2212'}${Math.abs(gain * 100).toFixed(2)} pp</span>
+    </div>`;
+  }).join('');
+  document.getElementById('rootnote').textContent =
+    'Each figure is the change against the forecast that assumes nothing about the result, '
+    + 'measured across the same simulations as the rest of the site. It describes what the '
+    + 'numbers do rather than suggesting what to watch or back, and a percentage point is a '
+    + 'small thing next to ninety minutes of football.';
+}
+
+/* ================= clinched and eliminated ================= */
+function renderClinch(t) {
+  const el = document.getElementById('clinchline');
+  const c = t.clinch;
+  if (!c) { el.hidden = true; return; }
+  const bits = [];
+  /* A null `need` is not "eliminated": on this bound it means no attainable
+     total guarantees the outcome *yet*, which in September is true of almost
+     every club. It is passed over in silence rather than reported as a result. */
+  const need = (k, done, word) => {
+    const r = c[k];
+    if (!r) return;
+    if (r.done) bits.push(done);
+    else if (r.need != null) bits.push(`${ptsWord(r.need)} more would guarantee ${word}`);
+  };
+  need('title', W.isCup ? 'They have first place in the league phase' : 'They are champions',
+       W.winWord);
+  need('top', `${W.topN} is secured`, W.topFinish);
+  /* A noun, because the sentence is "N points would guarantee ___": `surviveWord`
+     is the verb phrase "stay up", which reads as "guarantee stay up". */
+  need('safe', W.isCup ? 'They are through the cut' : 'They are mathematically safe',
+       W.isCup ? 'a place beyond the cut' : 'safety');
+  /* In September every `need` is null for nearly every club, because the bound
+     is conservative and nothing at all is decidable yet. That is a state worth
+     saying out loud: silence here reads as a number the build failed to
+     produce. */
+  if (!bits.length) {
+    el.hidden = false;
+    el.textContent =
+      `Nothing is settled for ${t.name} by arithmetic yet: no points total they can still `
+      + `reach guarantees ${W.winWord}, ${W.topFinish} or ${
+        W.isCup ? 'a place beyond the cut' : 'safety'} whatever every rival does. That is `
+      + 'a statement about how early it is rather than about this club — the bound gives '
+      + 'every rival the maximum three points from each of its remaining matches, so it '
+      + 'settles almost nothing until the spring. The probabilities above are the useful '
+      + 'answer until then.';
+    return;
+  }
+  el.hidden = false;
+  el.textContent = `${bits.join('. ')}. These are arithmetic rather than probability, and the `
+    + 'bound is deliberately conservative: every rival is given the maximum three points from '
+    + 'each of its remaining matches and the fact that rivals play each other is ignored. So '
+    + 'the number is an upper limit on what is needed, not a target, and the real answer '
+    + 'almost always arrives before it does.';
 }
 
 function render() {
@@ -585,6 +1011,14 @@ function render() {
   renderScenarios(t);
   renderShooting(t);
   renderState(t);
+  renderCharacter(t);
+  renderMove(t);
+  renderRooting(t);
+  renderClinch(t);
+  /* Not awaited: `clubindex.json` is the biggest file this page can want and
+     nothing above depends on it, so the page is drawn first and these two cards
+     fill in when it arrives. */
+  renderElsewhere(t);
   const cal = document.getElementById('callink');
   cal.href = `cal/${W.slug}/${encodeURIComponent(t.id)}.ics`;
   cal.textContent = `${t.short} fixtures in your calendar →`;
@@ -644,9 +1078,7 @@ function render() {
     : '';
 
   /* the club's own highest-stakes fixtures, from the same conditional sims */
-  const EVENT = eventLabels();
-  const fmtD = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB',
-    { day: 'numeric', month: 'short' });
+  const fmtD = fmtDate;
   const mine = mm.matches
     .map((m) => ({ m, s: (m.swings || []).find((s) => s.team === current) }))
     .filter((x) => x.s && !x.m.played)

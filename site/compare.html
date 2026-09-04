@@ -3,15 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* The theme, before the first pixel. This used to be corrected inside
+   `initChrome`, which runs after a module load and after that module's
+   top-level await on the manifest -- so a reader on the light theme got about a
+   tenth of a second of the dark page first. Five lines in the head, run at parse
+   time, and the flash is gone.
+
+   It also settles what the default is. The site shipped `data-theme="dark"` on
+   every page and consulted `prefers-color-scheme` nowhere, so somebody whose
+   whole machine is set to light had to ask this one site again on every device.
+   A saved choice still wins over the system; the system wins over us. */
+(function () {
+  try {
+    var t = localStorage.getItem('plf-theme');
+    if (t !== 'light' && t !== 'dark') {
+      t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { /* private mode: the markup's own default stands */ }
+})();
+</script>
 <title>Compare two clubs</title>
 <meta name="description" content="Any two clubs in Europe side by side: ratings on one scale, the head-to-head record, and the match between them on neutral ground.">
 <meta property="og:title" content="Compare two clubs">
 <meta property="og:description" content="Any two clubs in Europe side by side: ratings on one scale, the head-to-head record, and a neutral-ground match.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="og/global.png">
+<meta property="og:image" content="https://chraltro.github.io/537/og/global.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="og/global.png">
+<meta name="twitter:image" content="https://chraltro.github.io/537/og/global.png">
 <link rel="canonical" href="https://chraltro.github.io/537/compare.html">
+<link rel="modulepreload" href="assets/app.js">
+<link rel="preload" as="fetch" crossorigin href="data/leagues.json">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -74,14 +97,18 @@
       each other. A line starts when the corpus can first see that club's league, which is
       why they are not all the same length.</p>
     <div id="traj"></div>
+    <h3 style="font-size:14px;margin:26px 0 4px">Week by week</h3>
+    <p class="sub" id="weeksub">The same rating, recorded every Monday. The chart above is
+      a decade; this is the season as it happens.</p>
+    <div id="weekchart"></div>
   </section>
 </main>
 
 <script type="module">
-import { siteData, data, esc, ord, pct, initChrome, initPalette, setMeta, chipColor,
-         scoreGrid, dcGrid, dcOutcome, neutralLambdas, spiCompare,
-         distinctPair, inkColor, copyLink, initTabs, radar, DIMS,
-         replaceQuery } from './assets/app.js';
+import { siteData, softSiteData, data, esc, ord, pct, initChrome, initPalette, setMeta,
+         chipColor, scoreGrid, dcGrid, dcOutcome, neutralLambdas, spiCompare,
+         distinctPair, inkColor, copyLink, initTabs, radar, DIMS, lineChart,
+         fmtDate, fmtSeason, showStaleBanner, replaceQuery } from './assets/app.js';
 initChrome('compare');
 
 const g = await siteData('global');
@@ -98,20 +125,35 @@ setMeta({
   description: 'Any two clubs in Europe side by side: ratings on one scale, the '
     + 'head-to-head record, and the match between them on neutral ground.',
 });
+showStaleBanner(g.generated, 'The global ranking');
 document.getElementById('stamp').innerHTML =
   `<span><b>${g.n_clubs}</b> clubs</span><span><b>${g.n_leagues}</b> leagues</span>
-   <span>Fitted to <b>${g.asof}</b></span>`;
+   <span>Fitted to <b>${esc(fmtDate(g.asof))}</b></span>`;
 
 /* Clubs we forecast come first, because they are the ones with a page to click
    through to; everything else follows, alphabetically. */
+/* Nearly half the ranking is rated on a feed that has stopped publishing, and
+   this picker offered all nine hundred of them in one flat list with nothing to
+   say which. The ranking table has carried the marker all along; a comparison
+   between a club rated to May 2026 and one rated to May 2024 is a different
+   thing from a comparison between two current sides, and the reader has to be
+   able to see that before choosing, not after. */
+const seasonOf = (iso) => {
+  if (!iso) return '';
+  const d = new Date(`${iso}T12:00:00`);
+  const y = d.getFullYear() - (d.getMonth() < 6 ? 1 : 0);
+  return fmtSeason(`${y}-${String(y + 1).slice(2)}`);
+};
+const staleTag = (c) => (c.stale > 13 ? `, rated to ${seasonOf(c.last)}` : '');
 const featured = g.clubs.filter((c) => c.featured)
   .sort((a, b) => a.name.localeCompare(b.name));
 const rest = g.clubs.filter((c) => !c.featured)
   .sort((a, b) => a.name.localeCompare(b.name));
 const options = `<optgroup label="Clubs with a forecast">${
-  featured.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')
+  featured.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}${esc(staleTag(c))}</option>`).join('')
 }</optgroup><optgroup label="Every other rated club">${
-  rest.map((c) => `<option value="${esc(c.id)}">${esc(c.name)} (${esc(c.league)})</option>`).join('')
+  rest.map((c) => `<option value="${esc(c.id)}">${esc(c.name)} (${esc(c.league)}${
+    esc(staleTag(c))})</option>`).join('')
 }</optgroup>`;
 
 const selA = document.getElementById('pa');
@@ -253,6 +295,9 @@ async function ratings(c) {
 }
 
 const TRAJ = siteData('trajectory').then((d) => d.clubs || {}).catch(() => ({}));
+/* The weekly ranking. Optional: the file is appended to by the build and does
+   not exist on an older one, and it starts with a single column. */
+const GHIST = softSiteData('global_history');
 
 async function trajectory(c) {
   /* Every club in the ranking has a line now, not only the 174 with a forecast
@@ -272,6 +317,46 @@ async function trajectory(c) {
   return { why: c.league === 'No domestic feed'
     ? 'its rating comes from European ties alone'
     : 'the pooled fit has too little of its league to place it season by season' };
+}
+
+/* ================= the same two clubs, week by week =================
+   `trajectory.json` records one rating per club per July, which answers "how
+   good have they been" and cannot answer "what is happening to them now".
+   `global_history.json` is the ranking itself, appended every Monday. */
+async function drawWeekly(A, B, colA, colB) {
+  const el = document.getElementById('weekchart');
+  const sub = document.getElementById('weeksub');
+  const gh = await GHIST;
+  const weeks = (gh && gh.weeks) || [];
+  const line = (c) => ((gh && gh.clubs && gh.clubs[c.id]) || []);
+  if (weeks.length < 2) {
+    el.innerHTML = '';
+    sub.textContent = weeks.length
+      ? `The ranking is recorded every Monday and this build has one column, for the week of `
+        + `${fmtDate(weeks[0])}. There is a point for each club and no line yet; a second `
+        + 'week is all this needs.'
+      : 'The weekly record of the ranking has not been written yet in this build.';
+    return;
+  }
+  const series = [{ c: A, color: colA }, { c: B, color: colB }]
+    .map(({ c, color }) => ({ label: c.name, color, points: weeks.map((_, i) => line(c)[i] ?? null) }))
+    .filter((s) => s.points.some((p) => p != null));
+  if (!series.length) {
+    el.innerHTML = '';
+    sub.textContent = 'Neither club has a weekly column in this build yet.';
+    return;
+  }
+  const vals = series.flatMap((s) => s.points).filter((p) => p != null);
+  /* The axis runs from zero because `lineChart` does, and a rating is a share of
+     points against an average big-five club -- zero on that scale is a real
+     floor rather than an arbitrary one. */
+  const yMax = Math.ceil(Math.max(...vals) / 10) * 10;
+  el.innerHTML = lineChart(series, { yMax, fmt: (v) => Math.round(v),
+                                     yLabel: 'rating week by week' });
+  sub.textContent =
+    `The same rating, recorded every Monday from ${fmtDate(weeks[0])} to ${
+      fmtDate(weeks[weeks.length - 1])}. The chart above is a decade; this is the season as `
+    + 'it happens. A gap in a line is a week the ranking did not hold that club.';
 }
 
 async function render() {
@@ -413,6 +498,8 @@ async function render() {
   if (!ha && !hb) {
     el.innerHTML = `<p class="empty">No line for either club: ${esc(A.name)} because `
       + `${esc(ra.why)}, ${esc(B.name)} because ${esc(rb.why)}.</p>`;
+    const [ca, cb] = distinctPair(A.primary, B.primary);
+    drawWeekly(A, B, ca, cb);
     return;
   }
   /* One chart, one axis. Two panels on separate vertical scales invited exactly
@@ -421,6 +508,7 @@ async function render() {
      them. */
   const [colA, colB] = distinctPair(A.primary, B.primary);
   const missing = [!ha && [A, ra], !hb && [B, rb]].filter(Boolean);
+  drawWeekly(A, B, colA, colB);
   el.innerHTML = spiCompare(
     ha && { label: A.name, color: colA, points: ha },
     hb && { label: B.name, color: colB, points: hb },

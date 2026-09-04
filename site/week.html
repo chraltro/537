@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* The theme, before the first pixel. This used to be corrected inside
+   `initChrome`, which runs after a module load and after that module's
+   top-level await on the manifest -- so a reader on the light theme got about a
+   tenth of a second of the dark page first. Five lines in the head, run at parse
+   time, and the flash is gone.
+
+   It also settles what the default is. The site shipped `data-theme="dark"` on
+   every page and consulted `prefers-color-scheme` nowhere, so somebody whose
+   whole machine is set to light had to ask this one site again on every device.
+   A saved choice still wins over the system; the system wins over us. */
+(function () {
+  try {
+    var t = localStorage.getItem('plf-theme');
+    if (t !== 'light' && t !== 'dark') {
+      t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { /* private mode: the markup's own default stands */ }
+})();
+</script>
+<title>This week across Europe</title>
+<meta name="description" content="Every match in the next fortnight across all ten competitions this site forecasts, in the order they kick off, with a probability for each and a mark on the ones that decide something.">
+<meta property="og:title" content="This week across Europe">
+<meta property="og:description" content="Every match in the next fortnight across ten competitions, in kick-off order, with a probability for each.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://chraltro.github.io/537/og/global.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://chraltro.github.io/537/og/global.png">
+<link rel="canonical" href="https://chraltro.github.io/537/week.html">
+<link rel="modulepreload" href="assets/app.js">
+<link rel="preload" as="fetch" crossorigin href="data/leagues.json">
+<link rel="preload" as="fetch" crossorigin href="data/upcoming.json">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
+</head>
+<body>
+<main class="wrap" id="main">
+  <div class="pagehead">
+    <h1>This week across Europe</h1>
+    <p class="lede" id="lede">Loading the week…</p>
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <section class="card" id="c-week">
+    <div class="cardbar">
+      <h2 id="weekhead">Every match, in the order they are played</h2>
+      <a class="morelink" href="rankings.html" id="alllink">Every club in Europe →</a>
+    </div>
+    <p class="sub" id="weeksub"></p>
+
+    <div class="chips" role="tablist" aria-label="How far ahead" id="rangechips"
+         style="margin:0 0 14px"></div>
+
+    <div class="controls">
+      <label for="fcomp">Competition</label>
+      <select id="fcomp"><option value="">All competitions</option></select>
+      <button class="chip-btn" id="onlyfollow" aria-pressed="false" hidden>Only clubs I follow</button>
+      <label><input type="checkbox" id="fbig"> Only matches that decide something</label>
+      <span style="margin-left:auto;color:var(--muted);font-size:12.5px" id="count"></span>
+    </div>
+
+    <div class="legend" style="margin:0 0 14px">
+      <span class="swatches" aria-hidden="true">
+        <i style="background:var(--accent);width:14px;height:10px"></i></span><span>Home win</span>
+      <span class="swatches" aria-hidden="true">
+        <i style="background:var(--draw);width:14px;height:10px"></i></span><span>Draw</span>
+      <span class="swatches" aria-hidden="true">
+        <i style="background:var(--away);width:14px;height:10px"></i></span><span>Away win</span>
+      <span style="margin-left:10px">Stakes: how far the result swings somebody's season</span>
+    </div>
+
+    <div class="wkrow wkhead">
+      <span class="when">Kick-off</span><span class="home">Home</span>
+      <span style="text-align:center"><span class="full">Win / draw / loss %</span><span class="abbr">W/D/L</span></span>
+      <span class="away">Away</span><span class="comp">Competition</span>
+      <span class="lev">Stakes</span>
+    </div>
+    <div id="list"><p class="skeleton">Loading fixtures…</p></div>
+    <p id="morewrap" hidden style="margin-top:14px;text-align:center">
+      <button class="chip-btn" id="showmore"></button>
+    </p>
+    <p class="hint" id="note" style="margin-top:18px"></p>
+  </section>
+
+  <section class="card" id="c-none" hidden>
+    <h2>Nothing to show yet</h2>
+    <p class="sub" id="nonesub"></p>
+  </section>
+
+  <nav class="deeper" aria-label="Go deeper">
+    <a href="index.html"><b>One competition at a time</b>
+      <span>The projected table, the ratings and every finishing position, for whichever
+        competition you follow.</span></a>
+    <a href="rankings.html"><b>Every club in Europe</b>
+      <span>One rating scale across every league with a feed, so a Dutch club and an
+        Italian one are finally comparable.</span></a>
+    <a href="method.html"><b>How it works, and how well</b>
+      <span>The model, and the backtest against the closing odds and ClubElo.</span></a>
+  </nav>
+</main>
+
+<script type="module">
+import { softSiteData, esc, pct, initChrome, initPalette, setMeta, ROOT, LEAGUES,
+         fmtDay, fmtDate, fmtStamp, todayISO, eventLabels, lg, followed, isFollowed,
+         showStaleBanner, replaceQuery, tip, tipRows, barPct } from './assets/app.js';
+initChrome('week');
+
+/* Every other page on this site is scoped to one competition, which is the
+   right shape for nine of the ten questions it answers and the wrong one for
+   the question a reader with two clubs actually has on a Tuesday in September.
+   This page is the fixture list of the whole site, in kick-off order.
+
+   It reads one precomputed file. Loading the ten `matches.json` files instead
+   would be about 2.5MB for a fortnight's fixtures, so the build writes the
+   fortnight out on its own. */
+const up = await softSiteData('upcoming');
+const all = (up && up.matches) || [];
+
+const LG_BY = Object.fromEntries(LEAGUES.map((l) => [l.slug, l]));
+const kindOf = (m) => m.kind || (LG_BY[m.slug] || {}).kind || 'league';
+/* The swing names its club by registry id, which is the right thing to store
+   and the wrong thing to print. It is always one of the two clubs in the match,
+   so the row already holds the display name. */
+const swingName = (m) => {
+  if (!m.swing) return '';
+  if (m.swing.club === m.h) return m.hn || m.h;
+  if (m.swing.club === m.a) return m.an || m.a;
+  return String(m.swing.club).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+};
+/* A competition's own words for its three events, from the manifest rather than
+   from whichever league the reader happened to be in last. */
+const NUMWORD = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+function eventWord(m, key) {
+  const l = LG_BY[m.slug] || {};
+  const adv = l.advance_direct || l.ucl_places || 4;
+  const n = NUMWORD[adv] || adv;
+  const cup = kindOf(m) === 'cup';
+  const promo = kindOf(m) === 'promotion';
+  if (key === 'title') return cup ? 'first in the league phase' : 'the title';
+  if (key === 'ucl' || key === 'top' || key === 'top8') {
+    return cup ? `the top ${n}` : (promo ? 'automatic promotion' : `a top-${n} finish`);
+  }
+  if (key === 'releg' || key === 'out') return cup ? 'elimination' : 'relegation';
+  return key;
+}
+
+if (!all.length) {
+  document.getElementById('c-week').hidden = true;
+  document.getElementById('c-none').hidden = false;
+  document.getElementById('lede').textContent =
+    'There is no fixture window in this build.';
+  document.getElementById('nonesub').innerHTML =
+    `The build writes a fortnight of fixtures across every competition into one file, and
+     this deploy does not have it. Each competition's own
+     <a href="${ROOT}matches.html">match list</a> is unaffected.`;
+} else {
+  showStaleBanner(up.generated, 'The fixture list');
+  setMeta({
+    title: 'This week across Europe',
+    description: `Every match in the next fortnight across the ${
+      new Set(all.map((m) => m.slug)).size} competitions this site forecasts, in the order `
+      + 'they kick off, with a probability for each.',
+  });
+
+  const today = todayISO();
+  const plus = (n) => {
+    const d = new Date(`${today}T12:00:00`);
+    d.setDate(d.getDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+
+  /* "This matchweek" cannot mean one number across ten competitions that number
+     their rounds independently, so it means each competition's own next round:
+     the earliest one it still has a fixture in. That is the round a reader
+     means when they say "this weekend's games". */
+  const currentRound = new Map();
+  all.forEach((m) => {
+    if (String(m.date) < today) return;
+    const at = currentRound.get(m.slug);
+    if (at == null || String(m.date) < at.date) currentRound.set(m.slug, { md: m.md, date: m.date });
+  });
+
+  const RANGES = [
+    { id: 'week', label: 'Next 7 days',
+      keep: (m) => String(m.date) >= today && String(m.date) <= plus(7) },
+    { id: 'round', label: 'This matchweek', short: 'This round',
+      keep: (m) => {
+        const r = currentRound.get(m.slug);
+        return !!r && String(m.md) === String(r.md) && String(m.date) >= today;
+      } },
+    { id: 'all', label: 'The whole window',
+      keep: () => true },
+  ];
+  let range = 'week';
+  let comp = '';
+  let bigOnly = false;
+  let mine = false;
+  let follows = new Set(followed());
+
+  const chips = document.getElementById('rangechips');
+  const drawChips = () => {
+    chips.innerHTML = RANGES.map((r) => `
+      <button class="chip-btn" data-range="${r.id}" role="tab"
+              aria-pressed="${r.id === range}">${esc(r.label)}</button>`).join('');
+  };
+  drawChips();
+
+  const comps = [...new Set(all.map((m) => m.slug))]
+    .map((slug) => ({ slug, name: (all.find((m) => m.slug === slug) || {}).league || slug }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  document.getElementById('fcomp').insertAdjacentHTML('beforeend',
+    comps.map((c) => `<option value="${esc(c.slug)}">${esc(c.name)}</option>`).join(''));
+
+  document.getElementById('stamp').innerHTML = `
+    <span><b>${all.length}</b> fixtures in the window</span>
+    <span><b>${comps.length}</b> competitions</span>
+    <span>${esc(fmtDate(up.from))} to ${esc(fmtDate(up.to))}</span>
+    <span>Updated <b>${esc(fmtStamp(up.generated))}</b></span>`;
+
+  const soon = all.filter((m) => String(m.date) >= today && String(m.date) <= plus(7));
+  const biggest = soon.filter((m) => m.swing).sort((a, b) => (b.lev || 0) - (a.lev || 0))[0];
+  document.getElementById('lede').innerHTML =
+    `<b>${soon.length}</b> matches in the next seven days across <b>${
+      new Set(soon.map((m) => m.slug)).size}</b> competitions, in the order they kick off.
+     Every other page here is one competition seen four ways; this is all of them at once,
+     which is the shape of an actual week.`
+    + (biggest ? ` The one with most riding on it is <b>${esc(biggest.hn)} v ${
+        esc(biggest.an)}</b>: it moves ${esc(swingName(biggest))}'s
+        chance of ${esc(eventWord(biggest, biggest.swing.event))} by
+        ${(Math.abs(biggest.swing.delta) * 100).toFixed(0)} points.` : '');
+
+  document.getElementById('weeksub').textContent =
+    'Kick-off times are the local times the fixture lists carry, with no conversion. A '
+    + 'match with no time yet is shown on its date. Clicking a fixture opens it in its own '
+    + 'competition, where the full scoreline picture lives.';
+
+  const seg = (c, p) => `<i class="${c}" style="flex:${Math.max(p || 0, 0.012)}">${
+    (p || 0) >= 0.16 ? `<b>${barPct(p)}</b>` : ''}</i>`;
+
+  const maxLev = Math.max(0.05, ...all.map((m) => m.lev || 0));
+
+  function row(m, i) {
+    const href = `${ROOT}matches.html?m=${encodeURIComponent(`${m.h}--${m.a}`)}`
+      + `&lg=${encodeURIComponent(m.slug)}`;
+    const res = m.played && m.hg != null ? `${m.hg}–${m.ag}` : '';
+    const swing = m.swing
+      ? `${swingName(m)}: ${eventWord(m, m.swing.event)} moves `
+        + `${(Math.abs(m.swing.delta) * 100).toFixed(0)} points`
+      : 'Little riding on this one';
+    return `<a class="wkrow" href="${href}" data-i="${i}" style="text-decoration:none;color:inherit">
+      <span class="when">${m.time ? esc(m.time) : '<span class="hint">TBC</span>'}${
+        res ? `<br><b>${esc(res)}</b>` : ''}</span>
+      <span class="home">${esc(m.hn || m.h)}</span>
+      <span class="wdl">${seg('h', m.ph)}${seg('d', m.pd)}${seg('a', m.pa)}</span>
+      <span class="away">${esc(m.an || m.a)}</span>
+      <span class="comp" title="${esc(m.league || m.slug)}">${esc(m.league || m.slug)}</span>
+      <span class="lev" title="${esc(swing)}">
+        <i style="--f:${Math.min(100, ((m.lev || 0) / maxLev) * 100).toFixed(0)}%"></i></span>
+    </a>`;
+  }
+
+  const list = document.getElementById('list');
+
+  /* A hundred and twenty-five fixtures is four hundred rows of text on a phone
+     and a page seventeen thousand pixels tall — the same mistake the global
+     ranking made with four hundred clubs. The first page is what fits; the
+     button says the rest is there. */
+  const PAGE = matchMedia('(max-width: 620px)').matches ? 40 : 250;
+  let limit = PAGE;
+
+  function draw() {
+    const r = RANGES.find((x) => x.id === range) || RANGES[0];
+    const sel = all.filter((m) => r.keep(m))
+      .filter((m) => !comp || m.slug === comp)
+      .filter((m) => !bigOnly || (m.lev || 0) >= 0.05)
+      .filter((m) => !mine || follows.has(m.h) || follows.has(m.a))
+      .sort((a, b) => String(a.date).localeCompare(String(b.date))
+        || String(a.time || '99:99').localeCompare(String(b.time || '99:99'))
+        || String(a.league || '').localeCompare(String(b.league || '')));
+
+    const shown = sel.slice(0, limit);
+    const more = document.getElementById('morewrap');
+    more.hidden = sel.length <= limit;
+    if (!more.hidden) {
+      document.getElementById('showmore').textContent =
+        `Show ${Math.min(PAGE, sel.length - limit)} more (${sel.length - limit} left)`;
+    }
+    document.getElementById('count').textContent = sel.length > shown.length
+      ? `${shown.length} of ${sel.length} shown · ${all.length} in the window`
+      : `${sel.length} of ${all.length} fixtures`;
+
+    if (!shown.length) {
+      list.innerHTML = '<p class="empty">Nothing matches those filters in this window.</p>';
+    } else {
+      const days = new Map();
+      shown.forEach((m) => {
+        if (!days.has(m.date)) days.set(m.date, []);
+        days.get(m.date).push(m);
+      });
+      list.innerHTML = [...days.entries()].map(([date, ms]) => {
+        const when = String(date) === today ? 'Today'
+          : (String(date) === plus(1) ? 'Tomorrow' : fmtDay(date));
+        const past = String(date) < today;
+        return `<section><h3 class="wkday">${esc(when)}${
+          past ? ' <span class="hint">played</span>' : ''} <span class="hint">${ms.length} ${
+          ms.length === 1 ? 'match' : 'matches'}</span></h3>${
+          ms.map((m) => row(m, all.indexOf(m))).join('')}</section>`;
+      }).join('');
+    }
+
+    const q = new URLSearchParams();
+    if (range !== 'week') q.set('range', range);
+    if (comp) q.set('comp', comp);
+    if (bigOnly) q.set('big', '1');
+    replaceQuery(q);
+  }
+
+  /* Filters live in the URL, so any view of this page is a link. */
+  const params = new URLSearchParams(location.search);
+  if (RANGES.some((r) => r.id === params.get('range'))) range = params.get('range');
+  if (comps.some((c) => c.slug === params.get('comp'))) {
+    comp = params.get('comp');
+    document.getElementById('fcomp').value = comp;
+  }
+  if (params.get('big') === '1') {
+    bigOnly = true;
+    document.getElementById('fbig').checked = true;
+  }
+  drawChips();
+
+  chips.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-range]');
+    if (!b) return;
+    range = b.dataset.range;
+    limit = PAGE;
+    drawChips();
+    draw();
+  });
+  document.getElementById('fcomp').addEventListener('change', (e) => {
+    comp = e.target.value;
+    limit = PAGE;
+    draw();
+  });
+  document.getElementById('fbig').addEventListener('change', (e) => {
+    bigOnly = e.target.checked;
+    limit = PAGE;
+    draw();
+  });
+
+  /* The follow list is the closest thing this site has to a reader's own team,
+     and a whole-of-Europe fixture list is exactly where it earns its keep. */
+  const followChip = document.getElementById('onlyfollow');
+  const syncFollow = () => {
+    follows = new Set(followed());
+    followChip.hidden = follows.size === 0 && !mine;
+    followChip.textContent = follows.size
+      ? `Only the ${follows.size} club${follows.size === 1 ? '' : 's'} I follow`
+      : 'Only clubs I follow';
+  };
+  syncFollow();
+  followChip.addEventListener('click', () => {
+    mine = followChip.getAttribute('aria-pressed') !== 'true';
+    followChip.setAttribute('aria-pressed', String(mine));
+    limit = PAGE;
+    draw();
+  });
+  addEventListener('followchange', () => { syncFollow(); limit = PAGE; draw(); });
+  document.getElementById('showmore').addEventListener('click', () => {
+    limit += PAGE;
+    draw();
+  });
+
+  list.addEventListener('mousemove', (e) => {
+    const el = e.target.closest('.wkrow');
+    if (!el || !el.dataset.i) return tip(null);
+    const m = all[+el.dataset.i];
+    if (!m) return tip(null);
+    tip(tipRows(`${esc(m.hn || m.h)} v ${esc(m.an || m.a)}`, [
+      ['Competition', esc(m.league || m.slug)],
+      ['Round', String(m.md)],
+      ['Kick-off', `${fmtDate(m.date)}${m.time ? `, ${m.time}` : ', time to be confirmed'}`],
+      [`${esc(m.hn || m.h)} win`, pct(m.ph, 1)],
+      ['Draw', pct(m.pd, 1)],
+      [`${esc(m.an || m.a)} win`, pct(m.pa, 1)],
+      ...(m.swing ? [['What rides on it',
+        `${esc(swingName(m))}, ${esc(eventWord(m, m.swing.event))}: `
+        + `${(Math.abs(m.swing.delta) * 100).toFixed(0)} points`]] : []),
+    ]), e);
+  });
+  list.addEventListener('mouseleave', () => tip(null));
+
+  document.getElementById('note').textContent =
+    'A competition appears here only once its forecast is live, so a league that has not '
+    + 'been built this cycle is simply absent rather than shown empty. The stakes bar is '
+    + 'the same leverage score the match pages use: how far the result moves somebody’s '
+    + 'season across the simulations, which is a different question from whether the match '
+    + 'is worth watching.';
+
+  draw();
+}
+
+/* This page is not scoped to a competition, so the palette keeps its page and
+   league jumps and offers no clubs: a club opened from here would land in
+   whichever forecast the reader was last in, which is not necessarily the one
+   the club plays in. */
+initPalette([]);
+</script>
+</body>
+</html>

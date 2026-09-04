@@ -67,6 +67,15 @@ jobs:
         # no reason to skip it on scheduled runs.
         run: python -m model.run
 
+      - name: Check the share cards exist
+        # og:image is an absolute URL on every page, so a build that skipped
+        # the cards (Pillow missing, font missing) ships 13 pages of broken
+        # previews. Loud, not fatal: the forecast is still worth publishing.
+        run: |
+          if [ ! -f site/og/premier-league.png ]; then
+            echo "::warning::share cards were not built (site/og is empty); og:image links will 404"
+          fi
+
       - name: Show headline numbers
         run: |
           python - <<'PY'

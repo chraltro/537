@@ -3,13 +3,36 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* The theme, before the first pixel. This used to be corrected inside
+   `initChrome`, which runs after a module load and after that module's
+   top-level await on the manifest -- so a reader on the light theme got about a
+   tenth of a second of the dark page first. Five lines in the head, run at parse
+   time, and the flash is gone.
+
+   It also settles what the default is. The site shipped `data-theme="dark"` on
+   every page and consulted `prefers-color-scheme` nowhere, so somebody whose
+   whole machine is set to light had to ask this one site again on every device.
+   A saved choice still wins over the system; the system wins over us. */
+(function () {
+  try {
+    var t = localStorage.getItem('plf-theme');
+    if (t !== 'light' && t !== 'dark') {
+      t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { /* private mode: the markup's own default stands */ }
+})();
+</script>
 <title>Method and accuracy — Premier League 2026/27 Forecast</title>
 <meta name="description" content="How the forecast works: Dixon-Coles ratings on a shots-and-goals blend, measured promotion priors, a decaying market anchor, and a walk-forward backtest against three baselines.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="og/premier-league.png">
+<meta property="og:image" content="https://chraltro.github.io/537/og/premier-league.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="og/premier-league.png">
+<meta name="twitter:image" content="https://chraltro.github.io/537/og/premier-league.png">
 <link rel="canonical" href="https://chraltro.github.io/537/method.html">
+<link rel="modulepreload" href="assets/app.js">
+<link rel="preload" as="fetch" crossorigin href="data/leagues.json">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233987e5'/><rect x='13' y='7' width='6' height='18' rx='2' fill='%23fff'/></svg>">
@@ -132,11 +155,11 @@
     <div class="tiles" id="seasontiles" style="margin-bottom:20px"></div>
     <div class="split2">
       <div>
-        <h4 style="font-size:13px;margin:0 0 8px">Biggest shocks</h4>
+        <h3 style="font-size:13px;margin:0 0 8px">Biggest shocks</h3>
         <div id="surprises"></div>
       </div>
       <div>
-        <h4 style="font-size:13px;margin:0 0 8px">Called with most confidence</h4>
+        <h3 style="font-size:13px;margin:0 0 8px">Called with most confidence</h3>
         <div id="confident"></div>
       </div>
     </div>
@@ -150,7 +173,9 @@
     <p style="color:var(--muted);font-size:12px;margin:16px 0 0" id="btfoot">
       Log-loss, lower is better. Every prediction was made using only matches played before
       it; the model never sees a result before forecasting it.</p>
-    <div class="scroller" style="margin-top:20px">
+    <p class="hint" id="adjnote" style="margin-top:12px" hidden></p>
+    <p class="hint" id="sharpnote" style="margin-top:10px" hidden></p>
+    <div class="scroller" style="margin-top:20px" id="byseawrap" hidden>
       <table id="bysea"><thead><tr>
         <th class="l">Season</th><th>Matches</th><th>Log-loss</th><th>RPS</th>
         <th>Correct</th><th class="l">Sample</th>
@@ -241,10 +266,8 @@
       league-wide conversion rate fitted on 20,000 matches, worth about 0.23 goals per shot
       on target and a small fraction of that for shots off target. It is a stand-in for
       expected goals, not the real thing.</p>
-    <p>How much does it actually buy? The grid search that set the model's two parameters
-      says: a little. Blending shots in is worth roughly 0.005 of log-loss. That is real, but far
-      less than a proper expected-goals model would give, and less than the gain from simply
-      weighting recent matches more heavily.</p>
+    <p id="blendp"><span id="blendgain">How much does it actually buy? The grid search that
+      set the model's parameters chose the blend, and the shipped weight is on this page.</span></p>
 
     <h3>Rating clubs that have never played in this league</h3>
     <p>Every season brings up clubs with no record in this division at all. Rather than guess,
@@ -291,6 +314,11 @@
       confident nonsense, with narrow points ranges and title races that are over in November.
       Ties are settled the way the league does it: points, then goal difference, then goals
       scored.</p>
+    <p id="cupsim" hidden>A knockout tie needs two more rules, and both are measured rather
+      than assumed. <span id="cupet">Extra time is played at the same tempo as open play</span>,
+      and a shootout is a coin flip: over the ties on record, the side that went on to win one
+      is not the side the ratings favoured often enough to call it anything else.</p>
+    <p id="freshnote" class="hint" style="margin-top:14px"></p>
 
     <h3>What a match is worth</h3>
     <p>Every simulated season also records what happened in each remaining fixture, which
@@ -412,10 +440,33 @@
 </main>
 
 <script type="module">
-import { data, siteData, pct, esc, initChrome, tip, tipRows, initPalette, lineChart,
-         chipColor, probBar, lg, ord, setMeta, cardUrl, initTabs, url, thisSeason } from './assets/app.js';
+import { data, siteData, softData, softSiteData, pct, esc, initChrome, tip, tipRows,
+         initPalette, lineChart,
+         chipColor, probBar, lg, ord, setMeta, cardUrl, initTabs, url, thisSeason,
+         fmtDate, fmtStamp, fmtSeason } from './assets/app.js';
 initChrome('method');
 
+/* Eleven files, and this page used to fetch them one after another: style,
+   module, manifest, forecast, history, season report, gamestate, backtest,
+   global, coverage, sources, changelog, each waiting on the one before it. None
+   of them depends on any other, so at a 150ms mobile round trip that ordering
+   was about a second and a half of pure latency for no reason. They are started
+   together here and awaited where they are read.
+
+   `soft*` rather than `data`: every one of these is optional to this page --
+   each read is already inside a guard -- and a missing optional file should not
+   put a full-page "this page could not load its forecast" banner over a page
+   that loaded fine. */
+const P = {
+  history: softData('history'),
+  season_report: softData('season_report'),
+  gamestate: softData('gamestate'),
+  backtest: softData('backtest'),
+  global: softSiteData('global'),
+  coverage: softSiteData('coverage'),
+  sources: softSiteData('sources'),
+  changelog: softSiteData('changelog'),
+};
 const fc = await data('forecast');
 const W = lg();
 document.documentElement.setAttribute('data-kind', W.kind);
@@ -474,8 +525,7 @@ if (fc.lines) {
 }
 
 /* ---- how the forecast has moved ---- */
-let hist = null;
-try { hist = await data('history'); } catch { /* first build */ }
+const hist = await P.history;
 const snaps = thisSeason(hist?.snapshots, fc.season);
 if (snaps.length >= 2) {
   const card = document.getElementById('movecard');
@@ -487,7 +537,7 @@ if (snaps.length >= 2) {
                         points: snaps.map((s) => s.teams[t.id]?.[key] ?? null) })),
       { yMax: 1, fmt: (v) => `${Math.round(v * 100)}%` })
       + `<div class="hint" style="margin-top:6px">${snaps.length} snapshots · `
-      + `${snaps[0].date} to ${snaps[snaps.length - 1].date}</div>`;
+      + `${esc(fmtDate(snaps[0].date))} to ${esc(fmtDate(snaps[snaps.length - 1].date))}</div>`;
   };
   draw('title');
   card.querySelectorAll('[data-race]').forEach((b) => b.addEventListener('click', () => {
@@ -498,8 +548,7 @@ if (snaps.length >= 2) {
 }
 
 /* ---- in-season scorecard, judged only on forecasts frozen before kick-off ---- */
-let sr = null;
-try { sr = await data('season_report'); } catch { /* nothing played yet */ }
+const sr = await P.season_report;
 if (sr && sr.n > 0) {
   const card = document.getElementById('seasoncard');
   card.hidden = false;
@@ -565,16 +614,16 @@ const src = fc.sources || {};
 
 /* ---- referees ---- */
 try {
-  const gs = await data('gamestate');
-  const refs = gs.referees || [];
-  const avg = gs.average || {};
+  const gs = await P.gamestate;
+  const refs = (gs && gs.referees) || [];
+  const avg = (gs && gs.average) || {};
   if (refs.length) {
     document.getElementById('refcard').hidden = false;
-    const seasons = gs.seasons || [];
+    const seasons = (gs && gs.seasons) || [];
     document.getElementById('refsub').textContent =
       `The ${refs.length} officials with at least thirty matches in the record, busiest `
       + `first, over ${seasons.length} seasons`
-      + (seasons.length ? ` (${seasons[0]}–${seasons[seasons.length - 1]})` : '') + '.';
+      + (seasons.length ? ` (${fmtSeason(seasons[0])}–${fmtSeason(seasons[seasons.length - 1])})` : '') + '.';
     const cell = (v, base, digits, higherIsMore = true) => {
       const off = base ? v - base : 0;
       const strong = base && Math.abs(off) / base > 0.12;
@@ -603,8 +652,7 @@ document.getElementById('mw').textContent = fc.market_weight
   ? `Current market weight: ${(fc.market_weight * 100).toFixed(0)}%.`
   : `Current market weight: 0%. ${W.name} runs on results alone.`;
 
-let bt = null;
-try { bt = await data('backtest'); } catch { /* backtest not built yet */ }
+const bt = await P.backtest;
 
 if (!bt) {
   document.getElementById('btsub').textContent =
@@ -629,7 +677,7 @@ if (!bt) {
   const beatsAll = Object.values(bl).every((v) =>
     v.log_loss > m.log_loss && v.rps > m.rps && v.brier > m.brier);
   document.getElementById('btsub').innerHTML =
-    `Walk-forward over ${esc(bt.seasons[0])} to ${esc(bt.seasons[bt.seasons.length - 1])},
+    `Walk-forward over ${esc(fmtSeason(bt.seasons[0]))} to ${esc(fmtSeason(bt.seasons[bt.seasons.length - 1]))},
      each match predicted before it was played.
      ${useHeld ? `Figures below cover the <b>${m.n.toLocaleString()}</b> matches in seasons
        that had no hand in choosing the model's two settings. Those were tuned on
@@ -712,10 +760,16 @@ if (!bt) {
   });
   document.getElementById('bars').addEventListener('mouseleave', () => tip(null));
 
-  const lls = (bt.by_season || []).map((r) => r.log_loss);
+  /* A season-by-season table with a header and no rows under it is worse than
+     no table: the Champions League's backtest holds two seasons of the whole
+     competition and no per-season split, and the page rendered the column heads
+     into empty space. */
+  const bySeason = bt.by_season || [];
+  document.getElementById('byseawrap').hidden = !bySeason.length;
+  const lls = bySeason.map((r) => r.log_loss);
   const lo = Math.min(...lls), hi = Math.max(...lls);
-  document.querySelector('#bysea tbody').innerHTML = (bt.by_season || []).map((r) => `
-    <tr><td class="l">${esc(r.season)}</td><td>${r.n}</td>
+  document.querySelector('#bysea tbody').innerHTML = bySeason.map((r) => `
+    <tr><td class="l">${esc(fmtSeason(r.season))}</td><td>${r.n}</td>
       <td>${r.log_loss.toFixed(4)}
         ${probBar(0.15 + 0.85 * (hi - r.log_loss) / ((hi - lo) || 1), 'accent')}</td>
       <td>${r.rps.toFixed(4)}</td>
@@ -841,7 +895,7 @@ if (!bt) {
         <div class="v">${v}</div><div class="n">${esc(n)}</div></div>`).join('');
     document.getElementById('tablebody').innerHTML = seasons.map((r) => `
       <tr>
-        <td class="l">${esc(r.season)}</td>
+        <td class="l">${esc(fmtSeason(r.season))}</td>
         <td class="${r.champion_called ? 'p-hi' : 'p-lo'}">${r.champion_called ? 'yes' : 'no'}</td>
         <td>${share(r.top_overlap)}</td>
         <td>${share(r.releg_overlap)}</td>
@@ -857,6 +911,125 @@ if (!bt) {
        variance and no amount of rating gets in front of it.`;
     document.getElementById('tablecard').hidden = false;
   }
+
+  /* ---- what the published model is, against what the ratings alone say ----
+     `model` is now the walk-forward *as the site publishes it*: through the
+     measured preseason correction, exactly as the live build applies it.
+     `model_ratings_only` is the same walk-forward straight off the ratings.
+     Publishing one without the other would be quoting a number for a model
+     nobody reads. Both are absent on a build made before the split, and the
+     page says nothing rather than guessing which one it has. */
+  /* The pipeline's own note, minus the two bits of shorthand it is written in:
+     backticks for field names, and a sentence addressed to whoever was building
+     the page rather than to whoever is reading it. */
+  const houseNote = (t) => String(t || '')
+    .replace(/`/g, '')
+    .replace(/One caveat the site should print:\s*/i, 'One caveat: ')
+    .replace(/\s--\s/g, ' \u2014 ');
+
+  const mro = bt.model_ratings_only;
+  const note = document.getElementById('adjnote');
+  if (mro && bt.model) {
+    const diff = mro.log_loss - bt.model.log_loss;
+    note.hidden = false;
+    note.textContent =
+      `The bar above is the model this site actually publishes: the same walk-forward, put `
+      + `through the measured promotion-and-relegation correction the live build applies. `
+      + `Straight off the ratings, with no correction, the same ${mro.n.toLocaleString()} `
+      + `matches score ${mro.log_loss.toFixed(4)} — so here the correction `
+      + (diff >= 0 ? `is worth ${diff.toFixed(4)} of log-loss.`
+                   : `costs ${Math.abs(diff).toFixed(4)} of log-loss.`)
+      + ' Both numbers are published because the correction is not tuned for this '
+      + 'competition: it is one measurement over promoted and relegated clubs, and it earns '
+      + 'most where a division has least of its own history to read a new club from. Where '
+      + 'it costs a little it is applied anyway — being closer on the clubs the model knows '
+      + 'least is worth more than a decimal place on the ones it knows best. '
+      + houseNote(bt.adjustment_note);
+  } else if (bt.adjustment_note) {
+    note.hidden = false;
+    note.textContent = houseNote(bt.adjustment_note);
+  }
+
+  /* ---- the calibration exponent ----
+     One number per competition, fitted on that competition's own walk-forward
+     and applied to every probability the pipeline publishes. It is quoted here
+     rather than described, because a page about accuracy that describes its own
+     dials in adjectives is the thing this page exists not to be. */
+  const sh = bt.sharpen;
+  const k = bt.params?.sharpen ?? (sh && sh.k);
+  if (k != null) {
+    const el = document.getElementById('sharpnote');
+    el.hidden = false;
+    const ho = sh && sh.held_out;
+    const flat = Math.abs(Number(k) - 1) < 1e-9;
+    /* Why a competition ships 1.0 is the file's own sentence, not one written
+       here: there are two reasons -- too few scored matches to fit on, and an
+       exponent that did not survive its own held-out split -- and only the file
+       knows which applies. */
+    if (flat) {
+      el.textContent =
+        'These probabilities are published as the model produces them. Every competition '
+        + 'here is offered one calibration exponent, fitted on its own walk-forward: each of '
+        + 'the three outcome probabilities raised to it and the three renormalised, pushing '
+        + 'them away from the base rate or towards it. '
+        + (sh && sh.reason
+          ? `${sh.reason.charAt(0).toUpperCase()}${sh.reason.slice(1)}.`
+          : 'This one ships at 1.0, which is the identity and changes nothing.');
+    } else {
+    const band = (() => {
+      const b = sh && sh.band;
+      const lo = Array.isArray(b) ? b[0] : (b && b.lo);
+      const hi = Array.isArray(b) ? b[1] : (b && b.hi);
+      return (lo == null || hi == null) ? '' : `, clamped to ${lo}\u2013${hi}`;
+    })();
+    el.textContent =
+      `Every probability here is then calibrated by one exponent, ${Number(k).toFixed(3)}: `
+      + 'each of the three outcome probabilities is raised to it and the three are '
+      + `renormalised, which pushes them ${Number(k) > 1 ? 'away from' : 'towards'} the base `
+      + `rate. It is fitted on ${(sh && sh.n) ? sh.n.toLocaleString() : 'this competition\u2019s'} `
+      + `scored matches of its own walk-forward${band}`
+      + (ho && ho.gain != null
+        ? `, and it ships only because it survived a split it never saw: ${
+            Math.abs(ho.gain).toFixed(4)} of log-loss ${ho.gain >= 0 ? 'better' : 'worse'} `
+          + `over the ${(ho.n || 0).toLocaleString()} matches held out of the fit.`
+        : '.');
+    }
+  }
+
+  /* The shot blend's own contribution, from the file rather than from a
+     sentence written once and never re-measured. */
+  const bg = document.getElementById('blendgain');
+  if (bt.params?.goals_weight != null) {
+    bg.textContent =
+      `How much does it actually buy? The grid search that set the model's parameters `
+      + `landed on ${bt.params.goals_weight} weight on goals against `
+      + `${(1 - bt.params.goals_weight).toFixed(2)} on the shot-implied fit for `
+      + `${W.name}`
+      + (bt.params.blend_gain != null
+        ? `, and blending them is worth ${Number(bt.params.blend_gain).toFixed(4)} of `
+          + 'log-loss over goals alone. That is real, and far less than a proper '
+          + 'expected-goals model would give — less, too, than simply weighting recent '
+          + 'matches more heavily.'
+        : '. What the blend alone is worth is not separately reported in the backtest this '
+          + 'page publishes, so no figure for it is quoted here; the number that used to sit '
+          + 'in this sentence was written once and never re-measured. Whatever it is, it is '
+          + 'less than a proper expected-goals model would give.');
+  } else {
+    bg.textContent =
+      `${W.The} is fitted on goals alone — its feed carries no shots — so there is no blend `
+      + 'here, and nothing for one to be worth. The weighting of recent matches over old '
+      + 'ones does all of the work the blend does elsewhere.';
+  }
+
+  /* Two sentences about what these numbers are measured on, because both
+     changed and neither is visible from the figures themselves. */
+  document.getElementById('freshnote').textContent =
+    'One asymmetry worth stating: the ratings behind the live forecast are fitted through '
+    + 'the end of today, so a result that lands this afternoon is in tonight\u2019s numbers. '
+    + 'The backtest above is deliberately stricter — every prediction in it is made from '
+    + 'matches played strictly before the round it is scoring, which is the only way the '
+    + 'figure means anything.';
+  if (W.isCup) document.getElementById('cupsim').hidden = false;
 
   const cp = bt.calibration_priors;
   if (cp) {
@@ -876,7 +1049,7 @@ if (!bt) {
   document.getElementById('params').textContent =
     (dials.length ? `Fitted with ${dials.join(' and ')}. ` : '')
     + `Home advantage currently multiplies home goals by ${fc.home_advantage}. `
-    + `Generated ${fc.generated}.`;
+    + `Generated ${fmtStamp(fc.generated)}.`;
 }
 
 /* ================= reference =================
@@ -990,7 +1163,7 @@ const GLOSS = [
    "sixty-six thousand matches and eight hundred clubs" for a build that had a
    hundred thousand and nine hundred and eighty-one. */
 try {
-  const gp = await siteData('global');
+  const gp = await P.global;
   document.getElementById('poolsize').textContent =
     `${gp.n_matches.toLocaleString()} matches and ${gp.n_clubs} clubs across `
     + `${gp.n_leagues} competitions`;
@@ -1002,8 +1175,8 @@ document.getElementById('glosscard').hidden = false;
 
 /* ---- what each competition is built from ---- */
 try {
-  const cov = await siteData('coverage');
-  const rows = cov.leagues || [];
+  const cov = await P.coverage;
+  const rows = (cov && cov.leagues) || [];
   if (rows.length) {
     const FEED = {
       mirror: 'results mirror: goals, shots, cards, half-time, referee',
@@ -1054,8 +1227,8 @@ try {
    with every club in it twice, so one is used only if it can reproduce a season
    we already have. This says which ones managed it. */
 try {
-  const sj = await siteData('sources');
-  const rows = sj.sources || [];
+  const sj = await P.sources;
+  const rows = (sj && sj.sources) || [];
   if (rows.length) {
     /* A watched feed is one being probed to find out what it would do. It is
        fetched and judged like the rest and then read by nothing, so counting it
@@ -1099,8 +1272,8 @@ try {
 
 /* ---- changelog ---- */
 try {
-  const log = await siteData('changelog');
-  const entries = log.entries || [];
+  const log = await P.changelog;
+  const entries = (log && log.entries) || [];
   if (entries.length) {
     document.getElementById('changebody').innerHTML = entries.map((e) => `
       <li>
