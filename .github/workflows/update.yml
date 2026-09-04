@@ -99,7 +99,10 @@ jobs:
         # with "cannot pull with rebase: You have unstaged changes". That made
         # the retry loop unable to ever succeed: when a scheduled run and a
         # push run overlapped, the second one lost its state commit entirely.
-        if: github.ref == 'refs/heads/main'
+        # Runs even when a league failed upstream: the leagues that did build
+        # froze their pre-kickoff predictions and took their daily snapshot,
+        # and one broken feed must not throw those away for everyone else.
+        if: github.ref == 'refs/heads/main' && !cancelled()
         run: |
           git config user.name "forecast-bot"
           git config user.email "actions@users.noreply.github.com"
